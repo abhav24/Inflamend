@@ -8,31 +8,33 @@ import NetInfo from '@react-native-community/netinfo';
 
 export default function RootLayout() {
   const { setSession, setProfile, setLoading } = useAuthStore();
+  const session = useAuthStore((s) => s.session);
+  const isLoading = useAuthStore((s) => s.isLoading);
   const { flush, getPendingCount } = useSyncQueue();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) {
         const { data } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', s.user.id)
           .single();
         setProfile(data);
       }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s);
+      if (s?.user) {
         const { data } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', s.user.id)
           .single();
         setProfile(data);
       } else {
@@ -43,9 +45,8 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Route protection
+  // Route protection — runs when auth state resolves
   useEffect(() => {
-    const { isLoading, session } = useAuthStore.getState();
     if (isLoading) return;
     const inAuthGroup = segments[0] === '(auth)';
     if (!session && !inAuthGroup) {
@@ -53,7 +54,7 @@ export default function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)/home');
     }
-  }, [useAuthStore((s) => s.session), useAuthStore((s) => s.isLoading)]);
+  }, [session, isLoading, segments]);
 
   // Background sync when online
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function RootLayout() {
       if (state.isConnected) flush();
     });
     return () => unsub();
-  }, []);
+  }, [flush, getPendingCount]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

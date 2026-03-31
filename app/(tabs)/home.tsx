@@ -70,7 +70,7 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [fetchFood, fetchBowel, fetchSymptom, fetchMedLogs, calculate]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -133,7 +133,7 @@ export default function HomeScreen() {
             <View
               style={[
                 styles.progressFill,
-                { width: `${risk.score}%` as any, backgroundColor: riskColor(risk.level) },
+                { width: `${risk.score}%` as `${number}%`, backgroundColor: riskColor(risk.level) },
               ]}
             />
           </View>
@@ -213,7 +213,7 @@ function TimelineEntry({ entry }: { entry: AnyLog }) {
     food: `Meal logged`,
     bowel: 'Bowel movement',
     symptom: 'Symptoms logged',
-    medication: `Medication ${(entry as any).was_taken ? 'taken' : 'missed'}`,
+    medication: `Medication ${entry.was_taken ? 'taken' : 'missed'}`,
   };
   return (
     <View style={tlStyles.row}>

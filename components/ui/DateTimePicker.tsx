@@ -1,11 +1,13 @@
-import React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  Platform,
+  Modal,
 } from 'react-native';
+import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { Colors } from '../../constants/colors';
 
@@ -32,33 +34,67 @@ function formatValue(date: Date, mode: PickerMode): string {
 }
 
 function modeIcon(mode: PickerMode): string {
-  switch (mode) {
-    case 'date':
-      return '📅';
-    case 'time':
-      return '🕐';
-    case 'datetime':
-    default:
-      return '📅';
-  }
+  return mode === 'time' ? '🕐' : '📅';
 }
 
 export function DateTimePicker({
   label,
   value,
-  onChange, // eslint-disable-line @typescript-eslint/no-unused-vars
+  onChange,
   mode = 'datetime',
   accessibilityLabel,
 }: DateTimePickerProps) {
-  // TODO: Wire up native date/time picker (e.g. @react-native-community/datetimepicker)
-  // when the package is installed. For now, shows the formatted value with an alert.
-  const handlePress = () => {
-    Alert.alert(
-      'Date Picker',
-      'Date picker will be implemented — edit directly.',
-      [{ text: 'OK' }]
-    );
-  };
+  const [show, setShow] = useState(false);
+  // For datetime on iOS we need two passes: first date, then time
+  const [phase, setPhase] = useState<'date' | 'time'>('date');
+  const [tempDate, setTempDate] = useState(value);
+
+  function handlePress() {
+    setTempDate(value);
+    setPhase('date');
+    setShow(true);
+  }
+
+  function handleChange(_event: DateTimePickerEvent, selected?: Date) {
+    if (!selected) {
+      setShow(false);
+      return;
+    }
+
+    if (Platform.OS !== 'ios') {
+      setShow(false);
+      onChange(selected);
+      return;
+    }
+
+    // iOS spinner — stay open
+    if (mode === 'datetime') {
+      if (phase === 'date') {
+        setTempDate(selected);
+        setPhase('time');
+      } else {
+        // Merge date part from tempDate with time part from selected
+        const merged = new Date(tempDate);
+        merged.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+        onChange(merged);
+        setShow(false);
+        setPhase('date');
+      }
+    } else {
+      onChange(selected);
+    }
+  }
+
+  function handleDone() {
+    if (mode === 'datetime' && phase === 'date') {
+      setPhase('time');
+    } else {
+      setShow(false);
+      setPhase('date');
+    }
+  }
+
+  const pickerMode = mode === 'datetime' ? phase : mode;
 
   return (
     <View style={styles.container}>
@@ -78,6 +114,43 @@ export function DateTimePicker({
         </View>
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
+
+      {Platform.OS === 'ios' ? (
+        <Modal visible={show} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {mode === 'datetime'
+                    ? phase === 'date' ? 'Select Date' : 'Select Time'
+                    : mode === 'time' ? 'Select Time' : 'Select Date'}
+                </Text>
+                <TouchableOpacity onPress={handleDone}>
+                  <Text style={styles.doneBtn}>
+                    {mode === 'datetime' && phase === 'date' ? 'Next →' : 'Done'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <RNDateTimePicker
+                value={phase === 'time' ? tempDate : value}
+                mode={pickerMode}
+                display="spinner"
+                onChange={handleChange}
+                style={styles.picker}
+              />
+            </View>
+          </View>
+        </Modal>
+      ) : (
+        show && (
+          <RNDateTimePicker
+            value={value}
+            mode={pickerMode}
+            display="default"
+            onChange={handleChange}
+          />
+        )
+      )}
     </View>
   );
 }
@@ -124,5 +197,38 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '300',
     marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  modalSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  doneBtn: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  picker: {
+    width: '100%',
   },
 });
