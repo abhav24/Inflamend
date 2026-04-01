@@ -45,16 +45,16 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Route protection — runs when auth state resolves
-  useEffect(() => {
-    if (isLoading) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (session && inAuthGroup) {
-      router.replace('/(tabs)/home');
-    }
-  }, [session, isLoading, segments]);
+  // Route protection — disabled for testing
+  // useEffect(() => {
+  //   if (isLoading) return;
+  //   const inAuthGroup = segments[0] === '(auth)';
+  //   if (!session && !inAuthGroup) {
+  //     router.replace('/(auth)/login');
+  //   } else if (session && inAuthGroup) {
+  //     router.replace('/(tabs)/home');
+  //   }
+  // }, [session, isLoading, segments]);
 
   // Background sync when online
   useEffect(() => {
