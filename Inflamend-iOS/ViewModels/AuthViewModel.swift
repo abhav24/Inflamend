@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Supabase
 
 @MainActor
 final class AuthViewModel: ObservableObject {
@@ -7,16 +7,14 @@ final class AuthViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var isAuthenticated = false
 
-    private let db = SupabaseClient.shared
-
-    var userId: String? { db.userId }
+    private let db = AppDatabase.shared
 
     init() {
         Task { await checkSession() }
     }
 
     func checkSession() async {
-        guard let uid = db.userId, db.accessToken != nil else {
+        guard let uid = await db.currentUserId() else {
             isLoading = false
             isAuthenticated = false
             return
@@ -32,14 +30,14 @@ final class AuthViewModel: ObservableObject {
     }
 
     func signIn(email: String, password: String) async throws {
-        let (_, uid) = try await db.signIn(email: email, password: password)
+        let uid = try await db.signIn(email: email, password: password)
         let p: UserProfile = try await db.selectOne("profiles", filter: "id=eq.\(uid)")
         profile = p
         isAuthenticated = true
     }
 
     func signOut() async {
-        await db.signOut()
+        try? await db.signOut()
         profile = nil
         isAuthenticated = false
     }

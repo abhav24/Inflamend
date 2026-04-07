@@ -13,7 +13,7 @@ struct HomeView: View {
     @State private var selectedLogTab: LogTab = .food
     @State private var showLog = false
 
-    private let db = SupabaseClient.shared
+    private let db = AppDatabase.shared
 
     var body: some View {
         NavigationStack {

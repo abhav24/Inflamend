@@ -130,7 +130,7 @@ struct SignupView: View {
         loading = true
         error = nil
         do {
-            try await SupabaseClient.shared.signUp(email: emailTrimmed, password: password)
+            try await AppDatabase.shared.signUp(email: emailTrimmed, password: password)
             try await auth.signIn(email: emailTrimmed, password: password)
         } catch {
             self.error = error.localizedDescription

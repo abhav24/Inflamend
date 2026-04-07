@@ -20,7 +20,7 @@ struct InsightsView: View {
     @State private var topTriggers: [(name: String, count: Int)] = []
     @State private var heatmapData: [(date: Date, pain: Double?)] = []
 
-    private let db = SupabaseClient.shared
+    private let db = AppDatabase.shared
 
     var body: some View {
         NavigationStack {

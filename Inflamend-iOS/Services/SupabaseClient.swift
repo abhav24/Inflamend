@@ -1,212 +1,132 @@
 import Foundation
+import Supabase
 
-// MARK: - Supabase Client
+// MARK: - Supabase singleton
 
-final class SupabaseClient {
-    static let shared = SupabaseClient()
+let supabase = SupabaseClient(
+    supabaseURL: URL(string: Config.supabaseURL)!,
+    supabaseKey: Config.supabaseAnonKey
+)
 
-    private let baseURL: String
-    private let anonKey: String
-    private let session = URLSession.shared
-    private let tokenKey = "sb_access_token"
-    private let userIdKey = "sb_user_id"
+// MARK: - AppDatabase
 
-    private init() {
-        baseURL = Config.supabaseURL
-        anonKey = Config.supabaseAnonKey
-    }
+/// Thin service wrapper around the official supabase-swift SDK.
+/// All view-layer code calls this rather than the SDK directly.
+final class AppDatabase {
+    static let shared = AppDatabase()
+    private init() {}
 
-    // MARK: - Token Management
+    private var client: SupabaseClient { supabase }
 
-    var accessToken: String? {
-        get { UserDefaults.standard.string(forKey: tokenKey) }
-        set { UserDefaults.standard.set(newValue, forKey: tokenKey) }
-    }
+    // MARK: - Cached User ID (synchronous, populated after auth)
 
-    var userId: String? {
-        get { UserDefaults.standard.string(forKey: userIdKey) }
-        set { UserDefaults.standard.set(newValue, forKey: userIdKey) }
-    }
-
-    func clearSession() {
-        accessToken = nil
-        userId = nil
+    private(set) var userId: String? {
+        get { UserDefaults.standard.string(forKey: "app_user_id") }
+        set { UserDefaults.standard.set(newValue, forKey: "app_user_id") }
     }
 
     // MARK: - Auth
 
-    func signIn(email: String, password: String) async throws -> (token: String, userId: String) {
-        let url = URL(string: "\(baseURL)/auth/v1/token?grant_type=password")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "password": password])
-
-        let (data, response) = try await session.data(for: req)
-        try checkHTTP(response, data: data)
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let token = json?["access_token"] as? String,
-              let user = json?["user"] as? [String: Any],
-              let uid = user["id"] as? String else {
-            throw SupabaseError.invalidResponse
-        }
-        accessToken = token
+    func signIn(email: String, password: String) async throws -> String {
+        let session = try await client.auth.signIn(email: email, password: password)
+        let uid = session.user.id.uuidString
         userId = uid
-        return (token, uid)
+        return uid
     }
 
     func signUp(email: String, password: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/signup")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["email": email, "password": password])
-
-        let (data, response) = try await session.data(for: req)
-        try checkHTTP(response, data: data)
+        try await client.auth.signUp(email: email, password: password)
     }
 
-    func signOut() async {
-        guard let token = accessToken else { clearSession(); return }
-        let url = URL(string: "\(baseURL)/auth/v1/logout")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        addAuthHeaders(&req, token: token)
-        _ = try? await session.data(for: req)
-        clearSession()
+    func signOut() async throws {
+        try await client.auth.signOut()
+        userId = nil
     }
 
     func resetPassword(email: String) async throws {
-        let url = URL(string: "\(baseURL)/auth/v1/recover")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["email": email])
-        let (data, response) = try await session.data(for: req)
-        try checkHTTP(response, data: data)
+        try await client.auth.resetPasswordForEmail(email)
     }
 
-    // MARK: - REST API
-
-    func select<T: Decodable>(_ table: String, query: [String] = [], filter: String? = nil) async throws -> [T] {
-        var components = URLComponents(string: "\(baseURL)/rest/v1/\(table)")!
-        var items: [URLQueryItem] = []
-        if !query.isEmpty { items.append(URLQueryItem(name: "select", value: query.joined(separator: ","))) }
-        if let filter { items.append(contentsOf: parseFilter(filter)) }
-        components.queryItems = items.isEmpty ? nil : items
-
-        var req = URLRequest(url: components.url!)
-        req.httpMethod = "GET"
-        addAuthHeaders(&req)
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        let (data, response) = try await session.data(for: req)
-        try checkHTTP(response, data: data)
-        return try decoder.decode([T].self, from: data)
+    func currentUserId() async -> String? {
+        if let cached = userId { return cached }
+        let uid = try? await client.auth.session.user.id.uuidString
+        userId = uid
+        return uid
     }
 
-    func selectOne<T: Decodable>(_ table: String, filter: String? = nil) async throws -> T {
-        let results: [T] = try await select(table, filter: filter)
-        guard let first = results.first else { throw SupabaseError.notFound }
-        return first
-    }
+    // MARK: - Database
 
-    func insert<T: Encodable>(_ table: String, data: T) async throws {
-        let url = URL(string: "\(baseURL)/rest/v1/\(table)")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        addAuthHeaders(&req)
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-        req.httpBody = try encoder.encode(data)
-
-        let (body, response) = try await session.data(for: req)
-        try checkHTTP(response, data: body)
-    }
-
-    func update<T: Encodable>(_ table: String, filter: String, data: T) async throws {
-        var components = URLComponents(string: "\(baseURL)/rest/v1/\(table)")!
-        components.queryItems = parseFilter(filter)
-        var req = URLRequest(url: components.url!)
-        req.httpMethod = "PATCH"
-        addAuthHeaders(&req)
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-        req.httpBody = try encoder.encode(data)
-
-        let (body, response) = try await session.data(for: req)
-        try checkHTTP(response, data: body)
-    }
-
-    func invokeFunction(_ name: String, body: [String: Any]) async throws -> Data {
-        guard let token = accessToken else { throw SupabaseError.unauthorized }
-        let url = URL(string: "\(baseURL)/functions/v1/\(name)")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-        req.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-        let (data, response) = try await session.data(for: req)
-        try checkHTTP(response, data: data)
-        return data
-    }
-
-    // MARK: - Helpers
-
-    private func addAuthHeaders(_ req: inout URLRequest, token: String? = nil) {
-        let t = token ?? accessToken ?? anonKey
-        req.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization")
-        req.setValue(anonKey, forHTTPHeaderField: "apikey")
-    }
-
-    private func parseFilter(_ filter: String) -> [URLQueryItem] {
-        filter.components(separatedBy: "&").compactMap { part in
-            let kv = part.components(separatedBy: "=")
-            guard kv.count == 2 else { return nil }
-            return URLQueryItem(name: kv[0], value: kv[1])
+    func select<T: Decodable & Sendable>(
+        _ table: String,
+        filter: String? = nil
+    ) async throws -> [T] {
+        var query = client.from(table).select()
+        if let filter {
+            query = applyFilter(query, filter: filter)
         }
+        return try await query.execute().value
     }
 
-    private func checkHTTP(_ response: URLResponse, data: Data) throws {
-        guard let http = response as? HTTPURLResponse else { return }
-        if http.statusCode == 401 { throw SupabaseError.unauthorized }
-        if http.statusCode >= 400 {
-            let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"] as? String
-            throw SupabaseError.httpError(http.statusCode, msg ?? "Unknown error")
+    func selectOne<T: Decodable & Sendable>(
+        _ table: String,
+        filter: String? = nil
+    ) async throws -> T {
+        var query = client.from(table).select()
+        if let filter {
+            query = applyFilter(query, filter: filter)
         }
+        return try await query.single().execute().value
     }
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.keyDecodingStrategy = .useDefaultKeys
-        return d
-    }()
+    func insert<T: Encodable & Sendable>(_ table: String, data: T) async throws {
+        try await client.from(table).insert(data).execute()
+    }
 
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        return e
-    }()
-}
+    func update<T: Encodable & Sendable>(_ table: String, filter: String, data: T) async throws {
+        var query = client.from(table).update(data)
+        query = applyUpdateFilter(query, filter: filter)
+        try await query.execute()
+    }
 
-// MARK: - Errors
+    // MARK: - Edge Functions
 
-enum SupabaseError: LocalizedError {
-    case invalidResponse
-    case unauthorized
-    case notFound
-    case httpError(Int, String)
+    func invokeFunction(_ name: String, body: some Encodable & Sendable) async throws -> Data {
+        let response = try await client.functions.invoke(name, options: .init(body: body))
+        return response
+    }
 
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse: return "Invalid server response"
-        case .unauthorized: return "Please sign in again"
-        case .notFound: return "Record not found"
-        case .httpError(_, let msg): return msg
+    // MARK: - Filter Helper
+
+    /// Parses simple `key=op.value` filter strings into SDK query methods.
+    private func applyFilter(
+        _ query: PostgrestFilterBuilder,
+        filter: String
+    ) -> PostgrestFilterBuilder {
+        var q = query
+        for part in filter.components(separatedBy: "&") {
+            guard let eqRange = part.range(of: "=") else { continue }
+            let key = String(part[part.startIndex..<eqRange.lowerBound])
+            let remainder = String(part[eqRange.upperBound...])
+            guard let opRange = remainder.range(of: ".") else { continue }
+            let op = String(remainder[remainder.startIndex..<opRange.lowerBound])
+            let value = String(remainder[opRange.upperBound...])
+            switch op {
+            case "eq":  q = q.eq(key, value: value)
+            case "neq": q = q.neq(key, value: value)
+            case "gte": q = q.gte(key, value: value)
+            case "lte": q = q.lte(key, value: value)
+            case "gt":  q = q.gt(key, value: value)
+            case "lt":  q = q.lt(key, value: value)
+            default: break
+            }
         }
+        return q
+    }
+
+    private func applyUpdateFilter(
+        _ query: PostgrestFilterBuilder,
+        filter: String
+    ) -> PostgrestFilterBuilder {
+        applyFilter(query, filter: filter)
     }
 }

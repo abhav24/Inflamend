@@ -9,7 +9,7 @@ struct ChatView: View {
     @State private var initialLoad = true
     @FocusState private var inputFocused: Bool
 
-    private let db = SupabaseClient.shared
+    private let db = AppDatabase.shared
 
     var body: some View {
         NavigationStack {

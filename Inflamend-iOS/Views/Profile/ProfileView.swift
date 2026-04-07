@@ -13,7 +13,7 @@ struct ProfileView: View {
     @State private var showExportSheet = false
     @State private var exportText = ""
 
-    private let db = SupabaseClient.shared
+    private let db = AppDatabase.shared
 
     var body: some View {
         NavigationStack {

@@ -8,6 +8,14 @@
 4. Minimum Deployment: **iOS 16.0**
 5. Save into this `Inflamend-iOS/` directory
 
+## Add the Supabase Swift SDK
+
+File → Add Package Dependencies → search for:
+```
+https://github.com/supabase/supabase-swift
+```
+Select `Up to Next Major Version` from `2.0.0`, then add the **Supabase** product to your target.
+
 ## Add Source Files
 
 Drag all `.swift` files (and folders) from this directory into the Xcode project navigator, ensuring "Copy items if needed" is **unchecked** (they're already in place).

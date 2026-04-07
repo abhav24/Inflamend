@@ -171,7 +171,7 @@ struct FoodLogForm: View {
 
     private func save() async {
         guard !description.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        guard let uid = SupabaseClient.shared.userId else { return }
+        guard let uid = AppDatabase.shared.userId else { return }
         loading = true
         let input = FoodLogInput(
             logged_at: ISO8601DateFormatter().string(from: Date()),
@@ -194,7 +194,7 @@ struct FoodLogForm: View {
                                description: input.description, is_trigger_food: input.is_trigger_food,
                                is_safe_food: input.is_safe_food, notes: input.notes)
         do {
-            try await SupabaseClient.shared.insert("food_logs", data: payload)
+            try await AppDatabase.shared.insert("food_logs", data: payload)
             description = ""; notes = ""; isTrigger = false; isSafe = false
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }
@@ -318,7 +318,7 @@ struct BowelLogForm: View {
     }
 
     private func save() async {
-        guard let uid = SupabaseClient.shared.userId else { return }
+        guard let uid = AppDatabase.shared.userId else { return }
         loading = true
         struct Payload: Encodable {
             let user_id: String; let logged_at: String; let bristol_scale: Int
@@ -331,7 +331,7 @@ struct BowelLogForm: View {
                         mucus_present: mucusPresent, pain_during: Int(painDuring),
                         notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("bowel_logs", data: p)
+            try await AppDatabase.shared.insert("bowel_logs", data: p)
             bristolScale = 4; urgency = 1; bloodPresent = false; mucusPresent = false; painDuring = 0; notes = ""
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }
@@ -445,7 +445,7 @@ struct SymptomLogForm: View {
     }
 
     private func save() async {
-        guard let uid = SupabaseClient.shared.userId else { return }
+        guard let uid = AppDatabase.shared.userId else { return }
         loading = true
         struct Payload: Encodable {
             let user_id: String; let logged_at: String; let pain_level: Int
@@ -459,7 +459,7 @@ struct SymptomLogForm: View {
                         bloating_level: Int(bloatingLevel), stress_level: Int(stressLevel),
                         mood: mood?.rawValue, is_flare: isFlare, notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("symptom_logs", data: p)
+            try await AppDatabase.shared.insert("symptom_logs", data: p)
             painLevel = 0; fatigueLevel = 0; nauseaLevel = 0; bloatingLevel = 0; stressLevel = 0
             selectedLocations = []; mood = nil; isFlare = false; notes = ""
             success = true
@@ -545,7 +545,7 @@ struct MedLogForm: View {
 
     private func save() async {
         guard !medicationName.trimmingCharacters(in: .whitespaces).isEmpty,
-              let uid = SupabaseClient.shared.userId else { return }
+              let uid = AppDatabase.shared.userId else { return }
         loading = true
         struct Payload: Encodable {
             let user_id: String; let medication_name: String; let dosage: String?
@@ -556,7 +556,7 @@ struct MedLogForm: View {
                         was_taken: wasTaken, side_effects: Array(selectedSideEffects),
                         notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("medication_logs", data: p)
+            try await AppDatabase.shared.insert("medication_logs", data: p)
             medicationName = ""; dosage = ""; wasTaken = true; selectedSideEffects = []; notes = ""
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }
@@ -630,7 +630,7 @@ struct SleepLogForm: View {
     }
 
     private func save() async {
-        guard let uid = SupabaseClient.shared.userId else { return }
+        guard let uid = AppDatabase.shared.userId else { return }
         loading = true
         let fmt = ISO8601DateFormatter()
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
@@ -643,7 +643,7 @@ struct SleepLogForm: View {
                         quality: Int(quality), night_wakings: Int(nightWakings),
                         bathroom_wakings: Int(bathroomWakings), notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("sleep_logs", data: p)
+            try await AppDatabase.shared.insert("sleep_logs", data: p)
             quality = 3; nightWakings = 0; bathroomWakings = 0; notes = ""
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }
@@ -709,7 +709,7 @@ struct CycleLogForm: View {
     }
 
     private func save() async {
-        guard let uid = SupabaseClient.shared.userId else { return }
+        guard let uid = AppDatabase.shared.userId else { return }
         loading = true
         let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"
         struct Payload: Encodable {
@@ -719,7 +719,7 @@ struct CycleLogForm: View {
         let p = Payload(user_id: uid, date: df.string(from: Date()), flow: flow.rawValue,
                         symptoms: Array(selectedSymptoms), notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("menstrual_logs", data: p)
+            try await AppDatabase.shared.insert("menstrual_logs", data: p)
             flow = .light; selectedSymptoms = []; notes = ""
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }
@@ -772,7 +772,7 @@ struct WeightLogForm: View {
     }
 
     private func save() async {
-        guard let kg = Double(weightKg), let uid = SupabaseClient.shared.userId else { return }
+        guard let kg = Double(weightKg), let uid = AppDatabase.shared.userId else { return }
         loading = true
         struct Payload: Encodable {
             let user_id: String; let logged_at: String; let weight_kg: Double; let notes: String?
@@ -780,7 +780,7 @@ struct WeightLogForm: View {
         let p = Payload(user_id: uid, logged_at: ISO8601DateFormatter().string(from: Date()),
                         weight_kg: kg, notes: notes.isEmpty ? nil : notes)
         do {
-            try await SupabaseClient.shared.insert("weight_logs", data: p)
+            try await AppDatabase.shared.insert("weight_logs", data: p)
             weightKg = ""; notes = ""
             success = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { success = false }

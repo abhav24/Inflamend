@@ -190,7 +190,7 @@ struct ForgotPasswordView: View {
         loading = true
         error = nil
         do {
-            try await SupabaseClient.shared.resetPassword(email: email.trimmingCharacters(in: .whitespaces))
+            try await AppDatabase.shared.resetPassword(email: email.trimmingCharacters(in: .whitespaces))
             sent = true
         } catch {
             self.error = error.localizedDescription
