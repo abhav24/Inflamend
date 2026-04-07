@@ -323,3 +323,72 @@ struct SliderRow: View {
         }
     }
 }
+
+// MARK: - Date Extensions
+
+extension Date {
+    var greeting: String {
+        switch Calendar.current.component(.hour, from: self) {
+        case 0..<12:  return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default:      return "Good evening"
+        }
+    }
+
+    var relativeLabel: String {
+        if Calendar.current.isDateInToday(self)     { return "Today" }
+        if Calendar.current.isDateInYesterday(self) { return "Yesterday" }
+        return dateString("MMM d")
+    }
+
+    func dateString(_ format: String) -> String {
+        let f = DateFormatter(); f.dateFormat = format; return f.string(from: self)
+    }
+}
+
+// MARK: - Input Validator
+
+struct InputValidator {
+    static func sanitize(_ input: String, maxLength: Int) -> String {
+        String(input.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxLength))
+    }
+    static func isValidEmail(_ value: String) -> Bool {
+        value.contains("@") && value.contains(".")
+    }
+    static func isValidName(_ value: String) -> Bool {
+        value.count >= 2 && value.count <= 50
+    }
+}
+
+// MARK: - Feature Pill
+
+struct FeaturePill: View {
+    let icon: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.caption)
+            Text(label).font(.caption).fontWeight(.semibold)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .foregroundStyle(.white)
+        .background(.white.opacity(0.18))
+        .clipShape(Capsule())
+    }
+}
+
+// MARK: - Stat Cell (Stats Strip)
+
+struct StatCell: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value).font(.subheadline).fontWeight(.bold)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
