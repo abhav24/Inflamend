@@ -230,7 +230,7 @@ struct BowelLogForm: View {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()
-                                    .fill(bristolScale == type.scale ? AppGradient.brand : AnyShapeStyle(Color(.tertiarySystemBackground)))
+                                    .fill(bristolScale == type.scale ? AnyShapeStyle(AppGradient.brand) : AnyShapeStyle(Color(.tertiarySystemBackground)))
                                     .frame(width: 36, height: 36)
                                 Text("\(type.scale)")
                                     .font(.system(.subheadline, design: .rounded)).fontWeight(.bold)
@@ -358,90 +358,102 @@ struct SymptomLogForm: View {
     var body: some View {
         VStack(spacing: 16) {
             if success { SuccessBanner() }
-
-            VStack(spacing: 16) {
-                SliderRow(label: "Pain Level", value: $painLevel, range: 0...10, color: .brandDanger)
-                Divider()
-                SliderRow(label: "Fatigue", value: $fatigueLevel, range: 0...10, color: .brandWarning)
-                Divider()
-                SliderRow(label: "Nausea", value: $nauseaLevel, range: 0...10, color: .brandSecondary)
-                Divider()
-                SliderRow(label: "Bloating", value: $bloatingLevel, range: 0...10, color: Color(red: 0.2, green: 0.6, blue: 0.9))
-                Divider()
-                SliderRow(label: "Stress", value: $stressLevel, range: 0...10, color: .brandWarning)
-            }
-            .padding(16)
-            .cardStyle()
-
-            // Pain Locations
-            VStack(alignment: .leading, spacing: 10) {
-                FieldLabel(text: "Pain Location")
-                FlowLayout(spacing: 8) {
-                    ForEach(painLocations, id: \.id) { loc in
-                        FilterChip(label: loc.label, selected: selectedLocations.contains(loc.id)) {
-                            if selectedLocations.contains(loc.id) {
-                                selectedLocations.remove(loc.id)
-                            } else {
-                                selectedLocations.insert(loc.id)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(16)
-            .cardStyle()
-
-            // Mood
-            VStack(alignment: .leading, spacing: 10) {
-                FieldLabel(text: "Mood")
-                HStack(spacing: 8) {
-                    ForEach(Mood.allCases, id: \.self) { m in
-                        Button {
-                            mood = (mood == m) ? nil : m
-                        } label: {
-                            Text(m.label)
-                                .font(.caption).fontWeight(.semibold)
-                                .padding(.horizontal, 12).padding(.vertical, 7)
-                                .foregroundStyle(mood == m ? .white : .primary)
-                                .background(mood == m ? AppGradient.brand : AnyShapeStyle(Color(.tertiarySystemBackground)))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .padding(16)
-            .cardStyle()
-
-            VStack(spacing: 0) {
-                Toggle(isOn: $isFlare) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Mark as Flare Day")
-                            .font(.subheadline).fontWeight(.medium)
-                        Text("Indicates an active flare episode")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                .tint(.brandDanger)
-                .padding(16)
-            }
-            .cardStyle()
-
-            VStack(alignment: .leading, spacing: 8) {
-                FieldLabel(text: "Notes (optional)")
-                TextField("Describe your symptoms further", text: $notes, axis: .vertical)
-                    .lineLimit(2...4)
-                    .padding(12)
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(16)
-            .cardStyle()
-
+            symptomsCard
+            locationCard
+            moodCard
+            flareCard
+            notesCard
             PrimaryButton("Save Symptom Log", icon: "checkmark", isLoading: loading) {
                 Task { await save() }
             }
         }
+    }
+
+    private var symptomsCard: some View {
+        VStack(spacing: 16) {
+            SliderRow(label: "Pain Level", value: $painLevel, range: 0...10, color: .brandDanger)
+            Divider()
+            SliderRow(label: "Fatigue", value: $fatigueLevel, range: 0...10, color: .brandWarning)
+            Divider()
+            SliderRow(label: "Nausea", value: $nauseaLevel, range: 0...10, color: .brandSecondary)
+            Divider()
+            SliderRow(label: "Bloating", value: $bloatingLevel, range: 0...10, color: Color(red: 0.2, green: 0.6, blue: 0.9))
+            Divider()
+            SliderRow(label: "Stress", value: $stressLevel, range: 0...10, color: .brandWarning)
+        }
+        .padding(16)
+        .cardStyle()
+    }
+
+    private var locationCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FieldLabel(text: "Pain Location")
+            FlowLayout(spacing: 8) {
+                ForEach(painLocations, id: \.id) { loc in
+                    FilterChip(label: loc.label, selected: selectedLocations.contains(loc.id)) {
+                        if selectedLocations.contains(loc.id) {
+                            selectedLocations.remove(loc.id)
+                        } else {
+                            selectedLocations.insert(loc.id)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .cardStyle()
+    }
+
+    private var moodCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FieldLabel(text: "Mood")
+            HStack(spacing: 8) {
+                ForEach(Mood.allCases, id: \.self) { m in
+                    Button {
+                        mood = (mood == m) ? nil : m
+                    } label: {
+                        Text(m.label)
+                            .font(.caption).fontWeight(.semibold)
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .foregroundStyle(mood == m ? .white : .primary)
+                            .background(mood == m ? AnyShapeStyle(AppGradient.brand) : AnyShapeStyle(Color(.tertiarySystemBackground)))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .cardStyle()
+    }
+
+    private var flareCard: some View {
+        VStack(spacing: 0) {
+            Toggle(isOn: $isFlare) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mark as Flare Day")
+                        .font(.subheadline).fontWeight(.medium)
+                    Text("Indicates an active flare episode")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .tint(.brandDanger)
+            .padding(16)
+        }
+        .cardStyle()
+    }
+
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            FieldLabel(text: "Notes (optional)")
+            TextField("Describe your symptoms further", text: $notes, axis: .vertical)
+                .lineLimit(2...4)
+                .padding(12)
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .padding(16)
+        .cardStyle()
     }
 
     private func save() async {

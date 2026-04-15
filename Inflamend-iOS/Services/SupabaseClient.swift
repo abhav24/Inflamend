@@ -83,7 +83,7 @@ final class AppDatabase {
     }
 
     func update<T: Encodable & Sendable>(_ table: String, filter: String, data: T) async throws {
-        var query = client.from(table).update(data)
+        var query = try client.from(table).update(data)
         query = applyUpdateFilter(query, filter: filter)
         try await query.execute()
     }
@@ -91,8 +91,7 @@ final class AppDatabase {
     // MARK: - Edge Functions
 
     func invokeFunction(_ name: String, body: some Encodable & Sendable) async throws -> Data {
-        let response = try await client.functions.invoke(name, options: .init(body: body))
-        return response
+        try await client.functions.invoke(name, options: .init(body: body)) { data, _ in data }
     }
 
     // MARK: - Filter Helper

@@ -185,8 +185,12 @@ struct ChatView: View {
         loading = true
 
         do {
+            struct ChatBody: Encodable {
+                let messages: [[String: String]]
+                let userId: String
+            }
             let last20 = messages.suffix(20).map { ["role": $0.role.rawValue, "content": $0.content] }
-            let data = try await db.invokeFunction("chat", body: ["messages": last20, "userId": uid])
+            let data = try await db.invokeFunction("chat", body: ChatBody(messages: last20, userId: uid))
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             let responseText = json?["content"] as? String ?? "Sorry, I could not generate a response."
 
