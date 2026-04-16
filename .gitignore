@@ -43,3 +43,6 @@ yarn-error.*
 
 # Xcode user state
 *.xcuserstate
+
+# Claude Code
+CLAUDE.md
