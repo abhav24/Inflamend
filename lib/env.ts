@@ -25,7 +25,9 @@ const RAW_HEALTH_SYNC_BATCH_SIZE = process.env.EXPO_PUBLIC_HEALTH_SYNC_BATCH_SIZ
 const RAW_HEALTH_SYNC_LOOKBACK_DAYS = process.env.EXPO_PUBLIC_HEALTH_SYNC_LOOKBACK_DAYS;
 const RAW_DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE;
 
-const demoMode = booleanWithDefault(RAW_DEMO_MODE, false);
+const isDevRuntime = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
+const demoMode = booleanWithDefault(RAW_DEMO_MODE, isDevRuntime);
 
 export const ENV = {
   DEMO_MODE: demoMode,
