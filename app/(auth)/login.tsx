@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput,
   StyleSheet, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { ENV } from '../../lib/env';
 import { Colors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
 import { AppCard, PrimaryButton, SectionHeader } from '../../components/ui/DesignPrimitives';
@@ -15,6 +16,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  useEffect(() => {
+    if (ENV.DEMO_MODE) {
+      router.replace('/(tabs)/home');
+    }
+  }, [router]);
 
   function validate() {
     const e: typeof errors = {};

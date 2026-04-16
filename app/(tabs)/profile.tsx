@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '../../lib/supabase';
+import { ENV } from '../../lib/env';
 import {
   getHealthSyncDiagnostics,
   HealthSyncDiagnostic,
@@ -337,6 +338,12 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
+    if (ENV.DEMO_MODE) {
+      Alert.alert('Demo Mode', 'Sign out is disabled in demo mode.');
+      router.replace('/(tabs)/home');
+      return;
+    }
+
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
