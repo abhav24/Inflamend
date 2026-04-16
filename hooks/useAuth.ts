@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { ENV } from '../lib/env';
 import { Profile } from '../types';
 
 export function useAuth() {
@@ -10,6 +11,24 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (ENV.DEMO_MODE) {
+      const now = new Date().toISOString();
+      setSession(null);
+      setUser(null);
+      setProfile({
+        id: 'demo-local-profile',
+        display_name: 'Demo User',
+        date_of_birth: null,
+        diagnosis_type: null,
+        diagnosis_date: null,
+        tracks_menstrual_cycle: false,
+        created_at: now,
+        updated_at: now,
+      });
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -41,20 +60,24 @@ export function useAuth() {
   }
 
   async function signUp(email: string, password: string) {
+    if (ENV.DEMO_MODE) return { data: null, error: null };
     const { data, error } = await supabase.auth.signUp({ email, password });
     return { data, error };
   }
 
   async function signIn(email: string, password: string) {
+    if (ENV.DEMO_MODE) return { data: null, error: null };
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { data, error };
   }
 
   async function signOut() {
+    if (ENV.DEMO_MODE) return;
     await supabase.auth.signOut();
   }
 
   async function resetPassword(email: string) {
+    if (ENV.DEMO_MODE) return { error: null };
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     return { error };
   }

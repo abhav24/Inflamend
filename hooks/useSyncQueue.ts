@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { ENV } from '../lib/env';
 import { useSyncStore } from '../store/syncStore';
 import { SyncQueueItem, SyncTableName } from '../types';
 
@@ -21,8 +22,14 @@ async function writeQueue(items: SyncQueueItem[]): Promise<void> {
 
 export function useSyncQueue() {
   const { setStatus, setPendingCount, setLastSyncedAt } = useSyncStore();
+  const isDemoMode = ENV.DEMO_MODE;
 
   const enqueue = useCallback(async (table: SyncTableName, data: Record<string, unknown>) => {
+    if (isDemoMode) {
+      setPendingCount(0);
+      return;
+    }
+
     const queue = await readQueue();
     const item: SyncQueueItem = {
       id: data.id as string,
@@ -34,9 +41,16 @@ export function useSyncQueue() {
     const updated = [...queue, item];
     await writeQueue(updated);
     setPendingCount(updated.length);
-  }, [setPendingCount]);
+  }, [isDemoMode, setPendingCount]);
 
   const flush = useCallback(async () => {
+    if (isDemoMode) {
+      await writeQueue([]);
+      setPendingCount(0);
+      setStatus('idle');
+      return;
+    }
+
     const queue = await readQueue();
     if (queue.length === 0) return;
 
@@ -62,13 +76,18 @@ export function useSyncQueue() {
     setPendingCount(filtered.length);
     setLastSyncedAt(new Date().toISOString());
     setStatus(filtered.length > 0 ? 'error' : 'idle');
-  }, [setStatus, setPendingCount, setLastSyncedAt]);
+  }, [isDemoMode, setStatus, setPendingCount, setLastSyncedAt]);
 
   const getPendingCount = useCallback(async () => {
+    if (isDemoMode) {
+      setPendingCount(0);
+      return 0;
+    }
+
     const queue = await readQueue();
     setPendingCount(queue.length);
     return queue.length;
-  }, [setPendingCount]);
+  }, [isDemoMode, setPendingCount]);
 
   return { enqueue, flush, getPendingCount };
 }
