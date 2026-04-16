@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  View, Text, TextInput,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
+import { AppCard, PrimaryButton, SectionHeader } from '../../components/ui/DesignPrimitives';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -41,10 +43,10 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>Inflamend</Text>
-        <Text style={styles.subtitle}>Your Gut's Best Friend</Text>
+        <SectionHeader title="Welcome back" subtitle="Sign in to continue your health tracking" />
 
-        <View style={styles.form}>
+        <AppCard style={styles.card}>
+          <View style={styles.form}>
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
@@ -69,28 +71,18 @@ export default function LoginScreen() {
           />
           {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={loading}
-            accessibilityLabel="Log in"
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <Text style={styles.buttonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
+          <PrimaryButton title="Log In" onPress={handleLogin} loading={loading} />
 
           <Link href="/(auth)/forgot-password" style={styles.link}>
             Forgot password?
           </Link>
 
           <View style={styles.signupRow}>
-            <Text style={styles.mutedText}>Don't have an account? </Text>
+            <Text style={styles.mutedText}>Don’t have an account? </Text>
             <Link href="/(auth)/signup" style={styles.link}>Sign up</Link>
           </View>
-        </View>
+          </View>
+        </AppCard>
       </View>
     </KeyboardAvoidingView>
   );
@@ -98,9 +90,10 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  title: { fontSize: 32, fontWeight: '700', color: Colors.primary, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginBottom: 40 },
+  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
+  card: {
+    padding: Theme.spacing.lg,
+  },
   form: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginTop: 8 },
   input: {
@@ -110,11 +103,6 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: Colors.danger },
   errorText: { fontSize: 12, color: Colors.danger },
-  button: {
-    backgroundColor: Colors.primary, borderRadius: 10,
-    paddingVertical: 14, alignItems: 'center', marginTop: 16,
-  },
-  buttonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
   link: { color: Colors.primary, fontSize: 14, textAlign: 'center', marginTop: 12 },
   signupRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   mutedText: { fontSize: 14, color: Colors.textSecondary },

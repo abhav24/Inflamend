@@ -10,6 +10,7 @@ import { useSyncStore } from '../../store/syncStore';
 import { useFoodLogs, useBowelLogs, useSymptomLogs, useMedicationLogs } from '../../hooks/useLogs';
 import { useRiskIndicator } from '../../hooks/useRiskIndicator';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
 import { RiskIndicator, FoodLog, BowelLog, SymptomLog, MedicationLog } from '../../types';
 
 type AnyLog = { id: string; logged_at?: string; created_at: string; _type: string; was_taken?: boolean };
@@ -52,27 +53,38 @@ export default function HomeScreen() {
   const [medLogs, setMedLogs] = useState<MedicationLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [food, bowel, symptom, meds, r] = await Promise.all([
-      fetchFood(),
-      fetchBowel(),
-      fetchSymptom(),
-      fetchMedLogs(),
-      calculate(),
-    ]);
-    setFoodLogs(food);
-    setBowelLogs(bowel);
-    setSymptomLogs(symptom);
-    setMedLogs(meds);
-    setRisk(r);
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      setLoadError(null);
+      const [food, bowel, symptom, meds, r] = await Promise.all([
+        fetchFood(),
+        fetchBowel(),
+        fetchSymptom(),
+        fetchMedLogs(),
+        calculate(),
+      ]);
+      setFoodLogs(food);
+      setBowelLogs(bowel);
+      setSymptomLogs(symptom);
+      setMedLogs(meds);
+      setRisk(r);
+    } catch (error) {
+      console.error('Home load failed', error);
+      setLoadError('We could not refresh your dashboard. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [fetchFood, fetchBowel, fetchSymptom, fetchMedLogs, calculate]);
 
   useEffect(() => { load(); }, [load]);
 
-  const onRefresh = () => { setRefreshing(true); load(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
+  };
 
   const medsTaken = medLogs.filter((m) => m.was_taken).length;
   const medsTotal = medLogs.length;
@@ -121,6 +133,16 @@ export default function HomeScreen() {
       </View>
 
       {/* Risk Indicator */}
+      {loadError && (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>Couldn’t refresh</Text>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryText}>Retry now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {risk && (
         <View style={[styles.riskCard, { borderLeftColor: riskColor(risk.level) }]}>
           <View style={styles.riskRow}>
@@ -146,11 +168,10 @@ export default function HomeScreen() {
       {/* Quick Stats */}
       <Text style={styles.sectionTitle}>Today at a Glance</Text>
       <View style={styles.statsGrid}>
-        <StatCard emoji="🍽️" label="Meals" value={foodLogs.length} />
-        <StatCard emoji="🚽" label="BMs" value={bowelLogs.length} />
-        <StatCard emoji="🩺" label="Symptoms" value={symptomLogs.length > 0 ? 'Logged' : 'None'} />
+        <StatCard label="Meals" value={foodLogs.length} />
+        <StatCard label="Bowel" value={bowelLogs.length} />
+        <StatCard label="Symptoms" value={symptomLogs.length > 0 ? 'Logged' : 'None'} />
         <StatCard
-          emoji="💊"
           label="Meds"
           value={medsTotal > 0 ? `${medsTaken}/${medsTotal}` : 'None'}
         />
@@ -159,15 +180,15 @@ export default function HomeScreen() {
       {/* Quick Actions */}
       <Text style={styles.sectionTitle}>Quick Log</Text>
       <View style={styles.actionRow}>
-        <QuickAction emoji="🍽️" label="Food" onPress={() => router.push('/(tabs)/log?tab=food')} />
-        <QuickAction emoji="🚽" label="Bowel" onPress={() => router.push('/(tabs)/log?tab=bowel')} />
-        <QuickAction emoji="🩺" label="Symptoms" onPress={() => router.push('/(tabs)/log?tab=symptoms')} />
+        <QuickAction badge="FD" label="Food" onPress={() => router.push('/(tabs)/log?tab=food')} />
+        <QuickAction badge="BW" label="Bowel" onPress={() => router.push('/(tabs)/log?tab=bowel')} />
+        <QuickAction badge="SY" label="Symptoms" onPress={() => router.push('/(tabs)/log?tab=symptoms')} />
       </View>
 
       {/* Timeline */}
       {timeline.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Today's Timeline</Text>
+          <Text style={styles.sectionTitle}>Today’s Timeline</Text>
           {timeline.map((entry) => (
             <TimelineEntry key={`${entry._type}-${entry.id}`} entry={entry} />
           ))}
@@ -176,7 +197,6 @@ export default function HomeScreen() {
 
       {timeline.length === 0 && (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📋</Text>
           <Text style={styles.emptyText}>Nothing logged today yet.</Text>
           <Text style={styles.emptySubtext}>Tap Quick Log above to get started.</Text>
         </View>
@@ -185,20 +205,20 @@ export default function HomeScreen() {
   );
 }
 
-function StatCard({ emoji, label, value }: { emoji: string; label: string; value: string | number }) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <View style={statStyles.card}>
-      <Text style={statStyles.emoji}>{emoji}</Text>
+      <View style={statStyles.badge}><Text style={statStyles.badgeText}>{label.slice(0, 2).toUpperCase()}</Text></View>
       <Text style={statStyles.value}>{value}</Text>
       <Text style={statStyles.label}>{label}</Text>
     </View>
   );
 }
 
-function QuickAction({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+function QuickAction({ badge, label, onPress }: { badge: string; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={actionStyles.btn} onPress={onPress} accessibilityLabel={`Log ${label}`}>
-      <Text style={actionStyles.emoji}>{emoji}</Text>
+      <View style={actionStyles.badge}><Text style={actionStyles.badgeText}>{badge}</Text></View>
       <Text style={actionStyles.label}>{label}</Text>
     </TouchableOpacity>
   );
@@ -207,7 +227,7 @@ function QuickAction({ emoji, label, onPress }: { emoji: string; label: string; 
 function TimelineEntry({ entry }: { entry: AnyLog }) {
   const time = format(new Date(entry.logged_at ?? entry.created_at), 'h:mm a');
   const icons: Record<string, string> = {
-    food: '🍽️', bowel: '🚽', symptom: '🩺', medication: '💊',
+    food: 'FD', bowel: 'BW', symptom: 'SY', medication: 'MD',
   };
   const labels: Record<string, string> = {
     food: `Meal logged`,
@@ -217,7 +237,7 @@ function TimelineEntry({ entry }: { entry: AnyLog }) {
   };
   return (
     <View style={tlStyles.row}>
-      <Text style={tlStyles.icon}>{icons[entry._type]}</Text>
+      <View style={tlStyles.iconBadge}><Text style={tlStyles.icon}>{icons[entry._type]}</Text></View>
       <View style={tlStyles.info}>
         <Text style={tlStyles.label}>{labels[entry._type]}</Text>
         <Text style={tlStyles.time}>{time}</Text>
@@ -234,9 +254,9 @@ const styles = StyleSheet.create({
   date: { fontSize: 13, color: Colors.textSecondary, marginBottom: 2 },
   greeting: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
   riskCard: {
-    backgroundColor: Colors.white, borderRadius: 14, padding: 16,
+    backgroundColor: Colors.white, borderRadius: Theme.radius.lg, padding: Theme.spacing.lg,
     borderLeftWidth: 4, marginBottom: 24,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    ...Theme.shadow.card,
   },
   riskRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   riskLabel: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
@@ -248,38 +268,78 @@ const styles = StyleSheet.create({
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   actionRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '600', color: Colors.textSecondary },
   emptySubtext: { fontSize: 13, color: Colors.textMuted, marginTop: 4 },
+  errorCard: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: Theme.radius.md,
+    padding: Theme.spacing.lg,
+    marginBottom: 18,
+  },
+  errorTitle: { color: '#A93838', fontWeight: '700', marginBottom: 4, fontSize: 14 },
+  errorText: { color: '#7A4B4B', fontSize: 13, marginBottom: 10 },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#F3BBBB',
+    borderRadius: Theme.radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  retryText: { color: '#A93838', fontWeight: '600', fontSize: 12 },
 });
 
 const statStyles = StyleSheet.create({
   card: {
-    flex: 1, minWidth: '45%', backgroundColor: Colors.white, borderRadius: 12,
+    flex: 1, minWidth: '45%', backgroundColor: Colors.white, borderRadius: Theme.radius.md,
     padding: 14, alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    ...Theme.shadow.subtle,
   },
-  emoji: { fontSize: 24, marginBottom: 6 },
+  badge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  badgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   value: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
   label: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });
 
 const actionStyles = StyleSheet.create({
   btn: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: 12, paddingVertical: 14,
+    flex: 1, backgroundColor: Colors.white, borderRadius: Theme.radius.md, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: Colors.border,
   },
-  emoji: { fontSize: 26, marginBottom: 4 },
+  badge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 6,
+  },
+  badgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
 });
 
 const tlStyles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
-    borderRadius: 10, padding: 12, marginBottom: 8,
+    borderRadius: Theme.radius.md, padding: 12, marginBottom: 8,
     borderWidth: 1, borderColor: Colors.border,
   },
-  icon: { fontSize: 22, marginRight: 12 },
+  iconBadge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginRight: 12,
+  },
+  icon: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   info: { flex: 1 },
   label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   time: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },

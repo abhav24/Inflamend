@@ -163,7 +163,18 @@ Edit `.env` with your actual values:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_DEMO_MODE=false
+EXPO_PUBLIC_HEALTH_SYNC_BATCH_SIZE=200
+EXPO_PUBLIC_HEALTH_SYNC_LOOKBACK_DAYS=30
 ```
+
+If you want to skip sign-in and backend while working on UI only, enable demo mode:
+
+```
+EXPO_PUBLIC_DEMO_MODE=true
+```
+
+In demo mode, the app bypasses auth redirects and loads straight into tabs with local placeholder profile data.
 
 ### 4. Set up the database
 
@@ -171,9 +182,10 @@ In your Supabase project, go to **SQL Editor** and run the contents of:
 
 ```
 supabase/migrations/001_initial_schema.sql
+supabase/migrations/002_health_sync.sql
 ```
 
-This creates all 11 tables, RLS policies, indexes, and the trigger that auto-creates a profile on signup.
+This creates core tracking tables plus Health sync metadata tables (`app_settings`, `health_samples`, `health_sync_state`), RLS policies, indexes, and profile triggers.
 
 ### 5. Deploy the AI chat edge function
 
@@ -187,6 +199,12 @@ supabase functions deploy chat
 ```
 
 ### 6. Run the app
+
+Before launching, validate the project:
+
+```bash
+npm run check
+```
 
 **iOS Simulator** (requires Xcode):
 ```bash
@@ -211,7 +229,7 @@ npm start
 1. **Sign up** → enter email and password
 2. **Onboarding** → select diagnosis type (Crohn's, UC, IBD unspecified, Other), toggle menstrual cycle tracking, allow notifications
 3. **Home tab** → see today's flare risk score, daily stats, timeline of logs, and quick log buttons
-4. **Log tab** → tap a tab at the top (Food / Bowel / Symptoms / Meds / Sleep / Cycle / Weight) and fill in the form — saves offline immediately and syncs when connected
+4. **Log tab** → use **Rapid Log** for one-tap check-ins (well/flare/water) or switch tabs (Food / Bowel / Symptoms / Meds / Sleep / Cycle / Weight) for detailed logging
 5. **Insights tab** → view 7-day or 30-day symptom trends, bowel frequency chart, top trigger foods, and pain heatmap calendar
 6. **Chat tab** → ask the AI assistant questions about IBD, medications, or your symptoms
 7. **Profile tab** → edit your name, toggle settings, export a PDF report for your doctor, or log out
@@ -236,6 +254,8 @@ When a user adds a medication with a scheduled time (e.g. "08:00"), the app sche
 |---|---|
 | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
+| `EXPO_PUBLIC_HEALTH_SYNC_BATCH_SIZE` | Batch size used when upserting HealthKit samples |
+| `EXPO_PUBLIC_HEALTH_SYNC_LOOKBACK_DAYS` | Lookback window used when no sync cursor exists yet |
 
 The AI API key is stored as a Supabase secret (`AI_API_KEY`) and never exposed to the client — all AI requests go through the edge function.
 
@@ -246,3 +266,11 @@ The AI API key is stored as a Supabase secret (`AI_API_KEY`) and never exposed t
 - All features are available to all users — no premium gating is implemented yet
 - The `.env` file is gitignored — never commit your real keys
 - The `supabase/functions/` directory uses Deno (not Node) and has its own `tsconfig.json`
+- Apple Health sync uses incremental cursor-based ingestion in `lib/healthSync.ts`; iOS native bridge + entitlements are still required for runtime sample access (see `docs/HEALTHKIT_SETUP.md`)
+
+---
+
+## Known Limitations
+
+- Lint is wired via `expo lint` and currently clean (`npm run check` passes lint + typecheck + tests + build).
+- Apple Health runtime still depends on native module availability (`react-native-health`) in your iOS build path; unsupported environments are skipped with explicit sync-state errors.

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
+import { AppCard, PrimaryButton, SectionHeader } from '../../components/ui/DesignPrimitives';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -31,13 +33,11 @@ export default function ForgotPasswordScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.inner}>
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.body}>
-            We've sent a password reset link to {email}. Check your inbox.
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.replace('/(auth)/login')}>
-            <Text style={styles.buttonText}>Back to Login</Text>
-          </TouchableOpacity>
+          <SectionHeader title="Check your email" subtitle="A password reset link has been sent." />
+          <AppCard style={styles.card}>
+            <Text style={styles.body}>We sent a reset link to {email}.</Text>
+            <PrimaryButton title="Back to Login" onPress={() => router.replace('/(auth)/login')} />
+          </AppCard>
         </View>
       </View>
     );
@@ -50,27 +50,22 @@ export default function ForgotPasswordScreen() {
     >
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.body}>Enter your email to receive a reset link.</Text>
+        <SectionHeader title="Reset password" subtitle="Enter your email to receive a reset link." />
+        <AppCard style={styles.card}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, error && styles.inputError]}
+            value={email} onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address" autoCapitalize="none"
+            accessibilityLabel="Email address"
+          />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={[styles.input, error && styles.inputError]}
-          value={email} onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address" autoCapitalize="none"
-          accessibilityLabel="Email address"
-        />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
-          {loading
-            ? <ActivityIndicator color={Colors.white} />
-            : <Text style={styles.buttonText}>Send Reset Link</Text>
-          }
-        </TouchableOpacity>
+          <PrimaryButton title="Send Reset Link" onPress={handleReset} loading={loading} />
+        </AppCard>
       </View>
     </KeyboardAvoidingView>
   );
@@ -78,10 +73,12 @@ export default function ForgotPasswordScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  inner: { flex: 1, paddingHorizontal: 24, paddingTop: 60 },
+  inner: { flex: 1, paddingHorizontal: 20, paddingTop: 56 },
+  card: {
+    padding: Theme.spacing.lg,
+  },
   back: { marginBottom: 24 },
   backText: { color: Colors.primary, fontSize: 16 },
-  title: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8 },
   body: { fontSize: 15, color: Colors.textSecondary, marginBottom: 24, lineHeight: 22 },
   label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
   input: {
@@ -91,9 +88,4 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: Colors.danger },
   errorText: { fontSize: 12, color: Colors.danger, marginTop: 4 },
-  button: {
-    backgroundColor: Colors.primary, borderRadius: 10,
-    paddingVertical: 14, alignItems: 'center', marginTop: 16,
-  },
-  buttonText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch,
-  ActivityIndicator, Alert,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -9,6 +9,8 @@ import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { Colors } from '../../constants/colors';
 import { DiagnosisType } from '../../types';
+import { Theme } from '../../constants/theme';
+import { AppCard, IconBadge, PrimaryButton } from '../../components/ui/DesignPrimitives';
 
 const STEPS = ['welcome', 'diagnosis', 'cycle', 'notifications'] as const;
 type Step = typeof STEPS[number];
@@ -79,19 +81,19 @@ export default function OnboardingScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {step === 'welcome' && (
-          <View style={styles.step}>
-            <Text style={styles.emoji}>🌿</Text>
+          <AppCard style={styles.stepCard}>
+            <IconBadge label="IN" size={52} />
             <Text style={styles.title}>Welcome to Inflamend</Text>
             <Text style={styles.body}>
               Your personal IBD management companion. Track your symptoms, food, medications,
-              and more — all in one place. Let's get you set up in just a few steps.
+              and more — all in one place. Let’s get you set up in just a few steps.
             </Text>
-          </View>
+          </AppCard>
         )}
 
         {step === 'diagnosis' && (
-          <View style={styles.step}>
-            <Text style={styles.title}>What's your diagnosis?</Text>
+          <AppCard style={styles.stepCard}>
+            <Text style={styles.title}>What’s your diagnosis?</Text>
             <Text style={styles.body}>This helps personalize your experience. You can change it later.</Text>
             <View style={styles.options}>
               {DIAGNOSIS_OPTIONS.map((opt) => (
@@ -108,11 +110,11 @@ export default function OnboardingScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </AppCard>
         )}
 
         {step === 'cycle' && (
-          <View style={styles.step}>
+          <AppCard style={styles.stepCard}>
             <Text style={styles.title}>Menstrual Cycle Tracking</Text>
             <Text style={styles.body}>
               Many people with IBD notice symptom changes during their cycle. Would you like
@@ -127,18 +129,18 @@ export default function OnboardingScreen() {
                 accessibilityLabel="Track menstrual cycle toggle"
               />
             </View>
-          </View>
+          </AppCard>
         )}
 
         {step === 'notifications' && (
-          <View style={styles.step}>
-            <Text style={styles.emoji}>🔔</Text>
+          <AppCard style={styles.stepCard}>
+            <IconBadge label="NT" tone="secondary" size={52} />
             <Text style={styles.title}>Medication Reminders</Text>
             <Text style={styles.body}>
               Allow notifications so Inflamend can remind you to take your medications
               and log your daily symptoms. You can change this in Settings anytime.
             </Text>
-          </View>
+          </AppCard>
         )}
       </ScrollView>
 
@@ -148,18 +150,13 @@ export default function OnboardingScreen() {
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          style={[styles.nextBtn, !stepIndex && styles.nextBtnFull]}
-          onPress={next}
-          disabled={saving}
-        >
-          {saving
-            ? <ActivityIndicator color={Colors.white} />
-            : <Text style={styles.nextBtnText}>
-                {step === 'notifications' ? 'Get Started' : 'Continue'}
-              </Text>
-          }
-        </TouchableOpacity>
+        <View style={[styles.nextBtnWrap, !stepIndex && styles.nextBtnFull]}>
+          <PrimaryButton
+            title={step === 'notifications' ? 'Get Started' : 'Continue'}
+            onPress={next}
+            loading={saving}
+          />
+        </View>
       </View>
     </View>
   );
@@ -170,11 +167,12 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingTop: 60 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
   dotActive: { backgroundColor: Colors.primary, width: 24 },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 32 },
-  step: { flex: 1 },
-  emoji: { fontSize: 56, marginBottom: 16 },
+  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 20 },
+  stepCard: {
+    padding: Theme.spacing.xl,
+  },
   title: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
-  body: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24, marginBottom: 32 },
+  body: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24, marginTop: 12, marginBottom: 24 },
   options: { gap: 12 },
   option: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
@@ -196,10 +194,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: 'center',
   },
   backBtnText: { fontSize: 16, color: Colors.textSecondary, fontWeight: '600' },
-  nextBtn: {
+  nextBtnWrap: {
     flex: 2, backgroundColor: Colors.primary, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
+    justifyContent: 'center',
   },
   nextBtnFull: { flex: 1 },
-  nextBtnText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
 });

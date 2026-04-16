@@ -36,6 +36,7 @@ import {
   SIDE_EFFECT_OPTIONS,
 } from '../../constants';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
 import { Medication, MealType, BloodAmount, Mood, FlowLevel } from '../../types';
 import { SliderInput } from '../../components/ui/SliderInput';
 import { TagSelector } from '../../components/ui/TagSelector';
@@ -44,15 +45,130 @@ import { TagSelector } from '../../components/ui/TagSelector';
 
 type TabKey = 'food' | 'bowel' | 'symptoms' | 'meds' | 'sleep' | 'cycle' | 'weight';
 
-const TABS: { key: TabKey; label: string; emoji: string }[] = [
-  { key: 'food', label: 'Food', emoji: '🍽️' },
-  { key: 'bowel', label: 'Bowel', emoji: '🚽' },
-  { key: 'symptoms', label: 'Symptoms', emoji: '🩺' },
-  { key: 'meds', label: 'Meds', emoji: '💊' },
-  { key: 'sleep', label: 'Sleep', emoji: '😴' },
-  { key: 'cycle', label: 'Cycle', emoji: '🌸' },
-  { key: 'weight', label: 'Weight', emoji: '⚖️' },
+const TABS: { key: TabKey; label: string; badge: string }[] = [
+  { key: 'food', label: 'Food', badge: 'FD' },
+  { key: 'bowel', label: 'Bowel', badge: 'BW' },
+  { key: 'symptoms', label: 'Symptoms', badge: 'SY' },
+  { key: 'meds', label: 'Meds', badge: 'MD' },
+  { key: 'sleep', label: 'Sleep', badge: 'SL' },
+  { key: 'cycle', label: 'Cycle', badge: 'CY' },
+  { key: 'weight', label: 'Weight', badge: 'WT' },
 ];
+
+type RapidLogSectionProps = {
+  onOpenTab: (tab: TabKey) => void;
+};
+
+function RapidLogSection({ onOpenTab }: RapidLogSectionProps) {
+  const { add: addSymptom } = useSymptomLogs();
+  const { add: addFood } = useFoodLogs();
+  const [busy, setBusy] = useState<null | 'well' | 'flare' | 'water'>(null);
+  const [successText, setSuccessText] = useState<string | null>(null);
+
+  const finish = (message: string) => {
+    setSuccessText(message);
+    setTimeout(() => setSuccessText(null), 1600);
+  };
+
+  const logWellCheckIn = async () => {
+    if (busy) return;
+    setBusy('well');
+    await addSymptom({
+      logged_at: new Date().toISOString(),
+      pain_level: 1,
+      pain_location: [],
+      fatigue_level: 2,
+      nausea_level: 0,
+      bloating_level: 1,
+      stress_level: 2,
+      mood: 'good',
+      is_flare: false,
+      notes: 'Rapid check-in',
+    });
+    setBusy(null);
+    finish('Quick symptom check-in saved');
+  };
+
+  const logFlareCheckIn = async () => {
+    if (busy) return;
+    setBusy('flare');
+    await addSymptom({
+      logged_at: new Date().toISOString(),
+      pain_level: 8,
+      pain_location: ['abdomen'],
+      fatigue_level: 7,
+      nausea_level: 5,
+      bloating_level: 6,
+      stress_level: 7,
+      mood: 'bad',
+      is_flare: true,
+      notes: 'Rapid flare check-in',
+    });
+    setBusy(null);
+    finish('Flare check-in saved');
+  };
+
+  const logWater = async () => {
+    if (busy) return;
+    setBusy('water');
+    await addFood({
+      logged_at: new Date().toISOString(),
+      meal_type: 'drink',
+      description: 'Water',
+      photo_url: null,
+      calories: null,
+      protein_g: null,
+      carbs_g: null,
+      fat_g: null,
+      fiber_g: null,
+      water_ml: 250,
+      is_trigger_food: false,
+      is_safe_food: true,
+      notes: 'Rapid hydration log',
+    });
+    setBusy(null);
+    finish('250ml water logged');
+  };
+
+  return (
+    <View style={rapidStyles.card}>
+      <Text style={rapidStyles.title}>Rapid Log</Text>
+      <Text style={rapidStyles.subtitle}>Save a check-in in one tap</Text>
+
+      <View style={rapidStyles.row}>
+        <TouchableOpacity
+          style={[rapidStyles.pill, busy === 'well' && rapidStyles.pillDisabled]}
+          onPress={logWellCheckIn}
+          disabled={busy !== null}
+        >
+          <Text style={rapidStyles.pillText}>{busy === 'well' ? 'Saving…' : 'Stable check-in'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[rapidStyles.pill, busy === 'flare' && rapidStyles.pillDisabled]}
+          onPress={logFlareCheckIn}
+          disabled={busy !== null}
+        >
+          <Text style={rapidStyles.pillText}>{busy === 'flare' ? 'Saving…' : 'Flare check-in'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={rapidStyles.row}>
+        <TouchableOpacity
+          style={[rapidStyles.pill, busy === 'water' && rapidStyles.pillDisabled]}
+          onPress={logWater}
+          disabled={busy !== null}
+        >
+          <Text style={rapidStyles.pillText}>{busy === 'water' ? 'Saving…' : '+250ml water'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={rapidStyles.secondaryPill} onPress={() => onOpenTab('symptoms')}>
+          <Text style={rapidStyles.secondaryPillText}>Open symptom form</Text>
+        </TouchableOpacity>
+      </View>
+
+      {successText && <Text style={rapidStyles.success}>{successText}</Text>}
+    </View>
+  );
+}
 
 // ─── Shared UI Helpers ───────────────────────────────────────────────────────
 
@@ -71,7 +187,7 @@ function Divider() {
 function SuccessBanner() {
   return (
     <View style={sharedStyles.successBanner}>
-      <Text style={sharedStyles.successCheck}>✓</Text>
+      <View style={sharedStyles.successCheck}><Text style={sharedStyles.successCheckText}>OK</Text></View>
       <Text style={sharedStyles.successText}>Logged!</Text>
     </View>
   );
@@ -414,14 +530,14 @@ function BowelForm() {
                   {bt.scale}
                 </Text>
               </View>
-              <Text style={bristolStyles.emoji}>{bt.emoji}</Text>
+              <View style={bristolStyles.badge}><Text style={bristolStyles.badgeText}>{bt.badge}</Text></View>
               <View style={bristolStyles.textBlock}>
                 <Text style={[bristolStyles.name, selected && bristolStyles.nameSelected]}>
                   {bt.name}
                 </Text>
                 <Text style={bristolStyles.desc}>{bt.description}</Text>
               </View>
-              {selected && <Text style={bristolStyles.checkmark}>✓</Text>}
+              {selected && <Text style={bristolStyles.checkmark}>OK</Text>}
             </TouchableOpacity>
           );
         })}
@@ -534,10 +650,16 @@ const bristolStyles = StyleSheet.create({
   scaleNumSelected: {
     color: Colors.primary,
   },
-  emoji: {
-    fontSize: 22,
+  badge: {
+    backgroundColor: Colors.white,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     marginRight: 10,
   },
+  badgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   textBlock: {
     flex: 1,
   },
@@ -555,7 +677,7 @@ const bristolStyles = StyleSheet.create({
     marginTop: 1,
   },
   checkmark: {
-    fontSize: 16,
+    fontSize: 11,
     color: Colors.primary,
     fontWeight: '700',
     marginLeft: 6,
@@ -686,7 +808,7 @@ function SymptomsForm() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.label}
               >
-                <Text style={moodStyles.emoji}>{opt.emoji}</Text>
+                <View style={moodStyles.badge}><Text style={moodStyles.badgeText}>{opt.badge}</Text></View>
                 <Text style={[moodStyles.label, active && moodStyles.labelActive]}>
                   {opt.label}
                 </Text>
@@ -741,9 +863,17 @@ const moodStyles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
   },
-  emoji: {
-    fontSize: 22,
+  badge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     marginBottom: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '700',
   },
   label: {
     fontSize: 10,
@@ -1435,7 +1565,10 @@ export default function LogScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={tab.label}
               >
-                <Text style={styles.tabEmoji}>{tab.emoji}</Text>
+                <View style={styles.tabBadge}>
+                  <Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>{tab.badge}</Text>
+                </View>
+                <View style={styles.tabBadge}><Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>{tab.badge}</Text></View>
                 <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
                   {tab.label}
                 </Text>
@@ -1452,6 +1585,7 @@ export default function LogScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <RapidLogSection onOpenTab={setActiveTab} />
         {renderForm()}
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -1464,14 +1598,10 @@ export default function LogScreen() {
 const sharedStyles = StyleSheet.create({
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: Theme.radius.lg,
+    padding: Theme.spacing.lg,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...Theme.shadow.card,
   },
   fieldLabel: {
     fontSize: 14,
@@ -1564,14 +1694,23 @@ const sharedStyles = StyleSheet.create({
     paddingVertical: 60,
   },
   successCheck: {
-    fontSize: 56,
-    color: Colors.secondary,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
+  },
+  successCheckText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 16,
   },
   successText: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.secondary,
+    color: Colors.primary,
   },
   collapsibleHeader: {
     flexDirection: 'row',
@@ -1623,7 +1762,7 @@ const sharedStyles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   radioLabel: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '500',
     color: Colors.textSecondary,
   },
@@ -1696,8 +1835,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  tabEmoji: {
-    fontSize: 15,
+  tabBadge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  tabBadgeTextActive: {
+    color: Colors.white,
   },
   tabLabel: {
     fontSize: 13,
@@ -1710,5 +1860,69 @@ const styles = StyleSheet.create({
   formContent: {
     padding: 16,
     paddingBottom: 60,
+  },
+});
+
+const rapidStyles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: Theme.radius.lg,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 3,
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  pill: {
+    flex: 1,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  pillDisabled: {
+    opacity: 0.65,
+  },
+  pillText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  secondaryPill: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  secondaryPillText: {
+    color: Colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  success: {
+    marginTop: 4,
+    fontSize: 12,
+    color: Colors.secondary,
+    fontWeight: '600',
   },
 });

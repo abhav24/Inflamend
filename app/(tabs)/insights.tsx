@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { useBowelLogs, useSymptomLogs, useFoodLogs } from '../../hooks/useLogs';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
 import { subDays, format, eachDayOfInterval, startOfDay } from 'date-fns';
 import { BowelLog, FoodLog, SymptomLog } from '../../types';
+import { IconBadge } from '../../components/ui/DesignPrimitives';
 
 type Range = '7d' | '30d';
 
@@ -70,7 +72,6 @@ function heatmapColor(avgPain: number | null): string {
 function SimpleLineChart({ points, maxY, color }: { points: DayPoint[]; maxY: number; color: string }) {
   if (points.length === 0) return null;
   const CHART_HEIGHT = 120;
-  const CHART_BAR_WIDTH = 100 / points.length;
 
   return (
     <View style={{ height: CHART_HEIGHT + 24, marginTop: 8 }}>
@@ -154,7 +155,7 @@ export default function InsightsScreen() {
 
   useEffect(() => {
     loadData(range);
-  }, [range]);
+  }, [range, loadData]);
 
   const days = eachDayOfInterval({
     start: subDays(new Date(), (range === '7d' ? 7 : 30) - 1),
@@ -237,7 +238,7 @@ export default function InsightsScreen() {
               <SimpleLineChart points={symptomPoints} maxY={10} color={Colors.primary} />
             ) : (
               <View style={styles.noDataContainer}>
-                <Text style={styles.noDataEmoji}>📊</Text>
+                <IconBadge label="SY" size={34} />
                 <Text style={styles.noDataText}>No symptom data for this period</Text>
               </View>
             )}
@@ -251,7 +252,7 @@ export default function InsightsScreen() {
               <SimpleBarChart points={bowelPoints} color={Colors.info} />
             ) : (
               <View style={styles.noDataContainer}>
-                <Text style={styles.noDataEmoji}>🚽</Text>
+                <IconBadge label="BW" size={34} />
                 <Text style={styles.noDataText}>No bowel movement data for this period</Text>
               </View>
             )}
@@ -278,7 +279,7 @@ export default function InsightsScreen() {
               </>
             ) : (
               <View style={styles.noDataContainer}>
-                <Text style={styles.noDataEmoji}>✅</Text>
+                <IconBadge label="TR" size={34} tone="success" />
                 <Text style={styles.noDataText}>No trigger foods logged yet</Text>
               </View>
             )}
@@ -390,14 +391,11 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: Theme.radius.lg,
     marginHorizontal: 20,
     marginBottom: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Theme.shadow.card,
   },
   cardTitle: {
     fontSize: 16,
@@ -414,13 +412,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 28,
   },
-  noDataEmoji: {
-    fontSize: 36,
-    marginBottom: 8,
-  },
   noDataText: {
     fontSize: 14,
     color: Colors.textSecondary,
+    marginTop: 10,
   },
   triggerRow: {
     flexDirection: 'row',

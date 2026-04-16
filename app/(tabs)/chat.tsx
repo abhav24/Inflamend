@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { ChatMessage, ChatRole } from '../../types';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
 import { STARTER_QUESTIONS } from '../../constants';
 import { format } from 'date-fns';
 
@@ -31,26 +32,41 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
 
   const fetchMessages = useCallback(async () => {
-    if (!userId) return;
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-    if (error) {
-      console.error('fetchMessages', error);
+    if (!userId) {
+      setInitialLoad(false);
       return;
     }
-    setMessages(data ?? []);
-    setInitialLoad(false);
+
+    try {
+      setInitialLoadError(null);
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('fetchMessages', error);
+        setInitialLoadError('Could not load your chat history yet.');
+        return;
+      }
+
+      setMessages(data ?? []);
+    } catch (error) {
+      console.error('fetchMessages unexpected', error);
+      setInitialLoadError('Could not load your chat history yet.');
+    } finally {
+      setInitialLoad(false);
+    }
   }, [userId]);
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [fetchMessages]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -197,11 +213,17 @@ export default function ChatScreen() {
         <Text style={styles.headerSubtitle}>Your AI health companion</Text>
       </View>
 
+      {initialLoadError && (
+        <View style={styles.loadErrorBanner}>
+          <Text style={styles.loadErrorText}>{initialLoadError}</Text>
+        </View>
+      )}
+
       {/* Messages / Starter Questions */}
       {messages.length === 0 && !loading ? (
         <View style={styles.starterContainer}>
           <Text style={styles.starterIntro}>
-            Hi! I'm your IBD support assistant. How can I help you today?
+            Hi! I’m your IBD support assistant. How can I help you today?
           </Text>
           <Text style={styles.starterHint}>Here are some things you can ask me:</Text>
           {STARTER_QUESTIONS.map((question) => (
@@ -275,10 +297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Theme.shadow.subtle,
   },
   headerTitle: {
     fontSize: 18,
@@ -289,6 +308,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  loadErrorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FECACA',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  loadErrorText: {
+    color: Colors.danger,
+    fontSize: 12,
+    fontWeight: '600',
   },
   starterContainer: {
     flex: 1,

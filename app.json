@@ -18,7 +18,9 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Used to photograph meals for your food log.",
         "NSPhotoLibraryUsageDescription": "Used to attach photos to your food log entries.",
-        "NSUserNotificationsUsageDescription": "Used to send medication reminders."
+        "NSUserNotificationsUsageDescription": "Used to send medication reminders.",
+        "NSHealthShareUsageDescription": "Inflamend reads Health data (like steps and sleep) to personalize your symptom insights.",
+        "NSHealthUpdateUsageDescription": "Inflamend may write wellness summaries to Health when you enable sync."
       }
     },
     "android": {

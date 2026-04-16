@@ -15,11 +15,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '../../lib/supabase';
+import {
+  getHealthSyncDiagnostics,
+  HealthSyncDiagnostic,
+  requestAppleHealthPermissions,
+  syncAppleHealthData,
+} from '../../lib/healthSync';
 import { useAuthStore } from '../../store/authStore';
 import { Profile } from '../../types';
 import { DIAGNOSIS_LABELS } from '../../constants';
 import { Colors } from '../../constants/colors';
+import { Theme } from '../../constants/theme';
 import { format, subDays } from 'date-fns';
+import { IconBadge } from '../../components/ui/DesignPrimitives';
 
 const NOTIF_MED_KEY = 'notif_medication_reminders';
 const NOTIF_DAILY_KEY = 'notif_daily_log_reminder';
@@ -41,6 +49,10 @@ export default function ProfileScreen() {
   const [dailyReminder, setDailyReminder] = useState(false);
 
   const [exportLoading, setExportLoading] = useState(false);
+  const [healthBusy, setHealthBusy] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<string | null>(null);
+  const [healthDiagnostics, setHealthDiagnostics] = useState<HealthSyncDiagnostic[]>([]);
+  const [healthDiagnosticsLoading, setHealthDiagnosticsLoading] = useState(false);
 
   // Load notification prefs from AsyncStorage
   useEffect(() => {
@@ -66,6 +78,26 @@ export default function ProfileScreen() {
       setTracksMenstrual(profile.tracks_menstrual_cycle);
     }
   }, [profile]);
+
+  const loadHealthDiagnostics = useCallback(async () => {
+    if (!userId) {
+      setHealthDiagnostics([]);
+      return;
+    }
+    setHealthDiagnosticsLoading(true);
+    try {
+      const diagnostics = await getHealthSyncDiagnostics(userId);
+      setHealthDiagnostics(diagnostics);
+    } catch (error) {
+      console.error('loadHealthDiagnostics', error);
+    } finally {
+      setHealthDiagnosticsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadHealthDiagnostics();
+  }, [loadHealthDiagnostics]);
 
   const saveDisplayName = useCallback(async () => {
     if (!userId) return;
@@ -259,6 +291,51 @@ export default function ProfileScreen() {
     Alert.alert('Terms of Service', 'Coming soon.', [{ text: 'OK' }]);
   };
 
+  const handleConnectAppleHealth = useCallback(async () => {
+    if (!userId) return;
+    setHealthBusy(true);
+    try {
+      const result = await requestAppleHealthPermissions(userId);
+      setHealthStatus(result.message);
+      if (!result.granted) {
+        Alert.alert('Apple Health', result.message);
+      }
+    } catch (error) {
+      console.error('handleConnectAppleHealth', error);
+      const msg = 'Failed to connect Apple Health. Please try again.';
+      setHealthStatus(msg);
+      Alert.alert('Apple Health', msg);
+    } finally {
+      setHealthBusy(false);
+      loadHealthDiagnostics();
+    }
+  }, [userId, loadHealthDiagnostics]);
+
+  const handleSyncAppleHealth = useCallback(async () => {
+    if (!userId) return;
+    setHealthBusy(true);
+    try {
+      const result = await syncAppleHealthData(userId);
+      setHealthStatus(result.message);
+      Alert.alert('Apple Health Sync', result.message);
+    } catch (error) {
+      console.error('handleSyncAppleHealth', error);
+      const msg = 'Health sync failed. Please try again.';
+      setHealthStatus(msg);
+      Alert.alert('Apple Health Sync', msg);
+    } finally {
+      setHealthBusy(false);
+      loadHealthDiagnostics();
+    }
+  }, [userId, loadHealthDiagnostics]);
+
+  const metricLabel: Record<HealthSyncDiagnostic['metric'], string> = {
+    steps: 'Steps',
+    heart_rate: 'Heart Rate',
+    sleep_hours: 'Sleep',
+    active_energy_kcal: 'Active Energy',
+  };
+
   const handleLogout = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -406,7 +483,7 @@ export default function ProfileScreen() {
             <ActivityIndicator size="small" color={Colors.white} />
           ) : (
             <>
-              <Text style={styles.exportButtonEmoji}>📄</Text>
+              <IconBadge label="PDF" size={24} tone="secondary" />
               <Text style={styles.exportButtonText}>Export Report (PDF)</Text>
             </>
           )}
@@ -414,6 +491,78 @@ export default function ProfileScreen() {
         <Text style={styles.exportHint}>
           Generates a 30-day summary report you can share with your healthcare provider.
         </Text>
+      </View>
+
+      {/* Apple Health */}
+      <Text style={styles.sectionLabel}>APPLE HEALTH (BETA)</Text>
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={[styles.secondaryButton, healthBusy && styles.secondaryButtonDisabled]}
+          onPress={handleConnectAppleHealth}
+          disabled={healthBusy}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.secondaryButtonText}>Connect Apple Health</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.secondaryButton, styles.secondaryButtonLast, healthBusy && styles.secondaryButtonDisabled]}
+          onPress={handleSyncAppleHealth}
+          disabled={healthBusy}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.secondaryButtonText}>Sync Health Data Now</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.secondaryButton, styles.secondaryButtonLast, healthDiagnosticsLoading && styles.secondaryButtonDisabled]}
+          onPress={loadHealthDiagnostics}
+          disabled={healthDiagnosticsLoading}
+          activeOpacity={0.8}
+        >
+          {healthDiagnosticsLoading ? (
+            <ActivityIndicator size="small" color={Colors.textPrimary} />
+          ) : (
+            <Text style={styles.secondaryButtonText}>Refresh Diagnostics</Text>
+          )}
+        </TouchableOpacity>
+
+        {healthStatus && <Text style={styles.healthStatus}>{healthStatus}</Text>}
+
+        <View style={styles.healthDiagWrap}>
+          <Text style={styles.healthDiagTitle}>Sync Diagnostics</Text>
+          {healthDiagnostics.length === 0 && !healthDiagnosticsLoading ? (
+            <Text style={styles.healthDiagEmpty}>No diagnostic data yet.</Text>
+          ) : (
+            healthDiagnostics.map((diag) => {
+              const statusColor =
+                diag.lastStatus === 'success'
+                  ? Colors.success
+                  : diag.lastStatus === 'error'
+                    ? Colors.danger
+                    : diag.lastStatus === 'syncing'
+                      ? Colors.warning
+                      : Colors.textSecondary;
+
+              return (
+                <View key={diag.metric} style={styles.healthDiagRow}>
+                  <View style={styles.healthDiagRowHead}>
+                    <Text style={styles.healthDiagMetric}>{metricLabel[diag.metric]}</Text>
+                    <Text style={[styles.healthDiagStatus, { color: statusColor }]}>
+                      {diag.lastStatus.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={styles.healthDiagMeta}>Samples: {diag.sampleCount}</Text>
+                  {diag.lastSyncedAt && (
+                    <Text style={styles.healthDiagMeta}>
+                      Last sync: {format(new Date(diag.lastSyncedAt), 'MMM d, h:mm a')}
+                    </Text>
+                  )}
+                  {diag.lastError && <Text style={styles.healthDiagError}>Error: {diag.lastError}</Text>}
+                </View>
+              );
+            })
+          )}
+        </View>
       </View>
 
       {/* Account */}
@@ -480,12 +629,9 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.white,
-    borderRadius: 14,
+    borderRadius: Theme.radius.lg,
     marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Theme.shadow.card,
     overflow: 'hidden',
   },
   avatarRow: {
@@ -616,9 +762,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 8,
   },
-  exportButtonEmoji: {
-    fontSize: 18,
-  },
   exportButtonText: {
     color: Colors.white,
     fontWeight: '700',
@@ -630,6 +773,83 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     marginHorizontal: 16,
+  },
+  secondaryButton: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  secondaryButtonLast: {
+    marginTop: 10,
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.6,
+  },
+  secondaryButtonText: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  healthStatus: {
+    marginHorizontal: 16,
+    marginVertical: 14,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  healthDiagWrap: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: Colors.background,
+  },
+  healthDiagTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  healthDiagEmpty: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  healthDiagRow: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  healthDiagRowHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  healthDiagMetric: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  healthDiagStatus: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  healthDiagMeta: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  healthDiagError: {
+    marginTop: 2,
+    fontSize: 11,
+    color: Colors.danger,
   },
   linkRow: {
     flexDirection: 'row',
@@ -655,7 +875,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 24,
     backgroundColor: Colors.danger,
-    borderRadius: 14,
+    borderRadius: Theme.radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
   },
