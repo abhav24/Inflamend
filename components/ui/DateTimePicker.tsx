@@ -3,13 +3,13 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   Modal,
 } from 'react-native';
 import RNDateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { Colors } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { useColors } from '../../constants/colors';
 
 type PickerMode = 'date' | 'time' | 'datetime';
 
@@ -33,8 +33,8 @@ function formatValue(date: Date, mode: PickerMode): string {
   }
 }
 
-function modeIcon(mode: PickerMode): string {
-  return mode === 'time' ? '🕐' : '📅';
+function modeIcon(mode: PickerMode): React.ComponentProps<typeof Ionicons>['name'] {
+  return mode === 'time' ? 'time-outline' : 'calendar-outline';
 }
 
 export function DateTimePicker({
@@ -44,6 +44,7 @@ export function DateTimePicker({
   mode = 'datetime',
   accessibilityLabel,
 }: DateTimePickerProps) {
+  const C = useColors();
   const [show, setShow] = useState(false);
   // For datetime on iOS we need two passes: first date, then time
   const [phase, setPhase] = useState<'date' | 'time'>('date');
@@ -97,36 +98,64 @@ export function DateTimePicker({
   const pickerMode = mode === 'datetime' ? phase : mode;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ fontSize: 14, fontWeight: '600', color: C.textPrimary, marginBottom: 6 }}>{label}</Text>
       <TouchableOpacity
-        style={styles.pill}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: C.surfaceMuted,
+          borderRadius: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: C.glassBorder,
+        }}
         onPress={handlePress}
         activeOpacity={0.75}
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityRole="button"
         accessibilityHint="Tap to change"
       >
-        <Text style={styles.icon}>{modeIcon(mode)}</Text>
-        <View style={styles.textBlock}>
-          <Text style={styles.valueText}>{formatValue(value, mode)}</Text>
-          <Text style={styles.hint}>Tap to change</Text>
+        <Ionicons name={modeIcon(mode)} size={18} color={C.primary} style={{ marginRight: 10 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: C.textPrimary }}>{formatValue(value, mode)}</Text>
+          <Text style={{ fontSize: 11, color: C.textSecondary, marginTop: 1 }}>Tap to change</Text>
         </View>
-        <Text style={styles.chevron}>›</Text>
+        <Ionicons name="chevron-forward" size={16} color={C.primary} style={{ marginLeft: 6 }} />
       </TouchableOpacity>
 
       {Platform.OS === 'ios' ? (
         <Modal visible={show} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalSheet}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
+          <View style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+          }}>
+            <View style={{
+              backgroundColor: C.surface,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              borderWidth: 1,
+              borderColor: C.glassBorder,
+              paddingBottom: 32,
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: C.border,
+              }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: C.textPrimary }}>
                   {mode === 'datetime'
                     ? phase === 'date' ? 'Select Date' : 'Select Time'
                     : mode === 'time' ? 'Select Time' : 'Select Date'}
                 </Text>
                 <TouchableOpacity onPress={handleDone}>
-                  <Text style={styles.doneBtn}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: C.primary }}>
                     {mode === 'datetime' && phase === 'date' ? 'Next →' : 'Done'}
                   </Text>
                 </TouchableOpacity>
@@ -136,7 +165,7 @@ export function DateTimePicker({
                 mode={pickerMode}
                 display="spinner"
                 onChange={handleChange}
-                style={styles.picker}
+                style={{ width: '100%' }}
               />
             </View>
           </View>
@@ -154,81 +183,3 @@ export function DateTimePicker({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: Colors.primary + '40',
-  },
-  icon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
-  textBlock: {
-    flex: 1,
-  },
-  valueText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  hint: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 1,
-  },
-  chevron: {
-    fontSize: 20,
-    color: Colors.primary,
-    fontWeight: '300',
-    marginLeft: 6,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  modalSheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  doneBtn: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  picker: {
-    width: '100%',
-  },
-});

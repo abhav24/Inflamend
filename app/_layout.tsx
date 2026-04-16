@@ -21,7 +21,7 @@ export default function RootLayout() {
     if (isDemoMode) {
       const demoProfile: Profile = {
         id: 'demo-local-profile',
-        display_name: 'Demo User',
+        display_name: 'Bob',
         date_of_birth: null,
         diagnosis_type: null,
         diagnosis_date: null,
@@ -79,14 +79,18 @@ export default function RootLayout() {
   useEffect(() => {
     if (isLoading) return;
     const inAuthGroup = segments[0] === '(auth)';
-    if (isDemoMode && inAuthGroup) {
-      router.replace('/(tabs)/home');
+    const inTabsGroup = segments[0] === '(tabs)';
+
+    if (isDemoMode) {
+      if (!inTabsGroup) {
+        router.replace('/(tabs)/home');
+      }
       return;
     }
 
-    if (!isDemoMode && !session && !inAuthGroup) {
+    if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (!isDemoMode && session && inAuthGroup) {
+    } else if (session && inAuthGroup) {
       router.replace('/(tabs)/home');
     }
   }, [session, isLoading, segments, router, isDemoMode]);

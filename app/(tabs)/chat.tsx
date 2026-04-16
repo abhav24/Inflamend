@@ -1,20 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, FlatList,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { ChatMessage, ChatRole } from '../../types';
-import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
+import { useColors } from '../../constants/colors';
 import { STARTER_QUESTIONS } from '../../constants';
 import { format } from 'date-fns';
 
@@ -27,52 +20,36 @@ function makeId() {
 
 export default function ChatScreen() {
   const { userId } = useAuthStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const C = useColors();
+  const [messages, setMessages]         = useState<ChatMessage[]>([]);
+  const [input, setInput]               = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [sending, setSending]           = useState(false);
+  const [initialLoad, setInitialLoad]   = useState(true);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
 
   const fetchMessages = useCallback(async () => {
-    if (!userId) {
-      setInitialLoad(false);
-      return;
-    }
-
+    if (!userId) { setInitialLoad(false); return; }
     try {
       setInitialLoadError(null);
       const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', userId)
+        .from('chat_messages').select('*').eq('user_id', userId)
         .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('fetchMessages', error);
-        setInitialLoadError('Could not load your chat history yet.');
-        return;
-      }
-
+      if (error) { setInitialLoadError('Could not load chat history.'); return; }
       setMessages(data ?? []);
-    } catch (error) {
-      console.error('fetchMessages unexpected', error);
-      setInitialLoadError('Could not load your chat history yet.');
+    } catch {
+      setInitialLoadError('Could not load chat history.');
     } finally {
       setInitialLoad(false);
     }
   }, [userId]);
 
-  useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages]);
 
@@ -80,98 +57,77 @@ export default function ChatScreen() {
     const trimmed = text.trim();
     if (!trimmed || !userId || sending || loading) return;
 
-    setSending(true);
-    setInput('');
-
+    setSending(true); setInput('');
     const userMsg: ChatMessage = {
-      id: makeId(),
-      user_id: userId,
-      role: 'user' as ChatRole,
-      content: trimmed,
-      created_at: new Date().toISOString(),
+      id: makeId(), user_id: userId, role: 'user' as ChatRole,
+      content: trimmed, created_at: new Date().toISOString(),
     };
-
     setMessages((prev) => [...prev, userMsg]);
-
-    // Save user message to supabase
-    await supabase.from('chat_messages').insert({
-      id: userMsg.id,
-      user_id: userId,
-      role: userMsg.role,
-      content: userMsg.content,
-      created_at: userMsg.created_at,
-    });
-
-    setSending(false);
-    setLoading(true);
+    await supabase.from('chat_messages').insert({ ...userMsg });
+    setSending(false); setLoading(true);
 
     try {
-      // Build the last 20 messages including the one just sent
-      const allMessages = [...messages, userMsg];
-      const last20 = allMessages.slice(-20).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
+      const last20 = [...messages, userMsg].slice(-20).map((m) => ({ role: m.role, content: m.content }));
       const { data: fnData, error: fnError } = await supabase.functions.invoke('chat', {
         body: { messages: last20, userId },
       });
-
-      if (fnError) {
-        throw new Error(fnError.message);
-      }
-
-      const responseText: string = fnData?.content ?? 'Sorry, I could not generate a response.';
-
+      if (fnError) throw new Error(fnError.message);
       const assistantMsg: ChatMessage = {
-        id: makeId(),
-        user_id: userId,
-        role: 'assistant' as ChatRole,
-        content: responseText,
+        id: makeId(), user_id: userId, role: 'assistant' as ChatRole,
+        content: fnData?.content ?? 'Sorry, I could not generate a response.',
         created_at: new Date().toISOString(),
       };
-
       setMessages((prev) => [...prev, assistantMsg]);
-
-      await supabase.from('chat_messages').insert({
-        id: assistantMsg.id,
-        user_id: userId,
-        role: assistantMsg.role,
-        content: assistantMsg.content,
-        created_at: assistantMsg.created_at,
-      });
-    } catch (err: any) {
-      console.error('chat error', err);
-      const errMsg: ChatMessage = {
-        id: makeId(),
-        user_id: userId,
-        role: 'assistant' as ChatRole,
-        content: 'Sorry, something went wrong. Please try again in a moment.',
+      await supabase.from('chat_messages').insert({ ...assistantMsg });
+    } catch {
+      setMessages((prev) => [...prev, {
+        id: makeId(), user_id: userId!, role: 'assistant' as ChatRole,
+        content: 'Something went wrong. Please try again in a moment.',
         created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errMsg]);
+      }]);
     } finally {
       setLoading(false);
     }
   }, [userId, messages, sending, loading]);
 
-  const handleSend = () => sendMessage(input);
-  const handleStarterQuestion = (question: string) => sendMessage(question);
-
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === 'user';
     return (
-      <View style={[styles.bubbleWrapper, isUser ? styles.bubbleWrapperUser : styles.bubbleWrapperAssistant]}>
+      <View style={{
+        flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end',
+        justifyContent: isUser ? 'flex-end' : 'flex-start',
+      }}>
         {!isUser && (
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>AI</Text>
+          <View style={{
+            width: 32, height: 32, borderRadius: 10,
+            backgroundColor: C.primary + '18',
+            alignItems: 'center', justifyContent: 'center',
+            marginRight: 8, flexShrink: 0,
+          }}>
+            <Ionicons name="sparkles" size={15} color={C.primary} />
           </View>
         )}
-        <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
-          <Text style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant]}>
+        <View style={{
+          maxWidth: '75%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
+          backgroundColor: isUser ? C.primary : C.surface,
+          borderBottomRightRadius: isUser ? 4 : 18,
+          borderBottomLeftRadius: isUser ? 18 : 4,
+          shadowColor: '#000',
+          shadowOpacity: isUser ? 0 : (C.background === '#000000' ? 0 : 0.04),
+          shadowRadius: 6, shadowOffset: { width: 0, height: 1 },
+          elevation: isUser ? 0 : 1,
+        }}>
+          <Text style={{
+            fontSize: 15, lineHeight: 22,
+            color: isUser ? '#FFFFFF' : C.textPrimary,
+          }}>
             {item.content}
           </Text>
-          <Text style={[styles.bubbleTime, isUser ? styles.bubbleTimeUser : styles.bubbleTimeAssistant]}>
+          <Text style={{
+            fontSize: 11, marginTop: 4,
+            color: isUser ? 'rgba(255,255,255,0.6)' : C.textMuted,
+            textAlign: isUser ? 'right' : 'left',
+          }}>
             {format(new Date(item.created_at), 'h:mm a')}
           </Text>
         </View>
@@ -179,61 +135,95 @@ export default function ChatScreen() {
     );
   };
 
-  const renderTypingIndicator = () => {
-    if (!loading) return null;
-    return (
-      <View style={[styles.bubbleWrapper, styles.bubbleWrapperAssistant]}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>AI</Text>
-        </View>
-        <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
-          <Text style={styles.typingText}>...</Text>
-        </View>
-      </View>
-    );
-  };
-
   if (initialLoad) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.background }}>
+        <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: C.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Health Assistant</Text>
-        <Text style={styles.headerSubtitle}>Your AI health companion</Text>
+      {/* ── Header ── */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        backgroundColor: C.surface,
+        paddingTop: Platform.OS === 'ios' ? 56 : 20,
+        paddingBottom: 14, paddingHorizontal: 20,
+        borderBottomWidth: 0.5, borderBottomColor: C.separator,
+      }}>
+        <View style={{
+          width: 42, height: 42, borderRadius: 13,
+          backgroundColor: C.primary,
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+        </View>
+        <View>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: C.textPrimary }}>AI Health Assistant</Text>
+          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Ask me anything about IBD</Text>
+        </View>
       </View>
 
       {initialLoadError && (
-        <View style={styles.loadErrorBanner}>
-          <Text style={styles.loadErrorText}>{initialLoadError}</Text>
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 6,
+          backgroundColor: C.danger + '12',
+          borderBottomWidth: 0.5, borderBottomColor: C.danger + '30',
+          paddingHorizontal: 16, paddingVertical: 10,
+        }}>
+          <Ionicons name="alert-circle-outline" size={14} color={C.danger} />
+          <Text style={{ color: C.danger, fontSize: 12, fontWeight: '600' }}>{initialLoadError}</Text>
         </View>
       )}
 
-      {/* Messages / Starter Questions */}
+      {/* ── Empty State / Messages ── */}
       {messages.length === 0 && !loading ? (
-        <View style={styles.starterContainer}>
-          <Text style={styles.starterIntro}>
-            Hi! I’m your IBD support assistant. How can I help you today?
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 32 }}>
+          {/* Hero */}
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View style={{
+              width: 76, height: 76, borderRadius: 24,
+              backgroundColor: C.primary + '15',
+              alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+            }}>
+              <Ionicons name="sparkles" size={34} color={C.primary} />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: C.textPrimary, marginBottom: 6 }}>
+              Hi, I&apos;m your IBD Assistant
+            </Text>
+            <Text style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', lineHeight: 20 }}>
+              I can help you understand your symptoms, medications, and health trends.
+            </Text>
+          </View>
+
+          <Text style={{ fontSize: 13, fontWeight: '600', color: C.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Try asking
           </Text>
-          <Text style={styles.starterHint}>Here are some things you can ask me:</Text>
-          {STARTER_QUESTIONS.map((question) => (
+          {STARTER_QUESTIONS.map((q) => (
             <TouchableOpacity
-              key={question}
-              style={styles.starterButton}
-              onPress={() => handleStarterQuestion(question)}
+              key={q}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                backgroundColor: C.surface, borderRadius: 14,
+                paddingHorizontal: 16, paddingVertical: 14, marginBottom: 8,
+                shadowColor: '#000',
+                shadowOpacity: C.background === '#000000' ? 0 : 0.04,
+                shadowRadius: 6, shadowOffset: { width: 0, height: 1 },
+                elevation: 1,
+              }}
+              onPress={() => sendMessage(q)}
               activeOpacity={0.7}
             >
-              <Text style={styles.starterButtonText}>{question}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: C.primary, fontWeight: '500', marginRight: 8 }}>
+                {q}
+              </Text>
+              <Ionicons name="arrow-forward-outline" size={14} color={C.primary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -243,228 +233,72 @@ export default function ChatScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          ListFooterComponent={renderTypingIndicator}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          ListFooterComponent={
+            loading ? (
+              <View style={{
+                flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end',
+              }}>
+                <View style={{
+                  width: 32, height: 32, borderRadius: 10,
+                  backgroundColor: C.primary + '18',
+                  alignItems: 'center', justifyContent: 'center', marginRight: 8,
+                }}>
+                  <Ionicons name="sparkles" size={15} color={C.primary} />
+                </View>
+                <View style={{
+                  backgroundColor: C.surface, borderRadius: 18, borderBottomLeftRadius: 4,
+                  paddingHorizontal: 18, paddingVertical: 14,
+                }}>
+                  <ActivityIndicator size="small" color={C.textMuted} />
+                </View>
+              </View>
+            ) : null
+          }
         />
       )}
 
-      {/* Input Row */}
-      <View style={styles.inputRow}>
+      {/* ── Input Row ── */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+        paddingHorizontal: 16, paddingVertical: 12,
+        backgroundColor: C.surface,
+        borderTopWidth: 0.5, borderTopColor: C.separator,
+      }}>
         <TextInput
-          style={styles.textInput}
+          style={{
+            flex: 1, backgroundColor: C.background, borderRadius: 22,
+            paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+            fontSize: 15, color: C.textPrimary,
+            borderWidth: 1, borderColor: C.border, maxHeight: 120,
+          }}
           value={input}
           onChangeText={setInput}
-          placeholder="Ask me anything about IBD..."
-          placeholderTextColor={Colors.placeholder}
+          placeholder="Ask me anything..."
+          placeholderTextColor={C.placeholder}
           multiline
           maxLength={1000}
-          returnKeyType="default"
         />
         <TouchableOpacity
-          style={[styles.sendButton, (!input.trim() || sending || loading) && styles.sendButtonDisabled]}
-          onPress={handleSend}
+          style={{
+            width: 42, height: 42, borderRadius: 21,
+            backgroundColor: (!input.trim() || sending || loading) ? C.border : C.primary,
+            alignItems: 'center', justifyContent: 'center',
+            shadowColor: C.primary, shadowOpacity: (!input.trim() || sending || loading) ? 0 : 0.35,
+            shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
+            elevation: (!input.trim() || sending || loading) ? 0 : 4,
+          }}
+          onPress={() => sendMessage(input)}
           disabled={!input.trim() || sending || loading}
           activeOpacity={0.8}
         >
-          {sending ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
-          )}
+          {sending
+            ? <ActivityIndicator size="small" color="#FFFFFF" />
+            : <Ionicons name="arrow-up" size={20} color="#FFFFFF" />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-  header: {
-    backgroundColor: Colors.white,
-    paddingTop: 56,
-    paddingBottom: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    ...Theme.shadow.subtle,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  loadErrorBanner: {
-    backgroundColor: '#FEF2F2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FECACA',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  loadErrorText: {
-    color: Colors.danger,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  starterContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  starterIntro: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-    marginBottom: 16,
-    fontWeight: '500',
-    lineHeight: 22,
-  },
-  starterHint: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
-  starterButton: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  starterButtonText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '500',
-  },
-  messageList: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  bubbleWrapper: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    alignItems: 'flex-end',
-  },
-  bubbleWrapperUser: {
-    justifyContent: 'flex-end',
-  },
-  bubbleWrapperAssistant: {
-    justifyContent: 'flex-start',
-  },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-    flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  bubble: {
-    maxWidth: '75%',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  bubbleUser: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleAssistant: {
-    backgroundColor: Colors.white,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  bubbleText: {
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  bubbleTextUser: {
-    color: Colors.white,
-  },
-  bubbleTextAssistant: {
-    color: Colors.textPrimary,
-  },
-  bubbleTime: {
-    fontSize: 11,
-    marginTop: 4,
-  },
-  bubbleTimeUser: {
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'right',
-  },
-  bubbleTimeAssistant: {
-    color: Colors.textMuted,
-  },
-  typingBubble: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-  },
-  typingText: {
-    fontSize: 20,
-    color: Colors.textSecondary,
-    letterSpacing: 4,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 10,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    maxHeight: 120,
-  },
-  sendButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 22,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 64,
-    height: 42,
-  },
-  sendButtonDisabled: {
-    backgroundColor: Colors.border,
-  },
-  sendButtonText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-});

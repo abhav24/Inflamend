@@ -1,249 +1,137 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
+  View, Text, ScrollView, TouchableOpacity,
+  TextInput, Switch, KeyboardAvoidingView,
+  Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
-  useFoodLogs,
-  useBowelLogs,
-  useSymptomLogs,
-  useMedications,
-  useMedicationLogs,
-  useSleepLogs,
-  useMenstrualLogs,
-  useWeightLogs,
+  useFoodLogs, useBowelLogs, useSymptomLogs,
+  useMedications, useMedicationLogs,
+  useSleepLogs, useMenstrualLogs, useWeightLogs,
 } from '../../hooks/useLogs';
 
 import {
-  BRISTOL_TYPES,
-  MEAL_TYPES,
-  MOOD_OPTIONS,
-  FLOW_LEVELS,
-  PAIN_LOCATIONS,
-  MENSTRUAL_SYMPTOMS,
-  SIDE_EFFECT_OPTIONS,
+  BRISTOL_TYPES, MEAL_TYPES, MOOD_OPTIONS,
+  FLOW_LEVELS, PAIN_LOCATIONS, MENSTRUAL_SYMPTOMS, SIDE_EFFECT_OPTIONS,
 } from '../../constants';
-import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
+import { useColors } from '../../constants/colors';
 import { Medication, MealType, BloodAmount, Mood, FlowLevel } from '../../types';
 import { SliderInput } from '../../components/ui/SliderInput';
 import { TagSelector } from '../../components/ui/TagSelector';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Tab definitions ──────────────────────────────────────────────────────────
 
 type TabKey = 'food' | 'bowel' | 'symptoms' | 'meds' | 'sleep' | 'cycle' | 'weight';
 
-const TABS: { key: TabKey; label: string; badge: string }[] = [
-  { key: 'food', label: 'Food', badge: 'FD' },
-  { key: 'bowel', label: 'Bowel', badge: 'BW' },
-  { key: 'symptoms', label: 'Symptoms', badge: 'SY' },
-  { key: 'meds', label: 'Meds', badge: 'MD' },
-  { key: 'sleep', label: 'Sleep', badge: 'SL' },
-  { key: 'cycle', label: 'Cycle', badge: 'CY' },
-  { key: 'weight', label: 'Weight', badge: 'WT' },
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'food',     label: 'Food'     },
+  { key: 'bowel',    label: 'Bowel'    },
+  { key: 'symptoms', label: 'Symptoms' },
+  { key: 'meds',     label: 'Meds'     },
+  { key: 'sleep',    label: 'Sleep'    },
+  { key: 'cycle',    label: 'Cycle'    },
+  { key: 'weight',   label: 'Weight'   },
 ];
 
-type RapidLogSectionProps = {
-  onOpenTab: (tab: TabKey) => void;
-};
+// ─── Shared primitives ────────────────────────────────────────────────────────
 
-function RapidLogSection({ onOpenTab }: RapidLogSectionProps) {
-  const { add: addSymptom } = useSymptomLogs();
-  const { add: addFood } = useFoodLogs();
-  const [busy, setBusy] = useState<null | 'well' | 'flare' | 'water'>(null);
-  const [successText, setSuccessText] = useState<string | null>(null);
-
-  const finish = (message: string) => {
-    setSuccessText(message);
-    setTimeout(() => setSuccessText(null), 1600);
-  };
-
-  const logWellCheckIn = async () => {
-    if (busy) return;
-    setBusy('well');
-    await addSymptom({
-      logged_at: new Date().toISOString(),
-      pain_level: 1,
-      pain_location: [],
-      fatigue_level: 2,
-      nausea_level: 0,
-      bloating_level: 1,
-      stress_level: 2,
-      mood: 'good',
-      is_flare: false,
-      notes: 'Rapid check-in',
-    });
-    setBusy(null);
-    finish('Quick symptom check-in saved');
-  };
-
-  const logFlareCheckIn = async () => {
-    if (busy) return;
-    setBusy('flare');
-    await addSymptom({
-      logged_at: new Date().toISOString(),
-      pain_level: 8,
-      pain_location: ['abdomen'],
-      fatigue_level: 7,
-      nausea_level: 5,
-      bloating_level: 6,
-      stress_level: 7,
-      mood: 'bad',
-      is_flare: true,
-      notes: 'Rapid flare check-in',
-    });
-    setBusy(null);
-    finish('Flare check-in saved');
-  };
-
-  const logWater = async () => {
-    if (busy) return;
-    setBusy('water');
-    await addFood({
-      logged_at: new Date().toISOString(),
-      meal_type: 'drink',
-      description: 'Water',
-      photo_url: null,
-      calories: null,
-      protein_g: null,
-      carbs_g: null,
-      fat_g: null,
-      fiber_g: null,
-      water_ml: 250,
-      is_trigger_food: false,
-      is_safe_food: true,
-      notes: 'Rapid hydration log',
-    });
-    setBusy(null);
-    finish('250ml water logged');
-  };
-
+function Card({ children, style }: { children: React.ReactNode; style?: object }) {
+  const C = useColors();
   return (
-    <View style={rapidStyles.card}>
-      <Text style={rapidStyles.title}>Rapid Log</Text>
-      <Text style={rapidStyles.subtitle}>Save a check-in in one tap</Text>
-
-      <View style={rapidStyles.row}>
-        <TouchableOpacity
-          style={[rapidStyles.pill, busy === 'well' && rapidStyles.pillDisabled]}
-          onPress={logWellCheckIn}
-          disabled={busy !== null}
-        >
-          <Text style={rapidStyles.pillText}>{busy === 'well' ? 'Saving…' : 'Stable check-in'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[rapidStyles.pill, busy === 'flare' && rapidStyles.pillDisabled]}
-          onPress={logFlareCheckIn}
-          disabled={busy !== null}
-        >
-          <Text style={rapidStyles.pillText}>{busy === 'flare' ? 'Saving…' : 'Flare check-in'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={rapidStyles.row}>
-        <TouchableOpacity
-          style={[rapidStyles.pill, busy === 'water' && rapidStyles.pillDisabled]}
-          onPress={logWater}
-          disabled={busy !== null}
-        >
-          <Text style={rapidStyles.pillText}>{busy === 'water' ? 'Saving…' : '+250ml water'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={rapidStyles.secondaryPill} onPress={() => onOpenTab('symptoms')}>
-          <Text style={rapidStyles.secondaryPillText}>Open symptom form</Text>
-        </TouchableOpacity>
-      </View>
-
-      {successText && <Text style={rapidStyles.success}>{successText}</Text>}
+    <View style={[{
+      backgroundColor: C.surface, borderRadius: 16, padding: 16, marginBottom: 12,
+      shadowColor: '#000',
+      shadowOpacity: C.background === '#000000' ? 0 : 0.05,
+      shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    }, style]}>
+      {children}
     </View>
   );
-}
-
-// ─── Shared UI Helpers ───────────────────────────────────────────────────────
-
-function SectionCard({ children, style }: { children: React.ReactNode; style?: object }) {
-  return <View style={[sharedStyles.card, style]}>{children}</View>;
 }
 
 function FieldLabel({ text }: { text: string }) {
-  return <Text style={sharedStyles.fieldLabel}>{text}</Text>;
+  const C = useColors();
+  return (
+    <Text style={{
+      fontSize: 11, fontWeight: '700', color: C.textMuted,
+      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10,
+    }}>
+      {text}
+    </Text>
+  );
 }
 
-function Divider() {
-  return <View style={sharedStyles.divider} />;
+function CardDivider() {
+  const C = useColors();
+  return <View style={{ height: 0.5, backgroundColor: C.separator, marginVertical: 10 }} />;
 }
 
 function SuccessBanner() {
+  const C = useColors();
   return (
-    <View style={sharedStyles.successBanner}>
-      <View style={sharedStyles.successCheck}><Text style={sharedStyles.successCheckText}>OK</Text></View>
-      <Text style={sharedStyles.successText}>Logged!</Text>
+    <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 64 }}>
+      <View style={{
+        width: 72, height: 72, borderRadius: 36,
+        backgroundColor: C.success + '18',
+        alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+      }}>
+        <Ionicons name="checkmark" size={36} color={C.success} />
+      </View>
+      <Text style={{ fontSize: 22, fontWeight: '700', color: C.success }}>Logged!</Text>
     </View>
   );
 }
 
-function SubmitButton({
-  label,
-  onPress,
-  loading,
-}: {
-  label: string;
-  onPress: () => void;
-  loading: boolean;
-}) {
+function SubmitButton({ label, onPress, loading }: { label: string; onPress: () => void; loading: boolean }) {
+  const C = useColors();
   return (
     <TouchableOpacity
-      style={sharedStyles.submitBtn}
+      style={{
+        backgroundColor: C.primary, borderRadius: 14, paddingVertical: 16,
+        alignItems: 'center', marginBottom: 16,
+        shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 }, elevation: 4,
+      }}
       onPress={onPress}
       disabled={loading}
-      accessibilityRole="button"
-      accessibilityLabel={label}
     >
-      {loading ? (
-        <ActivityIndicator color={Colors.white} />
-      ) : (
-        <Text style={sharedStyles.submitBtnText}>{label}</Text>
-      )}
+      {loading
+        ? <ActivityIndicator color="#FFFFFF" />
+        : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{label}</Text>}
     </TouchableOpacity>
   );
 }
 
 function SegmentedButtons<T extends string>({
-  options,
-  value,
-  onChange,
+  options, value, onChange,
 }: {
   options: readonly { value: T; label: string }[];
   value: T | null;
   onChange: (v: T) => void;
 }) {
+  const C = useColors();
   return (
-    <View style={sharedStyles.segmentedRow}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {options.map((opt) => {
         const active = value === opt.value;
         return (
           <TouchableOpacity
             key={opt.value}
-            style={[sharedStyles.segmentBtn, active && sharedStyles.segmentBtnActive]}
+            style={{
+              paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20,
+              backgroundColor: active ? C.primary : C.background,
+              borderWidth: 1.5, borderColor: active ? C.primary : C.border,
+            }}
             onPress={() => onChange(opt.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
           >
-            <Text
-              style={[sharedStyles.segmentText, active && sharedStyles.segmentTextActive]}
-              numberOfLines={1}
-            >
+            <Text style={{
+              fontSize: 13, fontWeight: active ? '700' : '500',
+              color: active ? '#FFFFFF' : C.textSecondary,
+            }} numberOfLines={1}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -253,149 +141,119 @@ function SegmentedButtons<T extends string>({
   );
 }
 
-function SwitchRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function SwitchRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  const C = useColors();
   return (
-    <View style={sharedStyles.switchRow}>
-      <Text style={sharedStyles.switchLabel}>{label}</Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, marginBottom: 4 }}>
+      <Text style={{ fontSize: 15, fontWeight: '500', color: C.textPrimary, flex: 1 }}>{label}</Text>
       <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: Colors.border, true: Colors.primary + '60' }}
-        thumbColor={value ? Colors.primary : Colors.textMuted}
+        value={value} onValueChange={onChange}
+        trackColor={{ false: C.border, true: C.primary + '80' }}
+        thumbColor={value ? C.primary : C.textMuted}
       />
     </View>
   );
 }
 
-function styledInput(extra?: object) {
-  return [sharedStyles.textInput, extra ?? {}];
+function StyledInput({ value, onChangeText, placeholder, multiline, minHeight, keyboardType, accessibilityLabel }: {
+  value: string; onChangeText: (v: string) => void; placeholder: string;
+  multiline?: boolean; minHeight?: number; keyboardType?: any; accessibilityLabel?: string;
+}) {
+  const C = useColors();
+  return (
+    <TextInput
+      style={{
+        borderWidth: 1.5, borderColor: C.border, borderRadius: 12,
+        paddingHorizontal: 14, paddingVertical: 10,
+        fontSize: 15, color: C.textPrimary, backgroundColor: C.background,
+        marginBottom: 4, ...(minHeight ? { minHeight, textAlignVertical: 'top' as const } : {}),
+      }}
+      value={value} onChangeText={onChangeText}
+      placeholder={placeholder} placeholderTextColor={C.placeholder}
+      multiline={multiline} keyboardType={keyboardType}
+      accessibilityLabel={accessibilityLabel}
+    />
+  );
 }
 
-// ─── Food Form ───────────────────────────────────────────────────────────────
+// ─── Food Form ────────────────────────────────────────────────────────────────
 
 function FoodForm() {
+  const C = useColors();
   const { add } = useFoodLogs();
-  const [mealType, setMealType] = useState<MealType | null>(null);
-  const [description, setDescription] = useState('');
-  const [waterMl, setWaterMl] = useState('');
-  const [calories, setCalories] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [fat, setFat] = useState('');
-  const [fiber, setFiber] = useState('');
-  const [isTrigger, setIsTrigger] = useState(false);
-  const [isSafe, setIsSafe] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [mealType, setMealType]         = useState<MealType | null>(null);
+  const [description, setDescription]   = useState('');
+  const [waterMl, setWaterMl]           = useState('');
+  const [calories, setCalories]         = useState('');
+  const [protein, setProtein]           = useState('');
+  const [carbs, setCarbs]               = useState('');
+  const [fat, setFat]                   = useState('');
+  const [fiber, setFiber]               = useState('');
+  const [isTrigger, setIsTrigger]       = useState(false);
+  const [isSafe, setIsSafe]             = useState(false);
+  const [notes, setNotes]               = useState('');
   const [nutritionOpen, setNutritionOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [success, setSuccess]           = useState(false);
 
-  const resetForm = () => {
-    setMealType(null);
-    setDescription('');
-    setWaterMl('');
-    setCalories('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    setFiber('');
-    setIsTrigger(false);
-    setIsSafe(false);
-    setNotes('');
-    setNutritionOpen(false);
+  const reset = () => {
+    setMealType(null); setDescription(''); setWaterMl('');
+    setCalories(''); setProtein(''); setCarbs(''); setFat(''); setFiber('');
+    setIsTrigger(false); setIsSafe(false); setNotes(''); setNutritionOpen(false);
   };
 
   const handleSubmit = async () => {
-    if (!mealType) {
-      Alert.alert('Missing Field', 'Please select a meal type.');
-      return;
-    }
-    if (!description.trim()) {
-      Alert.alert('Missing Field', 'Please describe what you ate.');
-      return;
-    }
+    if (!mealType) { Alert.alert('Missing Field', 'Please select a meal type.'); return; }
+    if (!description.trim()) { Alert.alert('Missing Field', 'Please describe what you ate.'); return; }
     setLoading(true);
     await add({
-      meal_type: mealType,
-      description: description.trim(),
-      logged_at: new Date().toISOString(),
-      photo_url: null,
+      meal_type: mealType, description: description.trim(),
+      logged_at: new Date().toISOString(), photo_url: null,
       calories: calories ? parseFloat(calories) : null,
       protein_g: protein ? parseFloat(protein) : null,
       carbs_g: carbs ? parseFloat(carbs) : null,
       fat_g: fat ? parseFloat(fat) : null,
       fiber_g: fiber ? parseFloat(fiber) : null,
       water_ml: waterMl ? parseFloat(waterMl) : null,
-      is_trigger_food: isTrigger,
-      is_safe_food: isSafe,
+      is_trigger_food: isTrigger, is_safe_food: isSafe,
       notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
-        <FieldLabel text="Meal Type *" />
+      <Card>
+        <FieldLabel text="Meal Type" />
         <SegmentedButtons options={MEAL_TYPES} value={mealType} onChange={setMealType} />
-      </SectionCard>
+      </Card>
 
-      <Divider />
+      <Card>
+        <FieldLabel text="What did you eat?" />
+        <StyledInput value={description} onChangeText={setDescription}
+          placeholder="Describe your meal..." multiline minHeight={80}
+          accessibilityLabel="Food description" />
+      </Card>
 
-      <SectionCard>
-        <FieldLabel text="What did you eat? *" />
-        <TextInput
-          style={styledInput({ minHeight: 80 })}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Describe your meal..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Food description"
-        />
-      </SectionCard>
-
-      <SectionCard>
+      <Card>
         <FieldLabel text="Water (ml)" />
-        <TextInput
-          style={styledInput()}
-          value={waterMl}
-          onChangeText={setWaterMl}
-          placeholder="e.g. 250"
-          placeholderTextColor={Colors.placeholder}
-          keyboardType="numeric"
-          accessibilityLabel="Water in ml"
-        />
-      </SectionCard>
+        <StyledInput value={waterMl} onChangeText={setWaterMl}
+          placeholder="e.g. 250" keyboardType="numeric" accessibilityLabel="Water in ml" />
+      </Card>
 
-      <SectionCard>
+      <Card>
         <TouchableOpacity
-          style={sharedStyles.collapsibleHeader}
-          onPress={() => setNutritionOpen((v) => !v)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: nutritionOpen }}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          onPress={() => setNutritionOpen(v => !v)}
         >
-          <Text style={sharedStyles.collapsibleTitle}>Nutrition (optional)</Text>
-          <Text style={sharedStyles.collapsibleChevron}>{nutritionOpen ? '▲' : '▼'}</Text>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: C.textPrimary }}>Nutrition (optional)</Text>
+          <Ionicons name={nutritionOpen ? 'chevron-up' : 'chevron-down'} size={16} color={C.textMuted} />
         </TouchableOpacity>
         {nutritionOpen && (
-          <View style={{ marginTop: 12 }}>
+          <View style={{ marginTop: 12, gap: 8 }}>
             {[
               { label: 'Calories', value: calories, set: setCalories },
               { label: 'Protein (g)', value: protein, set: setProtein },
@@ -403,56 +261,41 @@ function FoodForm() {
               { label: 'Fat (g)', value: fat, set: setFat },
               { label: 'Fiber (g)', value: fiber, set: setFiber },
             ].map(({ label, value, set }) => (
-              <View key={label} style={{ marginBottom: 12 }}>
+              <View key={label}>
                 <FieldLabel text={label} />
-                <TextInput
-                  style={styledInput()}
-                  value={value}
-                  onChangeText={set}
-                  placeholder="0"
-                  placeholderTextColor={Colors.placeholder}
-                  keyboardType="numeric"
-                  accessibilityLabel={label}
-                />
+                <StyledInput value={value} onChangeText={set}
+                  placeholder="0" keyboardType="numeric" accessibilityLabel={label} />
               </View>
             ))}
           </View>
         )}
-      </SectionCard>
+      </Card>
 
-      <Divider />
-
-      <SectionCard>
+      <Card>
         <SwitchRow label="Trigger food?" value={isTrigger} onChange={setIsTrigger} />
+        <CardDivider />
         <SwitchRow label="Safe food?" value={isSafe} onChange={setIsSafe} />
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any additional notes..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Food notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any additional notes..." multiline minHeight={70}
+          accessibilityLabel="Food notes" />
+      </Card>
 
-      <SectionCard>
-        <Text style={sharedStyles.timestampText}>
+      <Card>
+        <Text style={{ fontSize: 13, color: C.textMuted }}>
           Logged at: {format(new Date(), 'h:mm a, MMM d yyyy')}
         </Text>
-      </SectionCard>
+      </Card>
 
       <SubmitButton label="Log Food" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-// ─── Bowel Form ──────────────────────────────────────────────────────────────
+// ─── Bowel Form ───────────────────────────────────────────────────────────────
 
 const BLOOD_AMOUNT_OPTIONS: { value: BloodAmount; label: string }[] = [
   { value: 'none', label: 'None' },
@@ -462,120 +305,125 @@ const BLOOD_AMOUNT_OPTIONS: { value: BloodAmount; label: string }[] = [
 ];
 
 function BowelForm() {
+  const C = useColors();
   const { add } = useBowelLogs();
   const [bristolScale, setBristolScale] = useState<number | null>(null);
-  const [urgency, setUrgency] = useState(1);
+  const [urgency, setUrgency]           = useState(1);
   const [bloodPresent, setBloodPresent] = useState(false);
-  const [bloodAmount, setBloodAmount] = useState<BloodAmount>('none');
+  const [bloodAmount, setBloodAmount]   = useState<BloodAmount>('none');
   const [mucusPresent, setMucusPresent] = useState(false);
-  const [painDuring, setPainDuring] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [painDuring, setPainDuring]     = useState(0);
+  const [notes, setNotes]               = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [success, setSuccess]           = useState(false);
 
-  const resetForm = () => {
-    setBristolScale(null);
-    setUrgency(1);
-    setBloodPresent(false);
-    setBloodAmount('none');
-    setMucusPresent(false);
-    setPainDuring(0);
-    setNotes('');
+  const reset = () => {
+    setBristolScale(null); setUrgency(1); setBloodPresent(false);
+    setBloodAmount('none'); setMucusPresent(false); setPainDuring(0); setNotes('');
   };
 
   const handleSubmit = async () => {
-    if (!bristolScale) {
-      Alert.alert('Missing Field', 'Please select a Bristol Scale type.');
-      return;
-    }
+    if (!bristolScale) { Alert.alert('Missing Field', 'Please select a Bristol Scale type.'); return; }
     setLoading(true);
     await add({
-      logged_at: new Date().toISOString(),
-      bristol_scale: bristolScale,
-      urgency,
-      blood_present: bloodPresent,
+      logged_at: new Date().toISOString(), bristol_scale: bristolScale,
+      urgency, blood_present: bloodPresent,
       blood_amount: bloodPresent ? bloodAmount : 'none',
-      mucus_present: mucusPresent,
-      pain_during: painDuring,
+      mucus_present: mucusPresent, pain_during: painDuring,
       notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
-        <FieldLabel text="Bristol Stool Scale *" />
-        <Text style={sharedStyles.subLabel}>Select the type that best matches</Text>
+      <Card>
+        <FieldLabel text="Bristol Stool Scale" />
+        <Text style={{ fontSize: 12, color: C.textSecondary, marginBottom: 12, marginTop: -6 }}>
+          Select the type that best matches
+        </Text>
         {BRISTOL_TYPES.map((bt) => {
           const selected = bristolScale === bt.scale;
           return (
             <TouchableOpacity
               key={bt.scale}
-              style={[bristolStyles.card, selected && bristolStyles.cardSelected]}
+              style={{
+                flexDirection: 'row', alignItems: 'center', padding: 12,
+                borderRadius: 12, borderWidth: 1.5,
+                borderColor: selected ? C.primary : C.border,
+                marginBottom: 8,
+                backgroundColor: selected ? C.primary + '10' : C.background,
+              }}
               onPress={() => setBristolScale(bt.scale)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: selected }}
-              accessibilityLabel={`Type ${bt.scale}: ${bt.name}`}
             >
-              <View style={bristolStyles.scaleCircle}>
-                <Text style={[bristolStyles.scaleNum, selected && bristolStyles.scaleNumSelected]}>
+              <View style={{
+                width: 30, height: 30, borderRadius: 15,
+                backgroundColor: selected ? C.primary : C.border,
+                justifyContent: 'center', alignItems: 'center', marginRight: 10,
+              }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? '#FFF' : C.textSecondary }}>
                   {bt.scale}
                 </Text>
               </View>
-              <View style={bristolStyles.badge}><Text style={bristolStyles.badgeText}>{bt.badge}</Text></View>
-              <View style={bristolStyles.textBlock}>
-                <Text style={[bristolStyles.name, selected && bristolStyles.nameSelected]}>
+              <View style={{
+                width: 28, height: 28, borderRadius: 8,
+                backgroundColor: selected ? C.primary + '20' : C.border + '60',
+                alignItems: 'center', justifyContent: 'center', marginRight: 10,
+              }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: selected ? C.primary : C.textMuted }}>
+                  {bt.badge}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: selected ? C.primary : C.textPrimary }}>
                   {bt.name}
                 </Text>
-                <Text style={bristolStyles.desc}>{bt.description}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{bt.description}</Text>
               </View>
-              {selected && <Text style={bristolStyles.checkmark}>OK</Text>}
+              {selected && <Ionicons name="checkmark-circle" size={20} color={C.primary} />}
             </TouchableOpacity>
           );
         })}
-      </SectionCard>
+      </Card>
 
-      <Divider />
+      <Card>
+        <SliderInput label="Urgency" value={urgency} min={1} max={5} onChange={setUrgency}
+          accessibilityLabel="Urgency level 1 to 5" />
+      </Card>
 
-      <SectionCard>
-        <SliderInput
-          label="Urgency"
-          value={urgency}
-          min={1}
-          max={5}
-          onChange={setUrgency}
-          accessibilityLabel="Urgency level 1 to 5"
-        />
-      </SectionCard>
-
-      <SectionCard>
+      <Card>
         <SwitchRow label="Blood present?" value={bloodPresent} onChange={setBloodPresent} />
         {bloodPresent && (
           <View style={{ marginTop: 12 }}>
             <FieldLabel text="Blood Amount" />
-            <View style={sharedStyles.radioGroup}>
+            <View style={{ gap: 8 }}>
               {BLOOD_AMOUNT_OPTIONS.map((opt) => {
                 const active = bloodAmount === opt.value;
                 return (
                   <TouchableOpacity
                     key={opt.value}
-                    style={[sharedStyles.radioOption, active && sharedStyles.radioOptionActive]}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', padding: 10,
+                      borderRadius: 10, borderWidth: 1.5,
+                      borderColor: active ? C.primary : C.border,
+                      backgroundColor: active ? C.primary + '10' : C.background,
+                    }}
                     onPress={() => setBloodAmount(opt.value)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: active }}
                   >
-                    <View style={[sharedStyles.radioCircle, active && sharedStyles.radioCircleActive]}>
-                      {active && <View style={sharedStyles.radioDot} />}
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 10, borderWidth: 2,
+                      borderColor: active ? C.primary : C.border,
+                      justifyContent: 'center', alignItems: 'center', marginRight: 10,
+                    }}>
+                      {active && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary }} />}
                     </View>
-                    <Text style={[sharedStyles.radioLabel, active && sharedStyles.radioLabelActive]}>
+                    <Text style={{
+                      fontSize: 14, fontWeight: active ? '600' : '400',
+                      color: active ? C.primary : C.textSecondary,
+                    }}>
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -584,431 +432,228 @@ function BowelForm() {
             </View>
           </View>
         )}
-        <Divider />
+        <CardDivider />
         <SwitchRow label="Mucus present?" value={mucusPresent} onChange={setMucusPresent} />
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
-        <SliderInput
-          label="Pain During (0–10)"
-          value={painDuring}
-          min={0}
-          max={10}
-          onChange={setPainDuring}
-          accessibilityLabel="Pain during bowel movement 0 to 10"
-        />
-      </SectionCard>
+      <Card>
+        <SliderInput label="Pain During (0–10)" value={painDuring} min={0} max={10} onChange={setPainDuring}
+          accessibilityLabel="Pain during bowel movement 0 to 10" />
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any additional notes..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Bowel notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any additional notes..." multiline minHeight={70} accessibilityLabel="Bowel notes" />
+      </Card>
 
       <SubmitButton label="Log Bowel Movement" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-const bristolStyles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    marginBottom: 8,
-    backgroundColor: Colors.background,
-  },
-  cardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  scaleCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  scaleNum: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  scaleNumSelected: {
-    color: Colors.primary,
-  },
-  badge: {
-    backgroundColor: Colors.white,
-    borderColor: Colors.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    marginRight: 10,
-  },
-  badgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
-  textBlock: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  nameSelected: {
-    color: Colors.primary,
-  },
-  desc: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 1,
-  },
-  checkmark: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-});
-
-// ─── Symptoms Form ───────────────────────────────────────────────────────────
+// ─── Symptoms Form ────────────────────────────────────────────────────────────
 
 function SymptomsForm() {
+  const C = useColors();
   const { add } = useSymptomLogs();
-  const [painLevel, setPainLevel] = useState(0);
-  const [painLocation, setPainLocation] = useState<string[]>([]);
-  const [fatigueLevel, setFatigueLevel] = useState(0);
-  const [nauseaLevel, setNauseaLevel] = useState(0);
+  const [painLevel, setPainLevel]         = useState(0);
+  const [painLocation, setPainLocation]   = useState<string[]>([]);
+  const [fatigueLevel, setFatigueLevel]   = useState(0);
+  const [nauseaLevel, setNauseaLevel]     = useState(0);
   const [bloatingLevel, setBloatingLevel] = useState(0);
-  const [stressLevel, setStressLevel] = useState(0);
-  const [mood, setMood] = useState<Mood | null>(null);
-  const [isFlare, setIsFlare] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [stressLevel, setStressLevel]     = useState(0);
+  const [mood, setMood]                   = useState<Mood | null>(null);
+  const [isFlare, setIsFlare]             = useState(false);
+  const [notes, setNotes]                 = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [success, setSuccess]             = useState(false);
 
-  const resetForm = () => {
-    setPainLevel(0);
-    setPainLocation([]);
-    setFatigueLevel(0);
-    setNauseaLevel(0);
-    setBloatingLevel(0);
-    setStressLevel(0);
-    setMood(null);
-    setIsFlare(false);
-    setNotes('');
+  const reset = () => {
+    setPainLevel(0); setPainLocation([]); setFatigueLevel(0);
+    setNauseaLevel(0); setBloatingLevel(0); setStressLevel(0);
+    setMood(null); setIsFlare(false); setNotes('');
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     await add({
       logged_at: new Date().toISOString(),
-      pain_level: painLevel,
-      pain_location: painLocation,
-      fatigue_level: fatigueLevel,
-      nausea_level: nauseaLevel,
-      bloating_level: bloatingLevel,
-      stress_level: stressLevel,
-      mood: mood,
-      is_flare: isFlare,
-      notes: notes.trim() || null,
+      pain_level: painLevel, pain_location: painLocation,
+      fatigue_level: fatigueLevel, nausea_level: nauseaLevel,
+      bloating_level: bloatingLevel, stress_level: stressLevel,
+      mood, is_flare: isFlare, notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
-        <SliderInput
-          label="Pain Level"
-          value={painLevel}
-          min={0}
-          max={10}
-          onChange={setPainLevel}
-          accessibilityLabel="Pain level 0 to 10"
-        />
-        <TagSelector
-          options={PAIN_LOCATIONS}
-          selected={painLocation}
-          onChange={setPainLocation}
-          label="Pain Location"
-        />
-      </SectionCard>
+      <Card>
+        <SliderInput label="Pain Level" value={painLevel} min={0} max={10} onChange={setPainLevel}
+          accessibilityLabel="Pain level 0 to 10" />
+        <CardDivider />
+        <TagSelector options={PAIN_LOCATIONS} selected={painLocation} onChange={setPainLocation} label="Pain Location" />
+      </Card>
 
-      <Divider />
+      <Card>
+        <SliderInput label="Fatigue Level" value={fatigueLevel} min={0} max={10} onChange={setFatigueLevel} accessibilityLabel="Fatigue level" />
+        <CardDivider />
+        <SliderInput label="Nausea Level" value={nauseaLevel} min={0} max={10} onChange={setNauseaLevel} accessibilityLabel="Nausea level" />
+        <CardDivider />
+        <SliderInput label="Bloating Level" value={bloatingLevel} min={0} max={10} onChange={setBloatingLevel} accessibilityLabel="Bloating level" />
+        <CardDivider />
+        <SliderInput label="Stress Level" value={stressLevel} min={0} max={10} onChange={setStressLevel} accessibilityLabel="Stress level" />
+      </Card>
 
-      <SectionCard>
-        <SliderInput
-          label="Fatigue Level"
-          value={fatigueLevel}
-          min={0}
-          max={10}
-          onChange={setFatigueLevel}
-          accessibilityLabel="Fatigue level 0 to 10"
-        />
-        <SliderInput
-          label="Nausea Level"
-          value={nauseaLevel}
-          min={0}
-          max={10}
-          onChange={setNauseaLevel}
-          accessibilityLabel="Nausea level 0 to 10"
-        />
-        <SliderInput
-          label="Bloating Level"
-          value={bloatingLevel}
-          min={0}
-          max={10}
-          onChange={setBloatingLevel}
-          accessibilityLabel="Bloating level 0 to 10"
-        />
-        <SliderInput
-          label="Stress Level"
-          value={stressLevel}
-          min={0}
-          max={10}
-          onChange={setStressLevel}
-          accessibilityLabel="Stress level 0 to 10"
-        />
-      </SectionCard>
-
-      <Divider />
-
-      <SectionCard>
+      <Card>
         <FieldLabel text="Mood" />
-        <View style={moodStyles.row}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {MOOD_OPTIONS.map((opt) => {
             const active = mood === opt.value;
             return (
               <TouchableOpacity
                 key={opt.value}
-                style={[moodStyles.btn, active && moodStyles.btnActive]}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                  backgroundColor: active ? C.primary : C.background,
+                  borderWidth: 1.5, borderColor: active ? C.primary : C.border,
+                }}
                 onPress={() => setMood(opt.value as Mood)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={opt.label}
               >
-                <View style={moodStyles.badge}><Text style={moodStyles.badgeText}>{opt.badge}</Text></View>
-                <Text style={[moodStyles.label, active && moodStyles.labelActive]}>
+                <Text style={{
+                  fontSize: 13, fontWeight: active ? '700' : '500',
+                  color: active ? '#FFFFFF' : C.textSecondary,
+                }}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-      </SectionCard>
+      </Card>
 
-      <Divider />
-
-      <SectionCard>
+      <Card>
         <SwitchRow label="Currently in a flare?" value={isFlare} onChange={setIsFlare} />
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any additional notes..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Symptom notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any additional notes..." multiline minHeight={70} accessibilityLabel="Symptom notes" />
+      </Card>
 
       <SubmitButton label="Log Symptoms" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-const moodStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  btn: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    marginHorizontal: 3,
-    backgroundColor: Colors.background,
-  },
-  btnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  badge: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    marginBottom: 4,
-  },
-  badgeText: {
-    fontSize: 10,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  label: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  labelActive: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-});
-
-// ─── Meds Form ───────────────────────────────────────────────────────────────
+// ─── Meds Form ────────────────────────────────────────────────────────────────
 
 function MedsForm() {
+  const C = useColors();
   const { fetchActive, add: addMed } = useMedications();
-  const { add: addMedLog } = useMedicationLogs();
-  const [meds, setMeds] = useState<Medication[]>([]);
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const { add: addMedLog }           = useMedicationLogs();
+  const [meds, setMeds]              = useState<Medication[]>([]);
+  const [checkedIds, setCheckedIds]  = useState<Set<string>>(new Set());
   const [sideEffects, setSideEffects] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes]            = useState('');
   const [loadingMeds, setLoadingMeds] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [loading, setLoading]        = useState(false);
+  const [success, setSuccess]        = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newMedName, setNewMedName] = useState('');
+  const [newMedName, setNewMedName]  = useState('');
   const [newMedDosage, setNewMedDosage] = useState('');
-  const [addingMed, setAddingMed] = useState(false);
+  const [addingMed, setAddingMed]    = useState(false);
 
   useEffect(() => {
-    fetchActive().then((data) => {
-      setMeds(data);
-      setLoadingMeds(false);
-    });
+    fetchActive().then((data) => { setMeds(data); setLoadingMeds(false); });
   }, [fetchActive]);
 
   const toggleMed = (id: string) => {
     setCheckedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
-  const resetForm = () => {
-    setCheckedIds(new Set());
-    setSideEffects([]);
-    setNotes('');
-    setShowAddForm(false);
-    setNewMedName('');
-    setNewMedDosage('');
+  const reset = () => {
+    setCheckedIds(new Set()); setSideEffects([]); setNotes('');
+    setShowAddForm(false); setNewMedName(''); setNewMedDosage('');
   };
 
   const handleAddMed = async () => {
-    if (!newMedName.trim()) {
-      Alert.alert('Missing Field', 'Please enter a medication name.');
-      return;
-    }
+    if (!newMedName.trim()) { Alert.alert('Missing Field', 'Please enter a medication name.'); return; }
     setAddingMed(true);
     const result = await addMed({
-      name: newMedName.trim(),
-      dosage: newMedDosage.trim() || null,
-      dosage_unit: null,
-      frequency: null,
-      time_of_day: [],
-      is_active: true,
-      start_date: null,
-      end_date: null,
+      name: newMedName.trim(), dosage: newMedDosage.trim() || null,
+      dosage_unit: null, frequency: null, time_of_day: [],
+      is_active: true, start_date: null, end_date: null,
     });
-    if (result) {
-      setMeds((prev) => [...prev, result]);
-    }
-    setNewMedName('');
-    setNewMedDosage('');
-    setShowAddForm(false);
-    setAddingMed(false);
+    if (result) setMeds((prev) => [...prev, result]);
+    setNewMedName(''); setNewMedDosage(''); setShowAddForm(false); setAddingMed(false);
   };
 
   const handleSubmit = async () => {
-    if (checkedIds.size === 0 && meds.length > 0) {
-      Alert.alert('No Meds Selected', 'Please mark at least one medication as taken, or skip if none were taken today.');
-    }
     setLoading(true);
     const now = new Date().toISOString();
-    const promises = meds.map((med) =>
+    await Promise.all(meds.map((med) =>
       addMedLog({
-        medication_name: med.name,
-        dosage: med.dosage,
-        dosage_unit: med.dosage_unit,
-        scheduled_time: null,
-        taken_at: checkedIds.has(med.id) ? now : null,
-        was_taken: checkedIds.has(med.id),
-        side_effects: sideEffects,
+        medication_name: med.name, dosage: med.dosage, dosage_unit: med.dosage_unit,
+        scheduled_time: null, taken_at: checkedIds.has(med.id) ? now : null,
+        was_taken: checkedIds.has(med.id), side_effects: sideEffects,
         notes: notes.trim() || null,
-      })
-    );
-    await Promise.all(promises);
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+      }),
+    ));
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
+      <Card>
         <FieldLabel text="Today's Medications" />
         {loadingMeds ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={C.primary} style={{ marginVertical: 16 }} />
         ) : meds.length === 0 ? (
-          <Text style={sharedStyles.emptyText}>No active medications. Add one below.</Text>
+          <Text style={{ fontSize: 14, color: C.textMuted, textAlign: 'center', paddingVertical: 12 }}>
+            No active medications. Add one below.
+          </Text>
         ) : (
           meds.map((med) => {
             const checked = checkedIds.has(med.id);
             return (
               <TouchableOpacity
                 key={med.id}
-                style={[medStyles.medCard, checked && medStyles.medCardChecked]}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', padding: 12,
+                  borderRadius: 12, borderWidth: 1.5,
+                  borderColor: checked ? C.secondary : C.border,
+                  marginBottom: 8,
+                  backgroundColor: checked ? C.secondary + '10' : C.background,
+                }}
                 onPress={() => toggleMed(med.id)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked }}
-                accessibilityLabel={`${med.name}${med.dosage ? ', ' + med.dosage : ''}`}
               >
-                <View style={[medStyles.checkbox, checked && medStyles.checkboxChecked]}>
-                  {checked && <Text style={medStyles.checkmark}>✓</Text>}
+                <View style={{
+                  width: 24, height: 24, borderRadius: 6, borderWidth: 2,
+                  borderColor: checked ? C.secondary : C.border,
+                  backgroundColor: checked ? C.secondary : 'transparent',
+                  justifyContent: 'center', alignItems: 'center', marginRight: 12,
+                }}>
+                  {checked && <Ionicons name="checkmark" size={14} color="#FFF" />}
                 </View>
-                <View style={medStyles.medInfo}>
-                  <Text style={medStyles.medName}>{med.name}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: C.textPrimary }}>{med.name}</Text>
                   {med.dosage ? (
-                    <Text style={medStyles.medDosage}>{med.dosage}{med.dosage_unit ? ' ' + med.dosage_unit : ''}</Text>
+                    <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                      {med.dosage}{med.dosage_unit ? ' ' + med.dosage_unit : ''}
+                    </Text>
                   ) : null}
                 </View>
               </TouchableOpacity>
@@ -1016,392 +661,186 @@ function MedsForm() {
           })
         )}
         <TouchableOpacity
-          style={medStyles.addBtn}
-          onPress={() => setShowAddForm((v) => !v)}
-          accessibilityRole="button"
+          style={{
+            marginTop: 8, paddingVertical: 10, alignItems: 'center',
+            borderRadius: 10, borderWidth: 1.5, borderColor: C.primary,
+            borderStyle: 'dashed',
+          }}
+          onPress={() => setShowAddForm(v => !v)}
         >
-          <Text style={medStyles.addBtnText}>
-            {showAddForm ? '− Cancel' : '+ Add New Medication'}
+          <Text style={{ fontSize: 14, color: C.primary, fontWeight: '600' }}>
+            {showAddForm ? 'Cancel' : '+ Add Medication'}
           </Text>
         </TouchableOpacity>
         {showAddForm && (
-          <View style={medStyles.addForm}>
-            <FieldLabel text="Medication Name *" />
-            <TextInput
-              style={styledInput()}
-              value={newMedName}
-              onChangeText={setNewMedName}
-              placeholder="e.g. Mesalamine"
-              placeholderTextColor={Colors.placeholder}
-              accessibilityLabel="New medication name"
-            />
+          <View style={{ marginTop: 12, padding: 12, backgroundColor: C.background, borderRadius: 12 }}>
+            <FieldLabel text="Medication Name" />
+            <StyledInput value={newMedName} onChangeText={setNewMedName}
+              placeholder="e.g. Mesalamine" accessibilityLabel="New medication name" />
             <FieldLabel text="Dosage (optional)" />
-            <TextInput
-              style={styledInput()}
-              value={newMedDosage}
-              onChangeText={setNewMedDosage}
-              placeholder="e.g. 400mg"
-              placeholderTextColor={Colors.placeholder}
-              accessibilityLabel="New medication dosage"
-            />
+            <StyledInput value={newMedDosage} onChangeText={setNewMedDosage}
+              placeholder="e.g. 400mg" accessibilityLabel="New medication dosage" />
             <TouchableOpacity
-              style={medStyles.saveBtn}
-              onPress={handleAddMed}
-              disabled={addingMed}
-              accessibilityRole="button"
+              style={{
+                backgroundColor: C.primary, borderRadius: 10,
+                paddingVertical: 10, alignItems: 'center', marginTop: 4,
+              }}
+              onPress={handleAddMed} disabled={addingMed}
             >
-              {addingMed ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={medStyles.saveBtnText}>Save Medication</Text>
-              )}
+              {addingMed
+                ? <ActivityIndicator color="#FFF" />
+                : <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Save Medication</Text>}
             </TouchableOpacity>
           </View>
         )}
-      </SectionCard>
+      </Card>
 
-      <Divider />
+      <Card>
+        <TagSelector options={SIDE_EFFECT_OPTIONS} selected={sideEffects} onChange={setSideEffects} label="Side Effects (optional)" />
+      </Card>
 
-      <SectionCard>
-        <TagSelector
-          options={SIDE_EFFECT_OPTIONS}
-          selected={sideEffects}
-          onChange={setSideEffects}
-          label="Side Effects (optional)"
-        />
-      </SectionCard>
-
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any notes about your medications..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Medication notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any notes about your medications..." multiline minHeight={70} accessibilityLabel="Medication notes" />
+      </Card>
 
       <SubmitButton label="Log Medications" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-const medStyles = StyleSheet.create({
-  medCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    marginBottom: 8,
-    backgroundColor: Colors.background,
-  },
-  medCardChecked: {
-    borderColor: Colors.secondary,
-    backgroundColor: Colors.secondary + '10',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.secondary,
-    borderColor: Colors.secondary,
-  },
-  checkmark: {
-    fontSize: 14,
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  medInfo: {
-    flex: 1,
-  },
-  medName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  medDosage: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  addBtn: {
-    marginTop: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderStyle: 'dashed',
-  },
-  addBtnText: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  addForm: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-  },
-  saveBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  saveBtnText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-});
-
-// ─── Sleep Form ──────────────────────────────────────────────────────────────
+// ─── Sleep Form ───────────────────────────────────────────────────────────────
 
 function SleepForm() {
+  const C = useColors();
   const { add } = useSleepLogs();
-  const [quality, setQuality] = useState<number>(0);
-  const [nightWakings, setNightWakings] = useState('');
+  const [quality, setQuality]               = useState(0);
+  const [nightWakings, setNightWakings]     = useState('');
   const [bathroomWakings, setBathroomWakings] = useState('');
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [notes, setNotes]                   = useState('');
+  const [loading, setLoading]               = useState(false);
+  const [success, setSuccess]               = useState(false);
 
-  const resetForm = () => {
-    setQuality(0);
-    setNightWakings('');
-    setBathroomWakings('');
-    setNotes('');
-  };
+  const reset = () => { setQuality(0); setNightWakings(''); setBathroomWakings(''); setNotes(''); };
 
   const handleSubmit = async () => {
     setLoading(true);
-    const today = format(new Date(), 'yyyy-MM-dd');
     await add({
-      date: today,
-      bedtime: new Date().toISOString(),
-      wake_time: new Date().toISOString(),
-      duration_minutes: null,
-      quality: quality || 3,
+      date: format(new Date(), 'yyyy-MM-dd'),
+      bedtime: new Date().toISOString(), wake_time: new Date().toISOString(),
+      duration_minutes: null, quality: quality || 3,
       night_wakings: nightWakings ? parseInt(nightWakings, 10) : 0,
       bathroom_wakings: bathroomWakings ? parseInt(bathroomWakings, 10) : 0,
       notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
+  const QUALITY_LABELS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+
   return (
     <>
-      <SectionCard>
+      <Card>
         <FieldLabel text="Sleep Quality" />
-        <View style={sleepStyles.starsRow}>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
           {[1, 2, 3, 4, 5].map((star) => (
-            <TouchableOpacity
-              key={star}
-              onPress={() => setQuality(star)}
-              accessibilityRole="button"
-              accessibilityLabel={`${star} star${star !== 1 ? 's' : ''}`}
-              accessibilityState={{ selected: quality >= star }}
-              style={sleepStyles.starBtn}
-            >
-              <Text style={[sleepStyles.star, quality >= star && sleepStyles.starActive]}>
-                ★
-              </Text>
+            <TouchableOpacity key={star} onPress={() => setQuality(star)} style={{ padding: 4 }}>
+              <Text style={{ fontSize: 32, color: quality >= star ? C.warning : C.border }}>★</Text>
             </TouchableOpacity>
           ))}
         </View>
         {quality > 0 && (
-          <Text style={sleepStyles.qualityLabel}>
-            {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][quality]}
+          <Text style={{ marginTop: 6, fontSize: 14, color: C.textSecondary, fontWeight: '500' }}>
+            {QUALITY_LABELS[quality]}
           </Text>
         )}
-      </SectionCard>
+      </Card>
 
-      <Divider />
-
-      <SectionCard>
-        <Text style={sharedStyles.noteText}>
-          Duration will be calculated from bedtime / wake time.
+      <Card>
+        <Text style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>
+          Duration will be calculated from bedtime and wake time.
         </Text>
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Night Wakings" />
-        <TextInput
-          style={styledInput()}
-          value={nightWakings}
-          onChangeText={setNightWakings}
-          placeholder="0"
-          placeholderTextColor={Colors.placeholder}
-          keyboardType="number-pad"
-          accessibilityLabel="Number of night wakings"
-        />
+        <StyledInput value={nightWakings} onChangeText={setNightWakings}
+          placeholder="0" keyboardType="number-pad" accessibilityLabel="Number of night wakings" />
         <FieldLabel text="Bathroom Wakings" />
-        <TextInput
-          style={styledInput()}
-          value={bathroomWakings}
-          onChangeText={setBathroomWakings}
-          placeholder="0"
-          placeholderTextColor={Colors.placeholder}
-          keyboardType="number-pad"
-          accessibilityLabel="Number of bathroom wakings"
-        />
-      </SectionCard>
+        <StyledInput value={bathroomWakings} onChangeText={setBathroomWakings}
+          placeholder="0" keyboardType="number-pad" accessibilityLabel="Number of bathroom wakings" />
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any notes about your sleep..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Sleep notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any notes about your sleep..." multiline minHeight={70} accessibilityLabel="Sleep notes" />
+      </Card>
 
       <SubmitButton label="Log Sleep" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-const sleepStyles = StyleSheet.create({
-  starsRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 8,
-  },
-  starBtn: {
-    padding: 4,
-  },
-  star: {
-    fontSize: 32,
-    color: Colors.border,
-  },
-  starActive: {
-    color: Colors.warning,
-  },
-  qualityLabel: {
-    marginTop: 6,
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-});
-
-// ─── Cycle Form ──────────────────────────────────────────────────────────────
+// ─── Cycle Form ───────────────────────────────────────────────────────────────
 
 function CycleForm() {
   const { add } = useMenstrualLogs();
-  const [flow, setFlow] = useState<FlowLevel | null>(null);
+  const [flow, setFlow]         = useState<FlowLevel | null>(null);
   const [cycleDay, setCycleDay] = useState('');
   const [symptoms, setSymptoms] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [notes, setNotes]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [success, setSuccess]   = useState(false);
 
-  const resetForm = () => {
-    setFlow(null);
-    setCycleDay('');
-    setSymptoms([]);
-    setNotes('');
-  };
+  const reset = () => { setFlow(null); setCycleDay(''); setSymptoms([]); setNotes(''); };
 
   const handleSubmit = async () => {
     setLoading(true);
-    const today = format(new Date(), 'yyyy-MM-dd');
     await add({
-      date: today,
+      date: format(new Date(), 'yyyy-MM-dd'),
       cycle_day: cycleDay ? parseInt(cycleDay, 10) : null,
-      flow: flow ?? 'none',
-      symptoms,
-      notes: notes.trim() || null,
+      flow: flow ?? 'none', symptoms, notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
+      <Card>
         <FieldLabel text="Flow Level" />
         <SegmentedButtons options={FLOW_LEVELS} value={flow} onChange={setFlow} />
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Cycle Day (optional)" />
-        <TextInput
-          style={styledInput()}
-          value={cycleDay}
-          onChangeText={setCycleDay}
-          placeholder="e.g. 14"
-          placeholderTextColor={Colors.placeholder}
-          keyboardType="number-pad"
-          accessibilityLabel="Cycle day"
-        />
-      </SectionCard>
+        <StyledInput value={cycleDay} onChangeText={setCycleDay}
+          placeholder="e.g. 14" keyboardType="number-pad" accessibilityLabel="Cycle day" />
+      </Card>
 
-      <Divider />
+      <Card>
+        <TagSelector options={MENSTRUAL_SYMPTOMS} selected={symptoms} onChange={setSymptoms} label="Symptoms" />
+      </Card>
 
-      <SectionCard>
-        <TagSelector
-          options={MENSTRUAL_SYMPTOMS}
-          selected={symptoms}
-          onChange={setSymptoms}
-          label="Symptoms"
-        />
-      </SectionCard>
-
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any additional notes..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Cycle notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any additional notes..." multiline minHeight={70} accessibilityLabel="Cycle notes" />
+      </Card>
 
       <SubmitButton label="Log Cycle" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-// ─── Weight Form ─────────────────────────────────────────────────────────────
+// ─── Weight Form ──────────────────────────────────────────────────────────────
 
 const WEIGHT_UNITS = [
   { value: 'kg' as const, label: 'kg' },
@@ -1409,24 +848,20 @@ const WEIGHT_UNITS = [
 ];
 
 function WeightForm() {
+  const C = useColors();
   const { add } = useWeightLogs();
   const [weight, setWeight] = useState('');
-  const [unit, setUnit] = useState<'kg' | 'lbs'>('kg');
-  const [notes, setNotes] = useState('');
+  const [unit, setUnit]     = useState<'kg' | 'lbs'>('kg');
+  const [notes, setNotes]   = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const resetForm = () => {
-    setWeight('');
-    setUnit('kg');
-    setNotes('');
-  };
+  const reset = () => { setWeight(''); setUnit('kg'); setNotes(''); };
 
   const handleSubmit = async () => {
     const parsed = parseFloat(weight);
     if (!weight || isNaN(parsed) || parsed <= 0) {
-      Alert.alert('Invalid Weight', 'Please enter a valid positive weight.');
-      return;
+      Alert.alert('Invalid Weight', 'Please enter a valid positive weight.'); return;
     }
     const weightKg = unit === 'lbs' ? parsed * 0.453592 : parsed;
     setLoading(true);
@@ -1435,79 +870,50 @@ function WeightForm() {
       weight_kg: parseFloat(weightKg.toFixed(3)),
       notes: notes.trim() || null,
     });
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      resetForm();
-    }, 1500);
+    setLoading(false); setSuccess(true);
+    setTimeout(() => { setSuccess(false); reset(); }, 1500);
   };
 
   if (success) return <SuccessBanner />;
 
   return (
     <>
-      <SectionCard>
+      <Card>
         <FieldLabel text="Weight" />
-        <View style={weightStyles.row}>
-          <TextInput
-            style={[styledInput(), { flex: 1, marginRight: 10 }]}
-            value={weight}
-            onChangeText={setWeight}
-            placeholder="0.0"
-            placeholderTextColor={Colors.placeholder}
-            keyboardType="decimal-pad"
-            accessibilityLabel="Weight value"
-          />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <StyledInput value={weight} onChangeText={setWeight}
+              placeholder="0.0" keyboardType="decimal-pad" accessibilityLabel="Weight value" />
+          </View>
           <SegmentedButtons options={WEIGHT_UNITS} value={unit} onChange={setUnit} />
         </View>
         {weight && !isNaN(parseFloat(weight)) && parseFloat(weight) > 0 && unit === 'lbs' && (
-          <Text style={weightStyles.convertedText}>
+          <Text style={{ marginTop: 6, fontSize: 12, color: C.textMuted }}>
             ≈ {(parseFloat(weight) * 0.453592).toFixed(1)} kg
           </Text>
         )}
-      </SectionCard>
+      </Card>
 
-      <SectionCard>
+      <Card>
         <FieldLabel text="Notes (optional)" />
-        <TextInput
-          style={styledInput({ minHeight: 70 })}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Any notes..."
-          placeholderTextColor={Colors.placeholder}
-          multiline
-          textAlignVertical="top"
-          accessibilityLabel="Weight notes"
-        />
-      </SectionCard>
+        <StyledInput value={notes} onChangeText={setNotes}
+          placeholder="Any notes..." multiline minHeight={70} accessibilityLabel="Weight notes" />
+      </Card>
 
       <SubmitButton label="Log Weight" onPress={handleSubmit} loading={loading} />
     </>
   );
 }
 
-const weightStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  convertedText: {
-    marginTop: 6,
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-});
-
-// ─── Main Log Screen ─────────────────────────────────────────────────────────
+// ─── Main Log Screen ──────────────────────────────────────────────────────────
 
 export default function LogScreen() {
-  const params = useLocalSearchParams<{ tab?: string }>();
+  const C = useColors();
+  const params     = useLocalSearchParams<{ tab?: string }>();
   const initialTab = (params.tab as TabKey) ?? 'food';
-  const validTab = TABS.some((t) => t.key === initialTab) ? initialTab : 'food';
+  const validTab   = TABS.some((t) => t.key === initialTab) ? initialTab : 'food';
   const [activeTab, setActiveTab] = useState<TabKey>(validTab);
 
-  // Update active tab if params change (e.g. deep link from Quick Log buttons)
   useEffect(() => {
     if (params.tab && TABS.some((t) => t.key === params.tab)) {
       setActiveTab(params.tab as TabKey);
@@ -1516,60 +922,59 @@ export default function LogScreen() {
 
   const renderForm = () => {
     switch (activeTab) {
-      case 'food':
-        return <FoodForm />;
-      case 'bowel':
-        return <BowelForm />;
-      case 'symptoms':
-        return <SymptomsForm />;
-      case 'meds':
-        return <MedsForm />;
-      case 'sleep':
-        return <SleepForm />;
-      case 'cycle':
-        return <CycleForm />;
-      case 'weight':
-        return <WeightForm />;
-      default:
-        return null;
+      case 'food':     return <FoodForm />;
+      case 'bowel':    return <BowelForm />;
+      case 'symptoms': return <SymptomsForm />;
+      case 'meds':     return <MedsForm />;
+      case 'sleep':    return <SleepForm />;
+      case 'cycle':    return <CycleForm />;
+      case 'weight':   return <WeightForm />;
+      default:         return null;
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={{ flex: 1, backgroundColor: C.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
-      {/* Screen Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Log</Text>
-        <Text style={styles.headerDate}>{format(new Date(), 'EEEE, MMMM d')}</Text>
+      {/* ── Header ── */}
+      <View style={{
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 56 : 20,
+        paddingBottom: 14,
+        backgroundColor: C.surface,
+        borderBottomWidth: 0.5, borderBottomColor: C.separator,
+      }}>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: C.textPrimary }}>Log</Text>
+        <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>
+          {format(new Date(), 'EEEE, MMMM d')}
+        </Text>
       </View>
 
-      {/* Tab Bar */}
-      <View style={styles.tabBarWrapper}>
+      {/* ── Tab Chips ── */}
+      <View style={{ backgroundColor: C.surface, borderBottomWidth: 0.5, borderBottomColor: C.separator }}>
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBar}
+          horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 6 }}
         >
           {TABS.map((tab) => {
             const active = activeTab === tab.key;
             return (
               <TouchableOpacity
                 key={tab.key}
-                style={[styles.tabBtn, active && styles.tabBtnActive]}
+                style={{
+                  paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20,
+                  backgroundColor: active ? C.primary : C.background,
+                  borderWidth: 1.5, borderColor: active ? C.primary : C.border,
+                }}
                 onPress={() => setActiveTab(tab.key)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={tab.label}
               >
-                <View style={styles.tabBadge}>
-                  <Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>{tab.badge}</Text>
-                </View>
-                <View style={styles.tabBadge}><Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>{tab.badge}</Text></View>
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                <Text style={{
+                  fontSize: 13, fontWeight: active ? '700' : '500',
+                  color: active ? '#FFFFFF' : C.textSecondary,
+                }}>
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -1578,351 +983,16 @@ export default function LogScreen() {
         </ScrollView>
       </View>
 
-      {/* Form Content */}
+      {/* ── Form ── */}
       <ScrollView
-        style={styles.flex}
-        contentContainerStyle={styles.formContent}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <RapidLogSection onOpenTab={setActiveTab} />
         {renderForm()}
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-// ─── Shared Styles ───────────────────────────────────────────────────────────
-
-const sharedStyles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.radius.lg,
-    padding: Theme.spacing.lg,
-    marginBottom: 12,
-    ...Theme.shadow.card,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  subLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    marginTop: -4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 4,
-    marginBottom: 12,
-  },
-  textInput: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.background,
-    marginBottom: 4,
-  },
-  segmentedRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  segmentBtn: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  segmentBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  segmentTextActive: {
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-    marginBottom: 4,
-  },
-  switchLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  submitBtnText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  successBanner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  successCheck: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  successCheckText: {
-    color: Colors.primary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  successText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  collapsibleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  collapsibleTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  collapsibleChevron: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  radioGroup: {
-    gap: 8,
-  },
-  radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  radioOptionActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  radioCircleActive: {
-    borderColor: Colors.primary,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  radioLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  radioLabelActive: {
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  timestampText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  noteText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    paddingVertical: 12,
-  },
-});
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 56 : 20,
-    paddingBottom: 12,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  headerDate: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  tabBarWrapper: {
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  tabBar: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  tabBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-    gap: 5,
-  },
-  tabBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  tabBadge: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  tabBadgeText: {
-    fontSize: 10,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  tabBadgeTextActive: {
-    color: Colors.white,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  tabLabelActive: {
-    color: Colors.white,
-  },
-  formContent: {
-    padding: 16,
-    paddingBottom: 60,
-  },
-});
-
-const rapidStyles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.radius.lg,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 3,
-    marginBottom: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  pill: {
-    flex: 1,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-  },
-  pillDisabled: {
-    opacity: 0.65,
-  },
-  pillText: {
-    color: Colors.primary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  secondaryPill: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-  },
-  secondaryPillText: {
-    color: Colors.textPrimary,
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  success: {
-    marginTop: 4,
-    fontSize: 12,
-    color: Colors.secondary,
-    fontWeight: '600',
-  },
-});

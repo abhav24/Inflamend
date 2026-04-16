@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch,
+  View, Text, TouchableOpacity, ScrollView, Switch,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
-import { Colors } from '../../constants/colors';
+import { useColors } from '../../constants/colors';
 import { DiagnosisType } from '../../types';
 import { Theme } from '../../constants/theme';
 import { AppCard, IconBadge, PrimaryButton } from '../../components/ui/DesignPrimitives';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STEPS = ['welcome', 'diagnosis', 'cycle', 'notifications'] as const;
 type Step = typeof STEPS[number];
@@ -23,6 +24,7 @@ const DIAGNOSIS_OPTIONS: { value: DiagnosisType; label: string }[] = [
 ];
 
 export default function OnboardingScreen() {
+  const C = useColors();
   const router = useRouter();
   const { user, setProfile } = useAuthStore();
   const [step, setStep] = useState<Step>('welcome');
@@ -70,8 +72,65 @@ export default function OnboardingScreen() {
     if (stepIndex > 0) setStep(STEPS[stepIndex - 1]);
   }
 
+  const styles = {
+    container: { flex: 1, backgroundColor: C.background },
+    dots: { flexDirection: 'row' as const, justifyContent: 'center' as const, gap: 8, paddingTop: 14 },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.border },
+    dotActive: { backgroundColor: C.primary, width: 24 },
+    content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16 },
+    stepCard: {
+      padding: Theme.spacing.xl,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.glassBorder,
+    },
+    title: { fontSize: 26, fontWeight: '700' as const, color: C.textPrimary, marginBottom: 12 },
+    body: { fontSize: 16, color: C.textSecondary, lineHeight: 24, marginTop: 12, marginBottom: 24 },
+    options: { gap: 12 },
+    option: {
+      borderWidth: 1.2,
+      borderColor: C.glassBorder,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: C.surfaceMuted,
+    },
+    optionSelected: { borderColor: C.primary, backgroundColor: C.primary + '20' },
+    optionText: { fontSize: 16, color: C.textPrimary },
+    optionTextSelected: { color: C.primary, fontWeight: '600' as const },
+    switchRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      backgroundColor: C.surfaceMuted,
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: C.glassBorder,
+    },
+    switchLabel: { fontSize: 16, color: C.textPrimary },
+    footer: { flexDirection: 'row' as const, paddingHorizontal: 24, paddingBottom: 20, paddingTop: 8, gap: 12 },
+    backBtn: {
+      flex: 1,
+      borderWidth: 1.5,
+      borderColor: C.glassBorder,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center' as const,
+      backgroundColor: C.surfaceMuted,
+    },
+    backBtnText: { fontSize: 16, color: C.textSecondary, fontWeight: '600' as const },
+    nextBtnWrap: {
+      flex: 2,
+      borderRadius: 12,
+      justifyContent: 'center' as const,
+    },
+    nextBtnFull: { flex: 1 },
+  };
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Progress dots */}
       <View style={styles.dots}>
         {STEPS.map((s, i) => (
@@ -125,7 +184,7 @@ export default function OnboardingScreen() {
               <Switch
                 value={tracksCycle}
                 onValueChange={setTracksCycle}
-                trackColor={{ true: Colors.primary }}
+                trackColor={{ false: C.border, true: C.primary }}
                 accessibilityLabel="Track menstrual cycle toggle"
               />
             </View>
@@ -158,45 +217,6 @@ export default function OnboardingScreen() {
           />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingTop: 60 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
-  dotActive: { backgroundColor: Colors.primary, width: 24 },
-  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 20 },
-  stepCard: {
-    padding: Theme.spacing.xl,
-  },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
-  body: { fontSize: 16, color: Colors.textSecondary, lineHeight: 24, marginTop: 12, marginBottom: 24 },
-  options: { gap: 12 },
-  option: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
-    paddingVertical: 14, paddingHorizontal: 16, backgroundColor: Colors.white,
-  },
-  optionSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  optionText: { fontSize: 16, color: Colors.textPrimary },
-  optionTextSelected: { color: Colors.primary, fontWeight: '600' },
-  switchRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.white, borderRadius: 12,
-    paddingVertical: 16, paddingHorizontal: 16,
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  switchLabel: { fontSize: 16, color: Colors.textPrimary },
-  footer: { flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 40, gap: 12 },
-  backBtn: {
-    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center',
-  },
-  backBtnText: { fontSize: 16, color: Colors.textSecondary, fontWeight: '600' },
-  nextBtnWrap: {
-    flex: 2, backgroundColor: Colors.primary, borderRadius: 12,
-    justifyContent: 'center',
-  },
-  nextBtnFull: { flex: 1 },
-});

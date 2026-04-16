@@ -3,11 +3,10 @@ import {
   View,
   Text,
   PanResponder,
-  StyleSheet,
   GestureResponderEvent,
   PanResponderGestureState,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useColors } from '../../constants/colors';
 
 interface SliderInputProps {
   label: string;
@@ -28,6 +27,7 @@ export function SliderInput({
   showValue = true,
   accessibilityLabel,
 }: SliderInputProps) {
+  const C = useColors();
   const trackWidth = useRef<number>(0);
   const startValue = useRef<number>(value);
 
@@ -73,21 +73,40 @@ export function SliderInput({
 
   return (
     <View
-      style={styles.container}
+      style={{ marginBottom: 16 }}
       accessibilityLabel={accessibilityLabel ?? label}
     >
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+      }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: C.textPrimary, flex: 1 }}>{label}</Text>
         {showValue && (
-          <View style={styles.valueBadge}>
-            <Text style={styles.valueText}>{value}</Text>
+          <View style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: C.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginLeft: 8,
+            borderWidth: 1,
+            borderColor: C.glassBorder,
+          }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>{value}</Text>
           </View>
         )}
       </View>
-      <View style={styles.row}>
-        <Text style={styles.minMax}>{min}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 12, color: C.textSecondary, minWidth: 16, textAlign: 'center' }}>{min}</Text>
         <View
-          style={styles.trackContainer}
+          style={{
+            flex: 1,
+            height: THUMB_SIZE + 8,
+            justifyContent: 'center',
+          }}
           onLayout={(e) => {
             trackWidth.current = e.nativeEvent.layout.width;
           }}
@@ -95,11 +114,20 @@ export function SliderInput({
           accessible={false}
         >
           {/* Full track */}
-          <View style={styles.track}>
+          <View style={{
+            height: 6,
+            backgroundColor: C.border,
+            borderRadius: 3,
+            overflow: 'hidden',
+          }}>
             {/* Filled portion */}
             <View
               style={[
-                styles.trackFill,
+                {
+                  height: '100%',
+                  backgroundColor: C.primary,
+                  borderRadius: 3,
+                },
                 { width: `${fillPercent}%` },
               ]}
             />
@@ -107,7 +135,21 @@ export function SliderInput({
           {/* Thumb */}
           <View
             style={[
-              styles.thumb,
+              {
+                position: 'absolute',
+                width: THUMB_SIZE,
+                height: THUMB_SIZE,
+                borderRadius: THUMB_SIZE / 2,
+                backgroundColor: C.surface,
+                borderWidth: 2.5,
+                borderColor: C.primary,
+                shadowColor: '#000',
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 3,
+                top: (6 - THUMB_SIZE) / 2 + (THUMB_SIZE + 8 - 6) / 2 - THUMB_SIZE / 2,
+              },
               {
                 left:
                   trackWidth.current > 0
@@ -118,84 +160,10 @@ export function SliderInput({
             ]}
           />
         </View>
-        <Text style={styles.minMax}>{max}</Text>
+        <Text style={{ fontSize: 12, color: C.textSecondary, minWidth: 16, textAlign: 'center' }}>{max}</Text>
       </View>
     </View>
   );
 }
 
 const THUMB_SIZE = 24;
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  valueBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  valueText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.white,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  minMax: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    minWidth: 16,
-    textAlign: 'center',
-  },
-  trackContainer: {
-    flex: 1,
-    height: THUMB_SIZE + 8,
-    justifyContent: 'center',
-  },
-  track: {
-    height: 6,
-    backgroundColor: Colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  trackFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 3,
-  },
-  thumb: {
-    position: 'absolute',
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: THUMB_SIZE / 2,
-    backgroundColor: Colors.white,
-    borderWidth: 2.5,
-    borderColor: Colors.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    top: (6 - THUMB_SIZE) / 2 + (THUMB_SIZE + 8 - 6) / 2 - THUMB_SIZE / 2,
-  },
-});

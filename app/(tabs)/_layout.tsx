@@ -1,48 +1,54 @@
 import { Tabs } from 'expo-router';
-import { Colors } from '../../constants/colors';
-import { Text, View } from 'react-native';
-
-function TabIcon({ label, glyph, focused }: { label: string; glyph: string; focused: boolean }) {
-  return (
-    <View
-      accessibilityLabel={label}
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: focused ? Colors.primaryLight : 'transparent',
-      }}
-    >
-      <Text style={{ fontSize: 14, fontWeight: '700', color: focused ? Colors.primary : Colors.textMuted }}>{glyph}</Text>
-    </View>
-  );
-}
+import { useColorScheme } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useColors } from '../../constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
+  const C = useColors();
+  const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: C.textMuted,
         tabBarStyle: {
-          borderTopColor: Colors.border,
-          backgroundColor: Colors.white,
-          height: 84,
-          paddingBottom: 8,
-          paddingTop: 6,
+          position: 'absolute',
+          borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: C.glassBorder,
+          backgroundColor: C.navGlass,
+          height: 64 + Math.max(insets.bottom, 12),
+          paddingBottom: Math.max(insets.bottom, 12),
+          paddingTop: 8,
+          marginHorizontal: 12,
+          marginBottom: 10,
+          borderRadius: 26,
+          shadowColor: '#0F172A',
+          shadowOpacity: isDark ? 0.34 : 0.16,
+          shadowRadius: 24,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 10,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          letterSpacing: 0.2,
+        },
+        tabBarItemStyle: {
+          borderRadius: 16,
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon label="Home" glyph="H" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'house.fill' as any : 'house-outline'} size={23} color={color} />
           ),
         }}
       />
@@ -50,8 +56,8 @@ export default function TabsLayout() {
         name="log"
         options={{
           title: 'Log',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon label="Log" glyph="L" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} size={26} color={color} />
           ),
         }}
       />
@@ -59,17 +65,21 @@ export default function TabsLayout() {
         name="insights"
         options={{
           title: 'Insights',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon label="Insights" glyph="I" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={23} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon label="Chat" glyph="C" focused={focused} />
+          title: 'AI Chat',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={23}
+              color={color}
+            />
           ),
         }}
       />
@@ -77,8 +87,12 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon label="Profile" glyph="P" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={26}
+              color={color}
+            />
           ),
         }}
       />

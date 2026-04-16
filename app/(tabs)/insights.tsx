@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useBowelLogs, useSymptomLogs, useFoodLogs } from '../../hooks/useLogs';
-import { Colors } from '../../constants/colors';
+import { AppColors, useColors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
 import { subDays, format, eachDayOfInterval, startOfDay } from 'date-fns';
 import { BowelLog, FoodLog, SymptomLog } from '../../types';
@@ -60,16 +60,28 @@ function bowelCountByDay(logs: BowelLog[], days: Date[]): DayPoint[] {
   }));
 }
 
-function heatmapColor(avgPain: number | null): string {
-  if (avgPain === null) return Colors.border;
-  if (avgPain <= 3) return Colors.riskLow;
-  if (avgPain <= 6) return Colors.warning;
-  return Colors.riskHigh;
+function heatmapColor(avgPain: number | null, C: AppColors): string {
+  if (avgPain === null) return C.border;
+  if (avgPain <= 3) return C.riskLow;
+  if (avgPain <= 6) return C.warning;
+  return C.riskHigh;
 }
 
 // ─── Simple chart components (no external charting library needed) ──────────
 
-function SimpleLineChart({ points, maxY, color }: { points: DayPoint[]; maxY: number; color: string }) {
+function SimpleLineChart({
+  points,
+  maxY,
+  color,
+  borderColor,
+  labelColor,
+}: {
+  points: DayPoint[];
+  maxY: number;
+  color: string;
+  borderColor: string;
+  labelColor: string;
+}) {
   if (points.length === 0) return null;
   const CHART_HEIGHT = 120;
 
@@ -81,14 +93,14 @@ function SimpleLineChart({ points, maxY, color }: { points: DayPoint[]; maxY: nu
           const barH = Math.max(heightPct * CHART_HEIGHT, p.y > 0 ? 4 : 2);
           return (
             <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT }}>
-              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : Colors.border, borderRadius: 3, opacity: 0.85 }} />
+              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : borderColor, borderRadius: 3, opacity: 0.85 }} />
             </View>
           );
         })}
       </View>
       <View style={{ flexDirection: 'row', marginTop: 4 }}>
         {points.map((p, i) => (
-          <Text key={i} style={{ flex: 1, fontSize: 8, color: Colors.textMuted, textAlign: 'center' }} numberOfLines={1}>
+          <Text key={i} style={{ flex: 1, fontSize: 8, color: labelColor, textAlign: 'center' }} numberOfLines={1}>
             {i === 0 || i === points.length - 1 || i === Math.floor(points.length / 2) ? p.x : ''}
           </Text>
         ))}
@@ -97,7 +109,17 @@ function SimpleLineChart({ points, maxY, color }: { points: DayPoint[]; maxY: nu
   );
 }
 
-function SimpleBarChart({ points, color }: { points: DayPoint[]; color: string }) {
+function SimpleBarChart({
+  points,
+  color,
+  borderColor,
+  labelColor,
+}: {
+  points: DayPoint[];
+  color: string;
+  borderColor: string;
+  labelColor: string;
+}) {
   if (points.length === 0) return null;
   const CHART_HEIGHT = 120;
   const maxY = Math.max(...points.map((p) => p.y), 1);
@@ -109,14 +131,14 @@ function SimpleBarChart({ points, color }: { points: DayPoint[]; color: string }
           const barH = Math.max((p.y / maxY) * CHART_HEIGHT, p.y > 0 ? 4 : 2);
           return (
             <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT }}>
-              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : Colors.border, borderRadius: 3 }} />
+              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : borderColor, borderRadius: 3 }} />
             </View>
           );
         })}
       </View>
       <View style={{ flexDirection: 'row', marginTop: 4 }}>
         {points.map((p, i) => (
-          <Text key={i} style={{ flex: 1, fontSize: 8, color: Colors.textMuted, textAlign: 'center' }} numberOfLines={1}>
+          <Text key={i} style={{ flex: 1, fontSize: 8, color: labelColor, textAlign: 'center' }} numberOfLines={1}>
             {i === 0 || i === points.length - 1 || i === Math.floor(points.length / 2) ? p.x : ''}
           </Text>
         ))}
@@ -126,6 +148,8 @@ function SimpleBarChart({ points, color }: { points: DayPoint[]; color: string }
 }
 
 export default function InsightsScreen() {
+  const C = useColors();
+  const styles = createStyles(C);
   const [range, setRange] = useState<Range>('7d');
   const [loading, setLoading] = useState(true);
 
@@ -225,7 +249,7 @@ export default function InsightsScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={C.primary} />
           <Text style={styles.loadingText}>Loading your data...</Text>
         </View>
       ) : (
@@ -235,7 +259,13 @@ export default function InsightsScreen() {
             <Text style={styles.cardTitle}>Symptom Trends</Text>
             <Text style={styles.cardSubtitle}>Average pain level per day (0–10)</Text>
             {hasSymptomData ? (
-              <SimpleLineChart points={symptomPoints} maxY={10} color={Colors.primary} />
+              <SimpleLineChart
+                points={symptomPoints}
+                maxY={10}
+                color={C.primary}
+                borderColor={C.border}
+                labelColor={C.textMuted}
+              />
             ) : (
               <View style={styles.noDataContainer}>
                 <IconBadge label="SY" size={34} />
@@ -249,7 +279,12 @@ export default function InsightsScreen() {
             <Text style={styles.cardTitle}>Bowel Movement Frequency</Text>
             <Text style={styles.cardSubtitle}>Count per day</Text>
             {hasBowelData ? (
-              <SimpleBarChart points={bowelPoints} color={Colors.info} />
+              <SimpleBarChart
+                points={bowelPoints}
+                color={C.info}
+                borderColor={C.border}
+                labelColor={C.textMuted}
+              />
             ) : (
               <View style={styles.noDataContainer}>
                 <IconBadge label="BW" size={34} />
@@ -293,7 +328,7 @@ export default function InsightsScreen() {
               {heatmapDays.map((day) => {
                 const key = format(day, 'yyyy-MM-dd');
                 const pain = painByDayMap[key] ?? null;
-                const color = heatmapColor(pain);
+                const color = heatmapColor(pain, C);
                 return (
                   <View key={key} style={[styles.heatmapCell, { backgroundColor: color }]}>
                     <Text style={styles.heatmapDayText}>{format(day, 'd')}</Text>
@@ -303,19 +338,19 @@ export default function InsightsScreen() {
             </View>
             <View style={styles.heatmapLegend}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.riskLow }]} />
+                <View style={[styles.legendDot, { backgroundColor: C.riskLow }]} />
                 <Text style={styles.legendText}>Low (0-3)</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.warning }]} />
+                <View style={[styles.legendDot, { backgroundColor: C.warning }]} />
                 <Text style={styles.legendText}>Moderate (4-6)</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.riskHigh }]} />
+                <View style={[styles.legendDot, { backgroundColor: C.riskHigh }]} />
                 <Text style={styles.legendText}>High (7-10)</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: Colors.border }]} />
+                <View style={[styles.legendDot, { backgroundColor: C.border }]} />
                 <Text style={styles.legendText}>No data</Text>
               </View>
             </View>
@@ -326,158 +361,164 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingBottom: 40,
-  },
-  header: {
-    backgroundColor: Colors.white,
-    paddingTop: 56,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  rangeToggle: {
-    flexDirection: 'row',
-    margin: 20,
-    backgroundColor: Colors.border,
-    borderRadius: 10,
-    padding: 3,
-  },
-  rangeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  rangeButtonActive: {
-    backgroundColor: Colors.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  rangeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  rangeButtonTextActive: {
-    color: Colors.textPrimary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 12,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.radius.lg,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    ...Theme.shadow.card,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
-  noDataContainer: {
-    alignItems: 'center',
-    paddingVertical: 28,
-  },
-  noDataText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 10,
-  },
-  triggerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
-  },
-  triggerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.danger,
-    marginTop: 5,
-    marginRight: 10,
-    flexShrink: 0,
-  },
-  triggerText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    flex: 1,
-    lineHeight: 20,
-  },
-  triggerFoodName: {
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  heatmapGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
-    marginBottom: 14,
-  },
-  heatmapCell: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heatmapDayText: {
-    fontSize: 10,
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  heatmapLegend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-});
+function createStyles(C: AppColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    content: {
+      paddingBottom: 120,
+    },
+    header: {
+      backgroundColor: C.surface,
+      paddingTop: 56,
+      paddingBottom: 16,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: C.glassBorder,
+    },
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: C.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 13,
+      color: C.textSecondary,
+      marginTop: 2,
+    },
+    rangeToggle: {
+      flexDirection: 'row',
+      margin: 20,
+      backgroundColor: C.surfaceMuted,
+      borderRadius: 10,
+      padding: 3,
+      borderWidth: 1,
+      borderColor: C.glassBorder,
+    },
+    rangeButton: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: 'center',
+      borderRadius: 8,
+    },
+    rangeButtonActive: {
+      backgroundColor: C.surface,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    rangeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: C.textSecondary,
+    },
+    rangeButtonTextActive: {
+      color: C.textPrimary,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      marginTop: 12,
+    },
+    card: {
+      backgroundColor: C.surface,
+      borderRadius: Theme.radius.lg,
+      marginHorizontal: 20,
+      marginBottom: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.glassBorder,
+      ...Theme.shadow.card,
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: C.textPrimary,
+      marginBottom: 2,
+    },
+    cardSubtitle: {
+      fontSize: 12,
+      color: C.textSecondary,
+      marginBottom: 12,
+    },
+    noDataContainer: {
+      alignItems: 'center',
+      paddingVertical: 28,
+    },
+    noDataText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      marginTop: 10,
+    },
+    triggerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: C.separator,
+    },
+    triggerDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: C.danger,
+      marginTop: 5,
+      marginRight: 10,
+      flexShrink: 0,
+    },
+    triggerText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      flex: 1,
+      lineHeight: 20,
+    },
+    triggerFoodName: {
+      fontWeight: '600',
+      color: C.textPrimary,
+    },
+    heatmapGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 5,
+      marginBottom: 14,
+    },
+    heatmapCell: {
+      width: 36,
+      height: 36,
+      borderRadius: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    heatmapDayText: {
+      fontSize: 10,
+      color: '#FFFFFF',
+      fontWeight: '600',
+    },
+    heatmapLegend: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    legendText: {
+      fontSize: 11,
+      color: C.textSecondary,
+    },
+  });
+}

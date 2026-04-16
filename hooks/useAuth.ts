@@ -17,7 +17,7 @@ export function useAuth() {
       setUser(null);
       setProfile({
         id: 'demo-local-profile',
-        display_name: 'Demo User',
+        display_name: 'Bob',
         date_of_birth: null,
         diagnosis_type: null,
         diagnosis_date: null,

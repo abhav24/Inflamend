@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { ENV } from '../../lib/env';
-import { Colors } from '../../constants/colors';
+import { useColors } from '../../constants/colors';
 import { Theme } from '../../constants/theme';
 import { AppCard, PrimaryButton, SectionHeader } from '../../components/ui/DesignPrimitives';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
+  const C = useColors();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,73 +46,85 @@ export default function LoginScreen() {
     }
   }
 
+  const styles = {
+    container: { flex: 1, backgroundColor: C.background },
+    inner: { flex: 1, justifyContent: 'center' as const, paddingHorizontal: 20 },
+    card: {
+      padding: Theme.spacing.lg,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.glassBorder,
+    },
+    form: { gap: 8 },
+    label: { fontSize: 14, fontWeight: '600' as const, color: C.textPrimary, marginTop: 8 },
+    input: {
+      borderWidth: 1,
+      borderColor: C.border,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      backgroundColor: C.surfaceMuted,
+      color: C.textPrimary,
+    },
+    inputError: { borderColor: C.danger },
+    errorText: { fontSize: 12, color: C.danger },
+    link: { color: C.primary, fontSize: 14, textAlign: 'center' as const, marginTop: 12 },
+    signupRow: { flexDirection: 'row' as const, justifyContent: 'center' as const, marginTop: 8 },
+    mutedText: { fontSize: 14, color: C.textSecondary },
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.inner}>
-        <SectionHeader title="Welcome back" subtitle="Sign in to continue your health tracking" />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.inner}>
+          <SectionHeader title="Welcome back" subtitle="Sign in to continue your health tracking" />
 
-        <AppCard style={styles.card}>
-          <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Email address"
-          />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          <AppCard style={styles.card}>
+            <View style={styles.form}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={C.placeholder}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Email address"
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            secureTextEntry
-            accessibilityLabel="Password"
-          />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={[styles.input, errors.password && styles.inputError]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor={C.placeholder}
+                secureTextEntry
+                accessibilityLabel="Password"
+              />
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-          <PrimaryButton title="Log In" onPress={handleLogin} loading={loading} />
+              <PrimaryButton title="Log In" onPress={handleLogin} loading={loading} />
 
-          <Link href="/(auth)/forgot-password" style={styles.link}>
-            Forgot password?
-          </Link>
+              <Link href="/(auth)/forgot-password" style={styles.link}>
+                Forgot password?
+              </Link>
 
-          <View style={styles.signupRow}>
-            <Text style={styles.mutedText}>Don’t have an account? </Text>
-            <Link href="/(auth)/signup" style={styles.link}>Sign up</Link>
-          </View>
-          </View>
-        </AppCard>
-      </View>
-    </KeyboardAvoidingView>
+              <View style={styles.signupRow}>
+                <Text style={styles.mutedText}>Don’t have an account? </Text>
+                <Link href="/(auth)/signup" style={[styles.link, { marginTop: 0 }]}>Sign up</Link>
+              </View>
+            </View>
+          </AppCard>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  card: {
-    padding: Theme.spacing.lg,
-  },
-  form: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginTop: 8 },
-  input: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 16,
-    backgroundColor: Colors.white, color: Colors.textPrimary,
-  },
-  inputError: { borderColor: Colors.danger },
-  errorText: { fontSize: 12, color: Colors.danger },
-  link: { color: Colors.primary, fontSize: 14, textAlign: 'center', marginTop: 12 },
-  signupRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
-  mutedText: { fontSize: 14, color: Colors.textSecondary },
-});

@@ -1,78 +1,194 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Switch,
-  Alert,
-  ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity,
+  TextInput, Switch, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '../../lib/supabase';
 import { ENV } from '../../lib/env';
 import {
-  getHealthSyncDiagnostics,
-  HealthSyncDiagnostic,
-  requestAppleHealthPermissions,
-  syncAppleHealthData,
+  getHealthSyncDiagnostics, HealthSyncDiagnostic,
+  requestAppleHealthPermissions, syncAppleHealthData,
 } from '../../lib/healthSync';
 import { useAuthStore } from '../../store/authStore';
 import { Profile } from '../../types';
 import { DIAGNOSIS_LABELS } from '../../constants';
-import { Colors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
+import { useColors } from '../../constants/colors';
 import { format, subDays } from 'date-fns';
-import { IconBadge } from '../../components/ui/DesignPrimitives';
+import { UserAvatar } from '../../components/ui/DesignPrimitives';
 
-const NOTIF_MED_KEY = 'notif_medication_reminders';
+const NOTIF_MED_KEY   = 'notif_medication_reminders';
 const NOTIF_DAILY_KEY = 'notif_daily_log_reminder';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+// ─── Settings Row — Apple Settings style ──────────────────────────────────────
+// Solid-color rounded square badge (white icon) + label + optional right element
+
+function SettingsRow({
+  icon,
+  iconBg,
+  label,
+  subtitle,
+  onPress,
+  right,
+  isLast = false,
+}: {
+  icon: IoniconName;
+  iconBg: string;
+  label: string;
+  subtitle?: string;
+  onPress?: () => void;
+  right?: React.ReactNode;
+  isLast?: boolean;
+}) {
+  const C = useColors();
+  return (
+    <TouchableOpacity
+      style={{
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingVertical: 12,
+        borderBottomWidth: isLast ? 0 : 0.5,
+        borderBottomColor: C.separator,
+      }}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.6 : 1}
+      disabled={!onPress && !right}
+    >
+      {/* Solid-color icon badge */}
+      <View style={{
+        width: 30, height: 30, borderRadius: 7,
+        backgroundColor: iconBg,
+        alignItems: 'center', justifyContent: 'center', marginRight: 14, flexShrink: 0,
+      }}>
+        <Ionicons name={icon} size={15} color="#FFFFFF" />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: '400', color: C.textPrimary }}>{label}</Text>
+        {subtitle ? (
+          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{subtitle}</Text>
+        ) : null}
+      </View>
+
+      {right ?? (
+        onPress ? (
+          <Ionicons name="chevron-forward" size={15} color={C.textMuted} />
+        ) : null
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ─── Settings Section ─────────────────────────────────────────────────────────
+
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const C = useColors();
+  return (
+    <View style={{ marginTop: 28, marginHorizontal: 20 }}>
+      <Text style={{
+        fontSize: 12, fontWeight: '600', color: C.textMuted,
+        letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
+      }}>
+        {title}
+      </Text>
+      <View style={{
+        backgroundColor: C.surface, borderRadius: 16, overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOpacity: C.background === '#000000' ? 0 : 0.05,
+        shadowRadius: 8, shadowOffset: { width: 0, height: 1 },
+        elevation: 2,
+      }}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+// ─── 30-Day Stats Strip ───────────────────────────────────────────────────────
+
+function ProfileStatsStrip({
+  totalLogs, flareDays, medAdherence, loading,
+}: {
+  totalLogs: number | null; flareDays: number | null;
+  medAdherence: string | null; loading: boolean;
+}) {
+  const C = useColors();
+  const cells = [
+    { label: 'Logs (30d)', value: loading ? '…' : totalLogs != null ? String(totalLogs) : '—', color: C.primary },
+    { label: 'Flare Days', value: loading ? '…' : flareDays != null ? String(flareDays) : '—', color: C.danger },
+    { label: 'Med Adherence', value: loading ? '…' : medAdherence ?? '—', color: C.success },
+  ];
+  return (
+    <View style={{
+      flexDirection: 'row',
+      backgroundColor: C.surface,
+      borderRadius: 20,
+      marginHorizontal: 20, marginTop: 20, marginBottom: 4,
+      shadowColor: '#000',
+      shadowOpacity: C.background === '#000000' ? 0 : 0.05,
+      shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 3,
+      overflow: 'hidden',
+    }}>
+      {cells.map((cell, i) => (
+        <View key={cell.label} style={{
+          flex: 1, alignItems: 'center', paddingVertical: 16,
+          borderRightWidth: i < cells.length - 1 ? 0.5 : 0,
+          borderRightColor: C.separator,
+        }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: cell.color, marginBottom: 3 }}>
+            {cell.value}
+          </Text>
+          <Text style={{
+            fontSize: 10, color: C.textMuted, fontWeight: '600',
+            textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center',
+          }}>
+            {cell.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile, userId, setProfile } = useAuthStore();
+  const C = useColors();
 
-  const [editingName, setEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
-  const [savingName, setSavingName] = useState(false);
+  const [editingName, setEditingName]   = useState(false);
+  const [displayName, setDisplayName]   = useState(profile?.display_name ?? '');
+  const [savingName, setSavingName]     = useState(false);
 
-  const [tracksMenstrual, setTracksMenstrual] = useState(
-    profile?.tracks_menstrual_cycle ?? false
-  );
+  const [tracksMenstrual, setTracksMenstrual] = useState(profile?.tracks_menstrual_cycle ?? false);
   const [savingMenstrual, setSavingMenstrual] = useState(false);
 
-  const [medReminders, setMedReminders] = useState(false);
+  const [medReminders, setMedReminders]   = useState(false);
   const [dailyReminder, setDailyReminder] = useState(false);
 
-  const [exportLoading, setExportLoading] = useState(false);
-  const [healthBusy, setHealthBusy] = useState(false);
-  const [healthStatus, setHealthStatus] = useState<string | null>(null);
-  const [healthDiagnostics, setHealthDiagnostics] = useState<HealthSyncDiagnostic[]>([]);
-  const [healthDiagnosticsLoading, setHealthDiagnosticsLoading] = useState(false);
+  const [totalLogs, setTotalLogs]         = useState<number | null>(null);
+  const [flareDays, setFlareDays]         = useState<number | null>(null);
+  const [medAdherence, setMedAdherence]   = useState<string | null>(null);
+  const [statsLoading, setStatsLoading]   = useState(true);
 
-  // Load notification prefs from AsyncStorage
+  const [exportLoading, setExportLoading] = useState(false);
+  const [healthBusy, setHealthBusy]       = useState(false);
+  const [healthStatus, setHealthStatus]   = useState<string | null>(null);
+  const [healthDiagnostics, setHealthDiagnostics] = useState<HealthSyncDiagnostic[]>([]);
+
   useEffect(() => {
-    const loadNotifPrefs = async () => {
-      try {
-        const [med, daily] = await Promise.all([
-          AsyncStorage.getItem(NOTIF_MED_KEY),
-          AsyncStorage.getItem(NOTIF_DAILY_KEY),
-        ]);
-        setMedReminders(med === 'true');
-        setDailyReminder(daily === 'true');
-      } catch (e) {
-        console.error('loadNotifPrefs', e);
-      }
-    };
-    loadNotifPrefs();
+    AsyncStorage.multiGet([NOTIF_MED_KEY, NOTIF_DAILY_KEY]).then(([[, med], [, daily]]) => {
+      setMedReminders(med === 'true');
+      setDailyReminder(daily === 'true');
+    });
   }, []);
 
-  // Sync local state with profile changes
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
@@ -81,216 +197,107 @@ export default function ProfileScreen() {
   }, [profile]);
 
   const loadHealthDiagnostics = useCallback(async () => {
-    if (!userId) {
-      setHealthDiagnostics([]);
-      return;
-    }
-    setHealthDiagnosticsLoading(true);
+    if (!userId) { setHealthDiagnostics([]); return; }
+    try { setHealthDiagnostics(await getHealthSyncDiagnostics(userId)); }
+    catch (e) { console.error('loadHealthDiagnostics', e); }
+  }, [userId]);
+
+  useEffect(() => { loadHealthDiagnostics(); }, [loadHealthDiagnostics]);
+
+  const loadStats = useCallback(async () => {
+    if (!userId) { setStatsLoading(false); return; }
     try {
-      const diagnostics = await getHealthSyncDiagnostics(userId);
-      setHealthDiagnostics(diagnostics);
-    } catch (error) {
-      console.error('loadHealthDiagnostics', error);
+      const from = subDays(new Date(), 29).toISOString();
+      const [{ data: sd }, { data: bd }, { data: fd }, { data: md }] = await Promise.all([
+        supabase.from('symptom_logs').select('is_flare').eq('user_id', userId).gte('logged_at', from),
+        supabase.from('bowel_logs').select('id').eq('user_id', userId).gte('logged_at', from),
+        supabase.from('food_logs').select('id').eq('user_id', userId).gte('logged_at', from),
+        supabase.from('medication_logs').select('was_taken').eq('user_id', userId).gte('created_at', from),
+      ]);
+      const symptoms = sd ?? []; const bowels = bd ?? []; const foods = fd ?? []; const meds = md ?? [];
+      setTotalLogs(symptoms.length + bowels.length + foods.length + meds.length);
+      setFlareDays(symptoms.filter((s: any) => s.is_flare).length);
+      if (meds.length > 0) {
+        const pct = Math.round((meds.filter((m: any) => m.was_taken).length / meds.length) * 100);
+        setMedAdherence(`${pct}%`);
+      } else {
+        setMedAdherence('—');
+      }
+    } catch {
+      setTotalLogs(null); setFlareDays(null); setMedAdherence(null);
     } finally {
-      setHealthDiagnosticsLoading(false);
+      setStatsLoading(false);
     }
   }, [userId]);
 
-  useEffect(() => {
-    loadHealthDiagnostics();
-  }, [loadHealthDiagnostics]);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const saveDisplayName = useCallback(async () => {
     if (!userId) return;
-    const trimmed = displayName.trim();
     setSavingName(true);
     const { data, error } = await supabase
       .from('profiles')
-      .update({ display_name: trimmed, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single();
+      .update({ display_name: displayName.trim(), updated_at: new Date().toISOString() })
+      .eq('id', userId).select().single();
     setSavingName(false);
-    if (error) {
-      Alert.alert('Error', 'Could not save name. Please try again.');
-      return;
-    }
-    setProfile(data as Profile);
-    setEditingName(false);
+    if (error) { Alert.alert('Error', 'Could not save name.'); return; }
+    setProfile(data as Profile); setEditingName(false);
   }, [userId, displayName, setProfile]);
 
   const toggleMenstrual = useCallback(async (value: boolean) => {
     if (!userId) return;
-    setTracksMenstrual(value);
-    setSavingMenstrual(true);
+    setTracksMenstrual(value); setSavingMenstrual(true);
     const { data, error } = await supabase
       .from('profiles')
       .update({ tracks_menstrual_cycle: value, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single();
+      .eq('id', userId).select().single();
     setSavingMenstrual(false);
-    if (error) {
-      setTracksMenstrual(!value);
-      Alert.alert('Error', 'Could not update preference. Please try again.');
-      return;
-    }
+    if (error) { setTracksMenstrual(!value); Alert.alert('Error', 'Could not update preference.'); return; }
     setProfile(data as Profile);
   }, [userId, setProfile]);
 
-  const toggleMedReminders = useCallback(async (value: boolean) => {
-    setMedReminders(value);
-    await AsyncStorage.setItem(NOTIF_MED_KEY, String(value));
+  const toggleMedReminders  = useCallback(async (v: boolean) => {
+    setMedReminders(v);  await AsyncStorage.setItem(NOTIF_MED_KEY, String(v));
   }, []);
-
-  const toggleDailyReminder = useCallback(async (value: boolean) => {
-    setDailyReminder(value);
-    await AsyncStorage.setItem(NOTIF_DAILY_KEY, String(value));
+  const toggleDailyReminder = useCallback(async (v: boolean) => {
+    setDailyReminder(v); await AsyncStorage.setItem(NOTIF_DAILY_KEY, String(v));
   }, []);
 
   const handleExport = useCallback(async () => {
     if (!userId || !profile) return;
     setExportLoading(true);
     try {
-      const to = new Date();
-      const from = subDays(to, 29);
-      const fromStr = from.toISOString();
-      const toStr = to.toISOString();
-      const fromDate = format(from, 'MMM d, yyyy');
-      const toDate = format(to, 'MMM d, yyyy');
-
-      // Fetch summary data
-      const [
-        { data: symptomData },
-        { data: bowelData },
-        { data: foodData },
-        { data: medData },
-      ] = await Promise.all([
-        supabase
-          .from('symptom_logs')
-          .select('pain_level, fatigue_level, is_flare')
-          .eq('user_id', userId)
-          .gte('logged_at', fromStr)
-          .lte('logged_at', toStr),
-        supabase
-          .from('bowel_logs')
-          .select('bristol_scale, blood_present')
-          .eq('user_id', userId)
-          .gte('logged_at', fromStr)
-          .lte('logged_at', toStr),
-        supabase
-          .from('food_logs')
-          .select('description, is_trigger_food')
-          .eq('user_id', userId)
-          .gte('logged_at', fromStr)
-          .lte('logged_at', toStr),
-        supabase
-          .from('medication_logs')
-          .select('was_taken, medication_name')
-          .eq('user_id', userId)
-          .gte('created_at', fromStr)
-          .lte('created_at', toStr),
+      const to = new Date(); const from = subDays(to, 29);
+      const [{ data: sd }, { data: bd }, { data: fd }, { data: md }] = await Promise.all([
+        supabase.from('symptom_logs').select('pain_level,fatigue_level,is_flare').eq('user_id', userId).gte('logged_at', from.toISOString()).lte('logged_at', to.toISOString()),
+        supabase.from('bowel_logs').select('bristol_scale,blood_present').eq('user_id', userId).gte('logged_at', from.toISOString()).lte('logged_at', to.toISOString()),
+        supabase.from('food_logs').select('description,is_trigger_food').eq('user_id', userId).gte('logged_at', from.toISOString()).lte('logged_at', to.toISOString()),
+        supabase.from('medication_logs').select('was_taken,medication_name').eq('user_id', userId).gte('created_at', from.toISOString()).lte('created_at', to.toISOString()),
       ]);
-
-      const symptoms = symptomData ?? [];
-      const bowels = bowelData ?? [];
-      const foods = foodData ?? [];
-      const meds = medData ?? [];
-
-      const avgPain =
-        symptoms.length > 0
-          ? (symptoms.reduce((s: number, l: any) => s + (l.pain_level ?? 0), 0) / symptoms.length).toFixed(1)
-          : 'N/A';
+      const symptoms = sd ?? []; const bowels = bd ?? []; const foods = fd ?? []; const meds = md ?? [];
+      const avgPain = symptoms.length > 0
+        ? (symptoms.reduce((s: number, l: any) => s + (l.pain_level ?? 0), 0) / symptoms.length).toFixed(1)
+        : 'N/A';
       const flareDays = symptoms.filter((s: any) => s.is_flare).length;
-      const bowelCount = bowels.length;
-      const bloodInStool = bowels.filter((b: any) => b.blood_present).length;
-      const triggerFoods = foods.filter((f: any) => f.is_trigger_food).length;
       const medsTaken = meds.filter((m: any) => m.was_taken).length;
-      const medsTotal = meds.length;
-      const diagnosisLabel =
-        profile.diagnosis_type ? (DIAGNOSIS_LABELS[profile.diagnosis_type] ?? profile.diagnosis_type) : 'Not set';
+      const diagnosisLabel = profile.diagnosis_type
+        ? (DIAGNOSIS_LABELS[profile.diagnosis_type] ?? profile.diagnosis_type)
+        : 'Not set';
 
-      const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1A1A1A; padding: 32px; max-width: 700px; margin: 0 auto; }
-    h1 { color: #4A90D9; font-size: 24px; margin-bottom: 4px; }
-    .subtitle { color: #6B7280; font-size: 14px; margin-bottom: 24px; }
-    h2 { font-size: 16px; color: #1A1A1A; border-bottom: 1px solid #E0E0E0; padding-bottom: 6px; margin-top: 28px; }
-    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F8F9FA; }
-    .label { color: #6B7280; font-size: 14px; }
-    .value { font-weight: 600; font-size: 14px; }
-    .footer { margin-top: 40px; font-size: 11px; color: #9CA3AF; text-align: center; }
-  </style>
-</head>
-<body>
-  <h1>Inflamend Health Report</h1>
-  <p class="subtitle">Generated on ${format(new Date(), 'MMMM d, yyyy')} &bull; ${fromDate} &ndash; ${toDate}</p>
-
-  <h2>Patient Information</h2>
-  <div class="row"><span class="label">Name</span><span class="value">${profile.display_name ?? 'Not set'}</span></div>
-  <div class="row"><span class="label">Diagnosis</span><span class="value">${diagnosisLabel}</span></div>
-  <div class="row"><span class="label">Diagnosis Date</span><span class="value">${profile.diagnosis_date ? format(new Date(profile.diagnosis_date), 'MMMM d, yyyy') : 'Not set'}</span></div>
-
-  <h2>Symptom Summary (Last 30 Days)</h2>
-  <div class="row"><span class="label">Symptom Entries</span><span class="value">${symptoms.length}</span></div>
-  <div class="row"><span class="label">Average Pain Level</span><span class="value">${avgPain} / 10</span></div>
-  <div class="row"><span class="label">Flare Days</span><span class="value">${flareDays}</span></div>
-
-  <h2>Bowel Health (Last 30 Days)</h2>
-  <div class="row"><span class="label">Total Bowel Movements</span><span class="value">${bowelCount}</span></div>
-  <div class="row"><span class="label">Entries with Blood</span><span class="value">${bloodInStool}</span></div>
-
-  <h2>Nutrition (Last 30 Days)</h2>
-  <div class="row"><span class="label">Food Entries</span><span class="value">${foods.length}</span></div>
-  <div class="row"><span class="label">Trigger Food Incidents</span><span class="value">${triggerFoods}</span></div>
-
-  <h2>Medications (Last 30 Days)</h2>
-  <div class="row"><span class="label">Doses Logged</span><span class="value">${medsTotal}</span></div>
-  <div class="row"><span class="label">Doses Taken</span><span class="value">${medsTaken}</span></div>
-  <div class="row"><span class="label">Adherence Rate</span><span class="value">${medsTotal > 0 ? Math.round((medsTaken / medsTotal) * 100) : 0}%</span></div>
-
-  <p class="footer">This report was generated by Inflamend. It is not a substitute for professional medical advice. Always consult your healthcare provider.</p>
-</body>
-</html>
-      `.trim();
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#1A1A1A;padding:32px;max-width:700px;margin:0 auto}h1{color:#6366F1;font-size:24px;margin-bottom:4px}.subtitle{color:#6B7280;font-size:14px;margin-bottom:24px}h2{font-size:16px;color:#1A1A1A;border-bottom:1px solid #E0E0E0;padding-bottom:6px;margin-top:28px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F8F9FA}.label{color:#6B7280;font-size:14px}.value{font-weight:600;font-size:14px}.footer{margin-top:40px;font-size:11px;color:#9CA3AF;text-align:center}</style></head><body><h1>Inflamend Health Report</h1><p class="subtitle">Generated on ${format(new Date(), 'MMMM d, yyyy')} &bull; ${format(from, 'MMM d, yyyy')} &ndash; ${format(to, 'MMM d, yyyy')}</p><h2>Patient</h2><div class="row"><span class="label">Name</span><span class="value">${profile.display_name ?? 'Not set'}</span></div><div class="row"><span class="label">Diagnosis</span><span class="value">${diagnosisLabel}</span></div><h2>Symptoms (30 days)</h2><div class="row"><span class="label">Entries</span><span class="value">${symptoms.length}</span></div><div class="row"><span class="label">Average Pain</span><span class="value">${avgPain} / 10</span></div><div class="row"><span class="label">Flare Days</span><span class="value">${flareDays}</span></div><h2>Bowel (30 days)</h2><div class="row"><span class="label">Movements</span><span class="value">${bowels.length}</span></div><div class="row"><span class="label">With Blood</span><span class="value">${bowels.filter((b: any) => b.blood_present).length}</span></div><h2>Nutrition (30 days)</h2><div class="row"><span class="label">Food Entries</span><span class="value">${foods.length}</span></div><div class="row"><span class="label">Trigger Foods</span><span class="value">${foods.filter((f: any) => f.is_trigger_food).length}</span></div><h2>Medications (30 days)</h2><div class="row"><span class="label">Doses Logged</span><span class="value">${meds.length}</span></div><div class="row"><span class="label">Doses Taken</span><span class="value">${medsTaken}</span></div><div class="row"><span class="label">Adherence</span><span class="value">${meds.length > 0 ? Math.round((medsTaken / meds.length) * 100) : 0}%</span></div><p class="footer">Generated by Inflamend. Not a substitute for professional medical advice.</p></body></html>`.trim();
 
       const { uri } = await Print.printToFileAsync({ html, base64: false });
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Share Inflamend Report',
-        });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Inflamend Report' });
       } else {
         Alert.alert('Exported', `Report saved to:\n${uri}`);
       }
-    } catch (err: any) {
-      console.error('export error', err);
+    } catch {
       Alert.alert('Export Failed', 'Could not generate the report. Please try again.');
     } finally {
       setExportLoading(false);
     }
   }, [userId, profile]);
-
-  const handleChangePassword = () => {
-    Alert.alert(
-      'Change Password',
-      'To change your password, please use the "Forgot Password" flow on the login screen. Sign out and tap "Forgot Password" to receive a reset email.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  const handlePrivacyPolicy = () => {
-    Alert.alert('Privacy Policy', 'Coming soon.', [{ text: 'OK' }]);
-  };
-
-  const handleTerms = () => {
-    Alert.alert('Terms of Service', 'Coming soon.', [{ text: 'OK' }]);
-  };
 
   const handleConnectAppleHealth = useCallback(async () => {
     if (!userId) return;
@@ -298,17 +305,12 @@ export default function ProfileScreen() {
     try {
       const result = await requestAppleHealthPermissions(userId);
       setHealthStatus(result.message);
-      if (!result.granted) {
-        Alert.alert('Apple Health', result.message);
-      }
-    } catch (error) {
-      console.error('handleConnectAppleHealth', error);
-      const msg = 'Failed to connect Apple Health. Please try again.';
-      setHealthStatus(msg);
-      Alert.alert('Apple Health', msg);
+      if (!result.granted) Alert.alert('Apple Health', result.message);
+    } catch {
+      const msg = 'Failed to connect Apple Health.';
+      setHealthStatus(msg); Alert.alert('Apple Health', msg);
     } finally {
-      setHealthBusy(false);
-      loadHealthDiagnostics();
+      setHealthBusy(false); loadHealthDiagnostics();
     }
   }, [userId, loadHealthDiagnostics]);
 
@@ -317,584 +319,275 @@ export default function ProfileScreen() {
     setHealthBusy(true);
     try {
       const result = await syncAppleHealthData(userId);
-      setHealthStatus(result.message);
-      Alert.alert('Apple Health Sync', result.message);
-    } catch (error) {
-      console.error('handleSyncAppleHealth', error);
-      const msg = 'Health sync failed. Please try again.';
-      setHealthStatus(msg);
-      Alert.alert('Apple Health Sync', msg);
+      setHealthStatus(result.message); Alert.alert('Apple Health Sync', result.message);
+    } catch {
+      const msg = 'Health sync failed.';
+      setHealthStatus(msg); Alert.alert('Apple Health Sync', msg);
     } finally {
-      setHealthBusy(false);
-      loadHealthDiagnostics();
+      setHealthBusy(false); loadHealthDiagnostics();
     }
   }, [userId, loadHealthDiagnostics]);
-
-  const metricLabel: Record<HealthSyncDiagnostic['metric'], string> = {
-    steps: 'Steps',
-    heart_rate: 'Heart Rate',
-    sleep_hours: 'Sleep',
-    active_energy_kcal: 'Active Energy',
-  };
 
   const handleLogout = async () => {
     if (ENV.DEMO_MODE) {
       Alert.alert('Demo Mode', 'Sign out is disabled in demo mode.');
-      router.replace('/(tabs)/home');
       return;
     }
-
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/(auth)/login');
-        },
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => {
+        await supabase.auth.signOut(); router.replace('/(auth)/login');
+      }},
     ]);
   };
 
-  const diagnosisLabel =
-    profile?.diagnosis_type
-      ? (DIAGNOSIS_LABELS[profile.diagnosis_type] ?? profile.diagnosis_type)
-      : 'Not set';
+  const diagnosisLabel = profile?.diagnosis_type
+    ? (DIAGNOSIS_LABELS[profile.diagnosis_type] ?? profile.diagnosis_type)
+    : null;
+
+  const metricLabel: Record<HealthSyncDiagnostic['metric'], string> = {
+    steps: 'Steps', heart_rate: 'Heart Rate',
+    sleep_hours: 'Sleep', active_energy_kcal: 'Active Energy',
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
-      </View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: C.background }}
+      contentContainerStyle={{ paddingBottom: 60 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Profile Header ── */}
+      <View style={{
+        alignItems: 'center',
+        paddingTop: Platform.OS === 'ios' ? 68 : 36,
+        paddingBottom: 28, paddingHorizontal: 20,
+        backgroundColor: C.surface,
+        borderBottomWidth: 0.5,
+        borderBottomColor: C.separator,
+      }}>
+        {/* Avatar */}
+        <UserAvatar name={profile?.display_name ?? 'U'} size={88} />
 
-      {/* User Info */}
-      <Text style={styles.sectionLabel}>ACCOUNT</Text>
-      <View style={styles.card}>
-        <View style={styles.avatarRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(profile?.display_name ?? 'U').charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.avatarInfo}>
-            {editingName ? (
-              <View style={styles.nameEditRow}>
-                <TextInput
-                  style={styles.nameInput}
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  placeholder="Your name"
-                  placeholderTextColor={Colors.placeholder}
-                  autoFocus
-                  maxLength={50}
-                />
-                <TouchableOpacity
-                  style={styles.saveNameButton}
-                  onPress={saveDisplayName}
-                  disabled={savingName}
-                >
-                  {savingName ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Text style={styles.saveNameButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelNameButton}
-                  onPress={() => {
-                    setDisplayName(profile?.display_name ?? '');
-                    setEditingName(false);
-                  }}
-                >
-                  <Text style={styles.cancelNameButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.nameRow}>
-                <Text style={styles.userName}>{profile?.display_name || 'Add your name'}</Text>
-                <TouchableOpacity onPress={() => setEditingName(true)} style={styles.editButton}>
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <Text style={styles.userDiagnosis}>{diagnosisLabel}</Text>
-            {profile?.diagnosis_date && (
-              <Text style={styles.userDate}>
-                Since {format(new Date(profile.diagnosis_date), 'MMMM yyyy')}
+        {/* Name / Edit */}
+        <View style={{ marginTop: 14, alignItems: 'center', width: '100%' }}>
+          {editingName ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+              <TextInput
+                style={{
+                  flex: 1, backgroundColor: C.background, borderRadius: 12,
+                  paddingHorizontal: 14, paddingVertical: 9,
+                  fontSize: 16, color: C.textPrimary,
+                  borderWidth: 1, borderColor: C.border,
+                }}
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="Your name"
+                placeholderTextColor={C.placeholder}
+                autoFocus
+                maxLength={50}
+              />
+              <TouchableOpacity
+                style={{
+                  backgroundColor: C.primary, borderRadius: 12,
+                  paddingHorizontal: 16, paddingVertical: 9, alignItems: 'center',
+                }}
+                onPress={saveDisplayName}
+                disabled={savingName}
+              >
+                {savingName
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Save</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setDisplayName(profile?.display_name ?? ''); setEditingName(false); }}>
+                <Text style={{ color: C.textMuted, fontSize: 14, paddingVertical: 9 }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              onPress={() => setEditingName(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 22, fontWeight: '700', color: C.textPrimary }}>
+                {profile?.display_name || 'Add your name'}
               </Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Tracking Preferences */}
-      <Text style={styles.sectionLabel}>TRACKING PREFERENCES</Text>
-      <View style={styles.card}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Menstrual Cycle Tracking</Text>
-            <Text style={styles.settingSubtitle}>Track cycle alongside IBD symptoms</Text>
-          </View>
-          <Switch
-            value={tracksMenstrual}
-            onValueChange={toggleMenstrual}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.white}
-            disabled={savingMenstrual}
-          />
-        </View>
-      </View>
-
-      {/* Notification Settings */}
-      <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
-      <View style={styles.card}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Medication Reminders</Text>
-            <Text style={styles.settingSubtitle}>Get reminded to take your medications</Text>
-          </View>
-          <Switch
-            value={medReminders}
-            onValueChange={toggleMedReminders}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.white}
-          />
-        </View>
-        <View style={[styles.settingRow, styles.settingRowLast]}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Daily Log Reminder</Text>
-            <Text style={styles.settingSubtitle}>Reminder to log your symptoms each day</Text>
-          </View>
-          <Switch
-            value={dailyReminder}
-            onValueChange={toggleDailyReminder}
-            trackColor={{ false: Colors.border, true: Colors.primary }}
-            thumbColor={Colors.white}
-          />
-        </View>
-      </View>
-
-      {/* Data Export */}
-      <Text style={styles.sectionLabel}>DATA</Text>
-      <View style={styles.card}>
-        <TouchableOpacity
-          style={styles.exportButton}
-          onPress={handleExport}
-          disabled={exportLoading}
-          activeOpacity={0.8}
-        >
-          {exportLoading ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <>
-              <IconBadge label="PDF" size={24} tone="secondary" />
-              <Text style={styles.exportButtonText}>Export Report (PDF)</Text>
-            </>
+              <Ionicons name="pencil-outline" size={15} color={C.textMuted} />
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
-        <Text style={styles.exportHint}>
-          Generates a 30-day summary report you can share with your healthcare provider.
-        </Text>
+        </View>
+
+        {/* Diagnosis badge */}
+        {diagnosisLabel && (
+          <View style={{
+            backgroundColor: C.primary + '15', borderRadius: 20,
+            paddingHorizontal: 14, paddingVertical: 5, marginTop: 10,
+          }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: C.primary }}>{diagnosisLabel}</Text>
+          </View>
+        )}
+
+        {profile?.diagnosis_date && (
+          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 6 }}>
+            Since {format(new Date(profile.diagnosis_date), 'MMMM yyyy')}
+          </Text>
+        )}
       </View>
 
-      {/* Apple Health */}
-      <Text style={styles.sectionLabel}>APPLE HEALTH (BETA)</Text>
-      <View style={styles.card}>
-        <TouchableOpacity
-          style={[styles.secondaryButton, healthBusy && styles.secondaryButtonDisabled]}
-          onPress={handleConnectAppleHealth}
-          disabled={healthBusy}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryButtonText}>Connect Apple Health</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.secondaryButton, styles.secondaryButtonLast, healthBusy && styles.secondaryButtonDisabled]}
-          onPress={handleSyncAppleHealth}
-          disabled={healthBusy}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryButtonText}>Sync Health Data Now</Text>
-        </TouchableOpacity>
+      {/* ── 30-Day Stats ── */}
+      <ProfileStatsStrip
+        totalLogs={totalLogs}
+        flareDays={flareDays}
+        medAdherence={medAdherence}
+        loading={statsLoading}
+      />
 
-        <TouchableOpacity
-          style={[styles.secondaryButton, styles.secondaryButtonLast, healthDiagnosticsLoading && styles.secondaryButtonDisabled]}
-          onPress={loadHealthDiagnostics}
-          disabled={healthDiagnosticsLoading}
-          activeOpacity={0.8}
-        >
-          {healthDiagnosticsLoading ? (
-            <ActivityIndicator size="small" color={Colors.textPrimary} />
-          ) : (
-            <Text style={styles.secondaryButtonText}>Refresh Diagnostics</Text>
-          )}
-        </TouchableOpacity>
+      {/* ── Tracking ── */}
+      <SettingsSection title="Tracking">
+        <SettingsRow
+          icon="calendar-outline"
+          iconBg="#8B5CF6"
+          label="Menstrual Cycle"
+          subtitle="Track alongside IBD symptoms"
+          right={
+            <Switch
+              value={tracksMenstrual} onValueChange={toggleMenstrual}
+              trackColor={{ false: C.border, true: C.primary }}
+              thumbColor="#FFFFFF" disabled={savingMenstrual}
+            />
+          }
+          isLast
+        />
+      </SettingsSection>
 
-        {healthStatus && <Text style={styles.healthStatus}>{healthStatus}</Text>}
+      {/* ── Notifications ── */}
+      <SettingsSection title="Notifications">
+        <SettingsRow
+          icon="notifications-outline"
+          iconBg="#F59E0B"
+          label="Medication Reminders"
+          subtitle="Get reminded to take your medications"
+          right={
+            <Switch value={medReminders} onValueChange={toggleMedReminders}
+              trackColor={{ false: C.border, true: C.primary }} thumbColor="#FFFFFF" />
+          }
+        />
+        <SettingsRow
+          icon="alarm-outline"
+          iconBg="#38BDF8"
+          label="Daily Log Reminder"
+          subtitle="Daily reminder to log your symptoms"
+          right={
+            <Switch value={dailyReminder} onValueChange={toggleDailyReminder}
+              trackColor={{ false: C.border, true: C.primary }} thumbColor="#FFFFFF" />
+          }
+          isLast
+        />
+      </SettingsSection>
 
-        <View style={styles.healthDiagWrap}>
-          <Text style={styles.healthDiagTitle}>Sync Diagnostics</Text>
-          {healthDiagnostics.length === 0 && !healthDiagnosticsLoading ? (
-            <Text style={styles.healthDiagEmpty}>No diagnostic data yet.</Text>
-          ) : (
-            healthDiagnostics.map((diag) => {
-              const statusColor =
-                diag.lastStatus === 'success'
-                  ? Colors.success
-                  : diag.lastStatus === 'error'
-                    ? Colors.danger
-                    : diag.lastStatus === 'syncing'
-                      ? Colors.warning
-                      : Colors.textSecondary;
+      {/* ── Data ── */}
+      <SettingsSection title="Data">
+        <SettingsRow
+          icon="document-text-outline"
+          iconBg="#8B5CF6"
+          label="Export Health Report"
+          subtitle="30-day PDF summary for your doctor"
+          onPress={exportLoading ? undefined : handleExport}
+          right={exportLoading ? <ActivityIndicator size="small" color={C.primary} /> : undefined}
+          isLast
+        />
+      </SettingsSection>
 
+      {/* ── Apple Health ── */}
+      <SettingsSection title="Apple Health">
+        <SettingsRow
+          icon="heart-outline"
+          iconBg="#EF4444"
+          label="Connect Apple Health"
+          onPress={healthBusy ? undefined : handleConnectAppleHealth}
+          right={healthBusy ? <ActivityIndicator size="small" color={C.primary} /> : undefined}
+        />
+        <SettingsRow
+          icon="sync-outline"
+          iconBg="#10B981"
+          label="Sync Health Data"
+          onPress={healthBusy ? undefined : handleSyncAppleHealth}
+          isLast
+        />
+        {healthStatus ? (
+          <Text style={{
+            fontSize: 12, color: C.textSecondary,
+            paddingHorizontal: 16, paddingBottom: 12, lineHeight: 17,
+          }}>
+            {healthStatus}
+          </Text>
+        ) : null}
+        {healthDiagnostics.length > 0 && (
+          <View style={{
+            marginHorizontal: 16, marginBottom: 14,
+            borderTopWidth: 0.5, borderTopColor: C.separator, paddingTop: 10,
+          }}>
+            {healthDiagnostics.map((diag) => {
+              const statusColor = diag.lastStatus === 'success' ? C.success
+                : diag.lastStatus === 'error' ? C.danger
+                : diag.lastStatus === 'syncing' ? C.warning
+                : C.textSecondary;
               return (
-                <View key={diag.metric} style={styles.healthDiagRow}>
-                  <View style={styles.healthDiagRowHead}>
-                    <Text style={styles.healthDiagMetric}>{metricLabel[diag.metric]}</Text>
-                    <Text style={[styles.healthDiagStatus, { color: statusColor }]}>
-                      {diag.lastStatus.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={styles.healthDiagMeta}>Samples: {diag.sampleCount}</Text>
-                  {diag.lastSyncedAt && (
-                    <Text style={styles.healthDiagMeta}>
-                      Last sync: {format(new Date(diag.lastSyncedAt), 'MMM d, h:mm a')}
-                    </Text>
-                  )}
-                  {diag.lastError && <Text style={styles.healthDiagError}>Error: {diag.lastError}</Text>}
+                <View key={diag.metric} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: C.textPrimary }}>
+                    {metricLabel[diag.metric]}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>
+                    {diag.lastStatus.toUpperCase()}
+                  </Text>
                 </View>
               );
-            })
-          )}
-        </View>
-      </View>
+            })}
+          </View>
+        )}
+      </SettingsSection>
 
-      {/* Account */}
-      <Text style={styles.sectionLabel}>ACCOUNT SETTINGS</Text>
-      <View style={styles.card}>
-        <TouchableOpacity style={styles.linkRow} onPress={handleChangePassword} activeOpacity={0.7}>
-          <Text style={styles.linkRowText}>Change Password</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.linkRow} onPress={handlePrivacyPolicy} activeOpacity={0.7}>
-          <Text style={styles.linkRowText}>Privacy Policy</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.linkRow, styles.linkRowLast]} onPress={handleTerms} activeOpacity={0.7}>
-          <Text style={styles.linkRowText}>Terms of Service</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
-        </TouchableOpacity>
-      </View>
+      {/* ── Account ── */}
+      <SettingsSection title="Account">
+        <SettingsRow
+          icon="lock-closed-outline"
+          iconBg="#3B82F6"
+          label="Change Password"
+          onPress={() => Alert.alert('Change Password', 'Use "Forgot Password" on the login screen to reset your password.', [{ text: 'OK' }])}
+        />
+        <SettingsRow
+          icon="shield-checkmark-outline"
+          iconBg="#6366F1"
+          label="Privacy Policy"
+          onPress={() => Alert.alert('Privacy Policy', 'Coming soon.', [{ text: 'OK' }])}
+        />
+        <SettingsRow
+          icon="document-outline"
+          iconBg="#9CA3AF"
+          label="Terms of Service"
+          onPress={() => Alert.alert('Terms of Service', 'Coming soon.', [{ text: 'OK' }])}
+          isLast
+        />
+      </SettingsSection>
 
-      {/* Logout */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-        <Text style={styles.logoutButtonText}>Sign Out</Text>
+      {/* ── Sign Out ── */}
+      <TouchableOpacity
+        style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+          marginHorizontal: 20, marginTop: 32,
+          backgroundColor: C.danger + '12',
+          borderWidth: 1, borderColor: C.danger + '40',
+          borderRadius: 16, paddingVertical: 15, gap: 8,
+        }}
+        onPress={handleLogout}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="log-out-outline" size={18} color={C.danger} />
+        <Text style={{ color: C.danger, fontSize: 15, fontWeight: '700' }}>Sign Out</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Inflamend v1.0.0</Text>
+      <Text style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, marginTop: 20 }}>
+        Inflamend v1.0.0
+      </Text>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingBottom: 48,
-  },
-  header: {
-    backgroundColor: Colors.white,
-    paddingTop: 56,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-    marginTop: 24,
-    marginBottom: 8,
-    marginHorizontal: 20,
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Theme.radius.lg,
-    marginHorizontal: 20,
-    ...Theme.shadow.card,
-    overflow: 'hidden',
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-    flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  avatarInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  editButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 8,
-  },
-  editButtonText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  nameEditRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
-  },
-  nameInput: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  saveNameButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minWidth: 52,
-    alignItems: 'center',
-  },
-  saveNameButtonText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  cancelNameButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  cancelNameButtonText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-  },
-  userDiagnosis: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  userDate: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
-  },
-  settingRowLast: {
-    borderBottomWidth: 0,
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  settingTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  settingSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  exportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    margin: 16,
-    borderRadius: 12,
-    paddingVertical: 14,
-    gap: 8,
-  },
-  exportButtonText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  exportHint: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-    marginHorizontal: 16,
-  },
-  secondaryButton: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  secondaryButtonLast: {
-    marginTop: 10,
-  },
-  secondaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  secondaryButtonText: {
-    color: Colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  healthStatus: {
-    marginHorizontal: 16,
-    marginVertical: 14,
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  healthDiagWrap: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: Colors.background,
-  },
-  healthDiagTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  healthDiagEmpty: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  healthDiagRow: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  healthDiagRowHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  healthDiagMetric: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  healthDiagStatus: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  healthDiagMeta: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  healthDiagError: {
-    marginTop: 2,
-    fontSize: 11,
-    color: Colors.danger,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
-  },
-  linkRowLast: {
-    borderBottomWidth: 0,
-  },
-  linkRowText: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.textPrimary,
-  },
-  linkRowChevron: {
-    fontSize: 20,
-    color: Colors.textMuted,
-  },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    backgroundColor: Colors.danger,
-    borderRadius: Theme.radius.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  version: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: 20,
-  },
-});

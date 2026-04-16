@@ -17,17 +17,24 @@ export const Theme = {
   shadow: {
     card: {
       shadowColor: '#0F172A',
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.14,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
       elevation: 4,
     },
     subtle: {
       shadowColor: '#0F172A',
-      shadowOpacity: 0.05,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
       elevation: 2,
+    },
+    glass: {
+      shadowColor: '#0F172A',
+      shadowOpacity: 0.2,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6,
     },
   },
 } as const;

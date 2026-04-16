@@ -3,9 +3,8 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useColors } from '../../constants/colors';
 
 interface TagOption {
   id: string;
@@ -25,6 +24,8 @@ export function TagSelector({
   onChange,
   label,
 }: TagSelectorProps) {
+  const C = useColors();
+
   const toggle = (id: string) => {
     if (selected.includes(id)) {
       onChange(selected.filter((s) => s !== id));
@@ -34,24 +35,37 @@ export function TagSelector({
   };
 
   return (
-    <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.tagRow}>
+    <View style={{ marginBottom: 16 }}>
+      {label ? (
+        <Text style={{ fontSize: 14, fontWeight: '600', color: C.textPrimary, marginBottom: 8 }}>
+          {label}
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {options.map((opt) => {
           const isSelected = selected.includes(opt.id);
           return (
             <TouchableOpacity
               key={opt.id}
-              style={[styles.tag, isSelected && styles.tagSelected]}
+              style={{
+                paddingVertical: 7,
+                paddingHorizontal: 14,
+                borderRadius: 20,
+                borderWidth: 1.2,
+                borderColor: isSelected ? C.primary : C.glassBorder,
+                backgroundColor: isSelected ? C.primary : C.surfaceMuted,
+              }}
               onPress={() => toggle(opt.id)}
               activeOpacity={0.7}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isSelected }}
               accessibilityLabel={opt.label}
             >
-              <Text
-                style={[styles.tagText, isSelected && styles.tagTextSelected]}
-              >
+              <Text style={{
+                fontSize: 13,
+                fontWeight: isSelected ? '600' : '500',
+                color: isSelected ? '#FFFFFF' : C.textSecondary,
+              }}>
                 {opt.label}
               </Text>
             </TouchableOpacity>
@@ -61,41 +75,3 @@ export function TagSelector({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tag: {
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-  tagSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  tagText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.textSecondary,
-  },
-  tagTextSelected: {
-    color: Colors.white,
-    fontWeight: '600',
-  },
-});

@@ -1,16 +1,17 @@
-# Design Language Guide — PocketSmart Style
+# Design Language Guide — Inflamend Liquid Glass
 
-Use this document to apply the PocketSmart design language to a new SwiftUI app. Adapt all content/labels/icons to the actual app domain — the design patterns are what carries over, not the budgeting-specific terminology.
+Use this document to apply Inflamend’s Apple Health-inspired design language to React Native and SwiftUI surfaces. Keep interaction patterns and spacing consistent across screens; domain copy can vary, but visual behavior should remain system-like and calm.
 
 ---
 
 ## Core Philosophy
 
-- **Instagram-inspired social polish**: Clean cards, generous whitespace, readable typography, smooth spring animations.
-- **SF Symbols only** — never use emoji in UI. Every icon is a system image.
-- **Indigo-to-violet brand gradient** as the primary accent. Everything else uses semantic system colors.
-- **Adaptive backgrounds**: Use `Color(.secondarySystemBackground)` for cards — respects dark/light mode automatically.
-- **No emoji in code output**, no placeholder comments, no extra abstraction layers.
+- **Apple Health tone**: Quiet, clinical, and reassuring. Prioritize readability and low cognitive load.
+- **Liquid glass layering**: Surfaces should be translucent with subtle borders and soft depth, never flat blocks.
+- **Dark mode parity**: Every screen must be fully legible in both light and dark without manual per-screen hacks.
+- **Safe-area first**: Navigation, headers, FABs, and forms must never collide with notches, tab bars, or keyboards.
+- **System iconography only**: SF Symbols / equivalent icon set; no emoji in UI.
+- **Motion discipline**: Use short, smooth transitions; avoid flashy or bouncy effects for health-critical information.
 
 ---
 
