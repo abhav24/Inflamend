@@ -17,6 +17,41 @@ export interface Profile {
   updated_at: string;
 }
 
+export type HealthMetric = 'steps' | 'heart_rate' | 'sleep_hours' | 'active_energy_kcal';
+
+export interface AppSettings {
+  user_id: string;
+  timezone: string;
+  preferred_weight_unit: 'kg' | 'lb';
+  health_sync_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HealthSample {
+  id: string;
+  user_id: string;
+  metric: HealthMetric;
+  value: number;
+  unit: string;
+  observed_at: string;
+  source: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface HealthSyncState {
+  id: string;
+  user_id: string;
+  provider: 'apple_health';
+  metric: HealthMetric;
+  last_synced_at: string | null;
+  last_cursor: string | null;
+  last_status: 'idle' | 'syncing' | 'success' | 'error';
+  last_error: string | null;
+  updated_at: string;
+}
+
 // ─── Food Log ───────────────────────────────────────────────────────────────
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink';
@@ -208,7 +243,8 @@ export type SyncTableName =
   | 'medication_logs'
   | 'sleep_logs'
   | 'menstrual_logs'
-  | 'weight_logs';
+  | 'weight_logs'
+  | 'health_samples';
 
 export interface SyncQueueItem {
   id: string;

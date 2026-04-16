@@ -6,7 +6,13 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "expo lint",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:web": "expo export --platform web",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build:web"
   },
   "dependencies": {
     "@expo/cli": "^55.0.19",
@@ -42,7 +48,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~10.0.0",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.4"
   },
   "private": true
 }
