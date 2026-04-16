@@ -1,22 +1,32 @@
 export const Colors = {
-  primary: '#4A90D9',
-  primaryLight: '#E8F2FC',
-  secondary: '#5CB85C',
-  danger: '#D9534F',
-  warning: '#F0AD4E',
-  info: '#5BC0DE',
+  // Brand (PocketSmart-inspired)
+  primary: '#6366F1',
+  primaryDark: '#4F46E5',
+  secondary: '#8B5CF6',
+  primaryLight: '#EEF2FF',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  success: '#10B981',
+  info: '#38BDF8',
+
+  // Gradients
+  gradientBrandStart: '#6366F1',
+  gradientBrandEnd: '#8B5CF6',
+  gradientOceanStart: '#3BBDF9',
+  gradientOceanEnd: '#6366F1',
 
   // Risk levels
-  riskLow: '#5CB85C',
-  riskMedium: '#F0AD4E',
-  riskHigh: '#D9534F',
+  riskLow: '#10B981',
+  riskMedium: '#F59E0B',
+  riskHigh: '#EF4444',
 
   // Neutrals
   white: '#FFFFFF',
-  background: '#F8F9FA',
+  background: '#F5F7FF',
   surface: '#FFFFFF',
-  border: '#E0E0E0',
-  textPrimary: '#1A1A1A',
+  surfaceMuted: '#F2F4FF',
+  border: '#E4E7F4',
+  textPrimary: '#12131A',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   placeholder: '#9CA3AF',

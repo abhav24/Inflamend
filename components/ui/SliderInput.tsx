@@ -29,7 +29,6 @@ export function SliderInput({
   accessibilityLabel,
 }: SliderInputProps) {
   const trackWidth = useRef<number>(0);
-  const startX = useRef<number>(0);
   const startValue = useRef<number>(value);
 
   const clamp = useCallback(
@@ -37,59 +36,14 @@ export function SliderInput({
     [min, max]
   );
 
-  const valueFromX = useCallback(
-    (x: number): number => {
-      if (trackWidth.current === 0) return value;
-      const ratio = x / trackWidth.current;
-      const raw = min + ratio * (max - min);
-      return clamp(Math.round(raw));
-    },
-    [min, max, value, clamp]
-  );
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (
-        evt: GestureResponderEvent,
-        _gs: PanResponderGestureState
-      ) => {
-        startX.current = evt.nativeEvent.locationX;
-        startValue.current = value;
-      },
-      onPanResponderMove: (
-        _evt: GestureResponderEvent,
-        gs: PanResponderGestureState
-      ) => {
-        if (trackWidth.current === 0) return;
-        const delta = gs.dx / trackWidth.current;
-        const deltaValue = delta * (max - min);
-        const newValue = clamp(Math.round(startValue.current + deltaValue));
-        onChange(newValue);
-      },
-      onPanResponderRelease: (
-        _evt: GestureResponderEvent,
-        gs: PanResponderGestureState
-      ) => {
-        if (trackWidth.current === 0) return;
-        const delta = gs.dx / trackWidth.current;
-        const deltaValue = delta * (max - min);
-        const newValue = clamp(Math.round(startValue.current + deltaValue));
-        onChange(newValue);
-      },
-    })
-  ).current;
-
-  // Reattach grant so startValue is always current
+  // Keep gesture handlers recreated with latest value/startValue.
   const panResponderLive = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (
-      evt: GestureResponderEvent,
+      _evt: GestureResponderEvent,
       _gs: PanResponderGestureState
     ) => {
-      startX.current = evt.nativeEvent.locationX;
       startValue.current = value;
     },
     onPanResponderMove: (
@@ -116,9 +70,6 @@ export function SliderInput({
 
   const fillPercent =
     max === min ? 0 : ((value - min) / (max - min)) * 100;
-
-  const thumbLeft =
-    max === min ? 0 : ((value - min) / (max - min)) * (trackWidth.current || 0) - 12;
 
   return (
     <View

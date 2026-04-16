@@ -2,7 +2,7 @@ export interface BristolType {
   scale: number;
   name: string;
   description: string;
-  emoji: string;
+  badge: string;
 }
 
 export const BRISTOL_TYPES: BristolType[] = [
@@ -10,42 +10,42 @@ export const BRISTOL_TYPES: BristolType[] = [
     scale: 1,
     name: 'Separate hard lumps',
     description: 'Hard to pass, like nuts',
-    emoji: '🪨',
+  badge: 'T1',
   },
   {
     scale: 2,
     name: 'Lumpy sausage',
     description: 'Sausage-shaped but lumpy',
-    emoji: '🌰',
+  badge: 'T2',
   },
   {
     scale: 3,
     name: 'Cracked sausage',
     description: 'Sausage with surface cracks',
-    emoji: '🌭',
+  badge: 'T3',
   },
   {
     scale: 4,
     name: 'Smooth sausage',
     description: 'Smooth, soft — ideal',
-    emoji: '✅',
+  badge: 'T4',
   },
   {
     scale: 5,
     name: 'Soft blobs',
     description: 'Soft blobs with clear edges',
-    emoji: '💧',
+  badge: 'T5',
   },
   {
     scale: 6,
     name: 'Fluffy pieces',
     description: 'Fluffy with ragged edges, mushy',
-    emoji: '🌊',
+  badge: 'T6',
   },
   {
     scale: 7,
     name: 'Watery',
     description: 'Entirely liquid, no solid pieces',
-    emoji: '💦',
+    badge: 'T7',
   },
 ];

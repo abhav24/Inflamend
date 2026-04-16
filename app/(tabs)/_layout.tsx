@@ -1,9 +1,23 @@
 import { Tabs } from 'expo-router';
 import { Colors } from '../../constants/colors';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
-function TabIcon({ label, emoji }: { label: string; emoji: string }) {
-  return <Text style={{ fontSize: 22 }} accessibilityLabel={label}>{emoji}</Text>;
+function TabIcon({ label, glyph, focused }: { label: string; glyph: string; focused: boolean }) {
+  return (
+    <View
+      accessibilityLabel={label}
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? Colors.primaryLight : 'transparent',
+      }}
+    >
+      <Text style={{ fontSize: 14, fontWeight: '700', color: focused ? Colors.primary : Colors.textMuted }}>{glyph}</Text>
+    </View>
+  );
 }
 
 export default function TabsLayout() {
@@ -13,7 +27,13 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: { borderTopColor: Colors.border },
+        tabBarStyle: {
+          borderTopColor: Colors.border,
+          backgroundColor: Colors.white,
+          height: 84,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
@@ -22,7 +42,7 @@ export default function TabsLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Home" emoji={focused ? '🏠' : '🏡'} />
+            <TabIcon label="Home" glyph="H" focused={focused} />
           ),
         }}
       />
@@ -31,7 +51,7 @@ export default function TabsLayout() {
         options={{
           title: 'Log',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Log" emoji={focused ? '✏️' : '📝'} />
+            <TabIcon label="Log" glyph="L" focused={focused} />
           ),
         }}
       />
@@ -40,7 +60,7 @@ export default function TabsLayout() {
         options={{
           title: 'Insights',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Insights" emoji={focused ? '📊' : '📈'} />
+            <TabIcon label="Insights" glyph="I" focused={focused} />
           ),
         }}
       />
@@ -49,7 +69,7 @@ export default function TabsLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Chat" emoji={focused ? '💬' : '🗨️'} />
+            <TabIcon label="Chat" glyph="C" focused={focused} />
           ),
         }}
       />
@@ -58,7 +78,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <TabIcon label="Profile" emoji={focused ? '👤' : '🙍'} />
+            <TabIcon label="Profile" glyph="P" focused={focused} />
           ),
         }}
       />

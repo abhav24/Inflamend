@@ -1,5 +1,6 @@
 export * from './bristol';
 export * from './colors';
+export * from './theme';
 
 export const PAIN_LOCATIONS = [
   { id: 'abdomen_upper', label: 'Upper Abdomen' },
@@ -39,11 +40,11 @@ export const DIAGNOSIS_LABELS: Record<string, string> = {
 };
 
 export const MOOD_OPTIONS = [
-  { value: 'great', label: 'Great', emoji: '😄' },
-  { value: 'good', label: 'Good', emoji: '🙂' },
-  { value: 'okay', label: 'Okay', emoji: '😐' },
-  { value: 'bad', label: 'Bad', emoji: '😟' },
-  { value: 'terrible', label: 'Terrible', emoji: '😢' },
+  { value: 'great', label: 'Great', badge: 'GR' },
+  { value: 'good', label: 'Good', badge: 'GD' },
+  { value: 'okay', label: 'Okay', badge: 'OK' },
+  { value: 'bad', label: 'Bad', badge: 'BD' },
+  { value: 'terrible', label: 'Terrible', badge: 'TR' },
 ] as const;
 
 export const MEAL_TYPES = [
