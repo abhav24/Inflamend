@@ -1,18 +1,17 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { useBowelLogs, useSymptomLogs, useFoodLogs } from '../../hooks/useLogs';
-import { AppColors, useColors } from '../../constants/colors';
-import { Theme } from '../../constants/theme';
-import { subDays, format, eachDayOfInterval, startOfDay } from 'date-fns';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { eachDayOfInterval, format, startOfDay, subDays } from 'date-fns';
+import { useBowelLogs, useFoodLogs, useSymptomLogs } from '../../hooks/useLogs';
 import { BowelLog, FoodLog, SymptomLog } from '../../types';
-import { IconBadge } from '../../components/ui/DesignPrimitives';
+import { useColors } from '../../constants/colors';
+import {
+  AppCard,
+  AppIcon,
+  GlassSurface,
+  PressScale,
+  SpringSegmentedControl,
+} from '../../components/ui/DesignPrimitives';
+import { selectionHaptic } from '../../lib/haptics';
 
 type Range = '7d' | '30d';
 
@@ -21,14 +20,14 @@ interface DayPoint {
   y: number;
 }
 
-function avgPainByDay(logs: SymptomLog[], days: Date[]): DayPoint[] {
+function averagePainByDay(logs: SymptomLog[], days: Date[]): DayPoint[] {
   const sums: Record<string, { total: number; count: number }> = {};
   for (const day of days) {
     sums[format(day, 'yyyy-MM-dd')] = { total: 0, count: 0 };
   }
   for (const log of logs) {
     const key = format(startOfDay(new Date(log.logged_at)), 'yyyy-MM-dd');
-    if (sums[key] !== undefined) {
+    if (sums[key]) {
       sums[key].total += log.pain_level;
       sums[key].count += 1;
     }
@@ -50,9 +49,7 @@ function bowelCountByDay(logs: BowelLog[], days: Date[]): DayPoint[] {
   }
   for (const log of logs) {
     const key = format(startOfDay(new Date(log.logged_at)), 'yyyy-MM-dd');
-    if (counts[key] !== undefined) {
-      counts[key] += 1;
-    }
+    if (counts[key] !== undefined) counts[key] += 1;
   }
   return days.map((day) => ({
     x: format(day, 'M/d'),
@@ -60,86 +57,61 @@ function bowelCountByDay(logs: BowelLog[], days: Date[]): DayPoint[] {
   }));
 }
 
-function heatmapColor(avgPain: number | null, C: AppColors): string {
-  if (avgPain === null) return C.border;
-  if (avgPain <= 3) return C.riskLow;
-  if (avgPain <= 6) return C.warning;
-  return C.riskHigh;
-}
-
-// ─── Simple chart components (no external charting library needed) ──────────
-
-function SimpleLineChart({
-  points,
-  maxY,
-  color,
-  borderColor,
-  labelColor,
+function HeatCell({
+  date,
+  pain,
+  onPress,
 }: {
-  points: DayPoint[];
-  maxY: number;
-  color: string;
-  borderColor: string;
-  labelColor: string;
+  date: Date;
+  pain: number | null;
+  onPress: () => void;
 }) {
-  if (points.length === 0) return null;
-  const CHART_HEIGHT = 120;
+  const C = useColors();
+  const backgroundColor =
+    pain == null ? C.fillQuaternary : pain <= 3 ? C.riskLow : pain <= 6 ? C.warning : C.riskHigh;
 
   return (
-    <View style={{ height: CHART_HEIGHT + 24, marginTop: 8 }}>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-        {points.map((p, i) => {
-          const heightPct = maxY > 0 ? (p.y / maxY) : 0;
-          const barH = Math.max(heightPct * CHART_HEIGHT, p.y > 0 ? 4 : 2);
-          return (
-            <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT }}>
-              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : borderColor, borderRadius: 3, opacity: 0.85 }} />
-            </View>
-          );
-        })}
-      </View>
-      <View style={{ flexDirection: 'row', marginTop: 4 }}>
-        {points.map((p, i) => (
-          <Text key={i} style={{ flex: 1, fontSize: 8, color: labelColor, textAlign: 'center' }} numberOfLines={1}>
-            {i === 0 || i === points.length - 1 || i === Math.floor(points.length / 2) ? p.x : ''}
-          </Text>
-        ))}
-      </View>
-    </View>
+    <PressScale onPress={onPress}>
+      <GlassSurface radius={12} intensity={44} style={{ width: 42, height: 42 }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: C.onGradient }}>{format(date, 'd')}</Text>
+        </View>
+      </GlassSurface>
+    </PressScale>
   );
 }
 
-function SimpleBarChart({
+function BarChart({
   points,
   color,
-  borderColor,
-  labelColor,
 }: {
   points: DayPoint[];
   color: string;
-  borderColor: string;
-  labelColor: string;
 }) {
-  if (points.length === 0) return null;
-  const CHART_HEIGHT = 120;
-  const maxY = Math.max(...points.map((p) => p.y), 1);
+  const C = useColors();
+  const maxY = Math.max(...points.map((point) => point.y), 1);
 
   return (
-    <View style={{ height: CHART_HEIGHT + 24, marginTop: 8 }}>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-        {points.map((p, i) => {
-          const barH = Math.max((p.y / maxY) * CHART_HEIGHT, p.y > 0 ? 4 : 2);
-          return (
-            <View key={i} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT }}>
-              <View style={{ width: '70%', height: barH, backgroundColor: p.y > 0 ? color : borderColor, borderRadius: 3 }} />
-            </View>
-          );
-        })}
+    <View style={{ marginTop: 12 }}>
+      <View style={{ height: 132, flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+        {points.map((point) => (
+          <View key={point.x} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+            <View
+              style={{
+                width: '72%',
+                minHeight: point.y > 0 ? 8 : 4,
+                height: `${Math.max((point.y / maxY) * 100, point.y > 0 ? 8 : 4)}%`,
+                borderRadius: 999,
+                backgroundColor: point.y > 0 ? color : C.fillQuaternary,
+              }}
+            />
+          </View>
+        ))}
       </View>
-      <View style={{ flexDirection: 'row', marginTop: 4 }}>
-        {points.map((p, i) => (
-          <Text key={i} style={{ flex: 1, fontSize: 8, color: labelColor, textAlign: 'center' }} numberOfLines={1}>
-            {i === 0 || i === points.length - 1 || i === Math.floor(points.length / 2) ? p.x : ''}
+      <View style={{ flexDirection: 'row', marginTop: 8 }}>
+        {points.map((point, index) => (
+          <Text key={point.x} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: C.textMuted }}>
+            {index === 0 || index === points.length - 1 || index === Math.floor(points.length / 2) ? point.x : ''}
           </Text>
         ))}
       </View>
@@ -149,21 +121,19 @@ function SimpleBarChart({
 
 export default function InsightsScreen() {
   const C = useColors();
-  const styles = createStyles(C);
   const [range, setRange] = useState<Range>('7d');
   const [loading, setLoading] = useState(true);
-
   const [symptomLogs, setSymptomLogs] = useState<SymptomLog[]>([]);
   const [bowelLogs, setBowelLogs] = useState<BowelLog[]>([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
-
+  const [selectedHeatDay, setSelectedHeatDay] = useState<{ label: string; pain: number | null } | null>(null);
   const { fetchRange: fetchSymptomRange } = useSymptomLogs();
   const { fetchRange: fetchBowelRange } = useBowelLogs();
   const { fetchRange: fetchFoodRange } = useFoodLogs();
 
-  const loadData = useCallback(async (r: Range) => {
+  const loadData = useCallback(async (currentRange: Range) => {
     setLoading(true);
-    const days = r === '7d' ? 7 : 30;
+    const days = currentRange === '7d' ? 7 : 30;
     const to = new Date();
     const from = subDays(to, days - 1);
     const [symptoms, bowels, foods] = await Promise.all([
@@ -175,350 +145,175 @@ export default function InsightsScreen() {
     setBowelLogs(bowels);
     setFoodLogs(foods);
     setLoading(false);
-  }, [fetchSymptomRange, fetchBowelRange, fetchFoodRange]);
+  }, [fetchBowelRange, fetchFoodRange, fetchSymptomRange]);
 
   useEffect(() => {
     loadData(range);
-  }, [range, loadData]);
+  }, [loadData, range]);
 
-  const days = eachDayOfInterval({
-    start: subDays(new Date(), (range === '7d' ? 7 : 30) - 1),
-    end: new Date(),
-  });
+  const days = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: subDays(new Date(), (range === '7d' ? 7 : 30) - 1),
+        end: new Date(),
+      }),
+    [range]
+  );
 
-  const symptomPoints = avgPainByDay(symptomLogs, days);
-  const bowelPoints = bowelCountByDay(bowelLogs, days);
-
-  const hasSymptomData = symptomPoints.some((p) => p.y > 0);
-  const hasBowelData = bowelPoints.some((p) => p.y > 0);
-
-  // Trigger food analysis
-  const triggerFoods = foodLogs.filter((f) => f.is_trigger_food);
-  const triggerCounts: Record<string, number> = {};
-  for (const food of triggerFoods) {
-    const key = food.description.trim().toLowerCase();
-    triggerCounts[key] = (triggerCounts[key] ?? 0) + 1;
-  }
-  const topTriggers = Object.entries(triggerCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  // Heatmap (last 30 days)
-  const heatmapDays = eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() });
-  const painByDayMap: Record<string, number | null> = {};
-  for (const day of heatmapDays) {
-    painByDayMap[format(day, 'yyyy-MM-dd')] = null;
-  }
-  for (const log of symptomLogs) {
-    const key = format(startOfDay(new Date(log.logged_at)), 'yyyy-MM-dd');
-    if (key in painByDayMap) {
-      const current = painByDayMap[key];
-      if (current === null) {
-        painByDayMap[key] = log.pain_level;
-      } else {
-        painByDayMap[key] = (current + log.pain_level) / 2;
-      }
+  const symptomPoints = useMemo(() => averagePainByDay(symptomLogs, days), [days, symptomLogs]);
+  const bowelPoints = useMemo(() => bowelCountByDay(bowelLogs, days), [bowelLogs, days]);
+  const topTriggers = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const food of foodLogs.filter((item) => item.is_trigger_food)) {
+      const key = food.description.trim().toLowerCase();
+      counts[key] = (counts[key] ?? 0) + 1;
     }
-  }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [foodLogs]);
+
+  const heatmapDays = useMemo(() => eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() }), []);
+  const painByDay = useMemo(() => {
+    const result: Record<string, number | null> = {};
+    for (const day of heatmapDays) result[format(day, 'yyyy-MM-dd')] = null;
+    for (const log of symptomLogs) {
+      const key = format(startOfDay(new Date(log.logged_at)), 'yyyy-MM-dd');
+      if (!(key in result)) continue;
+      result[key] = result[key] == null ? log.pain_level : Math.round(((result[key] as number) + log.pain_level) / 2);
+    }
+    return result;
+  }, [heatmapDays, symptomLogs]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Insights</Text>
-        <Text style={styles.headerSubtitle}>Your health trends at a glance</Text>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <View style={{ paddingTop: 58, paddingHorizontal: 20, paddingBottom: 18 }}>
+        <Text style={{ fontSize: 32, fontWeight: '800', color: C.textPrimary, letterSpacing: -0.5 }}>
+          Insights
+        </Text>
+        <Text style={{ marginTop: 4, fontSize: 15, fontWeight: '500', color: C.textSecondary, letterSpacing: -0.24 }}>
+          Your trends, triggers, and symptom load.
+        </Text>
       </View>
 
-      {/* Range Toggle */}
-      <View style={styles.rangeToggle}>
-        <TouchableOpacity
-          style={[styles.rangeButton, range === '7d' && styles.rangeButtonActive]}
-          onPress={() => setRange('7d')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.rangeButtonText, range === '7d' && styles.rangeButtonTextActive]}>7 Days</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.rangeButton, range === '30d' && styles.rangeButtonActive]}
-          onPress={() => setRange('30d')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.rangeButtonText, range === '30d' && styles.rangeButtonTextActive]}>30 Days</Text>
-        </TouchableOpacity>
+      <View style={{ paddingHorizontal: 20, marginBottom: 18 }}>
+        <SpringSegmentedControl
+          options={[
+            { value: '7d' as const, label: '7 Days' },
+            { value: '30d' as const, label: '30 Days' },
+          ]}
+          value={range}
+          onChange={(nextRange) => {
+            selectionHaptic();
+            setRange(nextRange);
+          }}
+        />
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={{ paddingTop: 80, alignItems: 'center' }}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading your data...</Text>
+          <Text style={{ marginTop: 12, fontSize: 15, color: C.textSecondary }}>Loading your data…</Text>
         </View>
       ) : (
         <>
-          {/* Symptom Trends */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Symptom Trends</Text>
-            <Text style={styles.cardSubtitle}>Average pain level per day (0–10)</Text>
-            {hasSymptomData ? (
-              <SimpleLineChart
-                points={symptomPoints}
-                maxY={10}
-                color={C.primary}
-                borderColor={C.border}
-                labelColor={C.textMuted}
-              />
+          <AppCard style={{ marginHorizontal: 20, marginBottom: 16, padding: 18 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.4 }}>
+              Symptom Trends
+            </Text>
+            <Text style={{ marginTop: 3, fontSize: 13, color: C.textSecondary }}>Average pain per day</Text>
+            {symptomPoints.some((point) => point.y > 0) ? (
+              <BarChart points={symptomPoints} color={C.primary} />
             ) : (
-              <View style={styles.noDataContainer}>
-                <IconBadge label="SY" size={34} />
-                <Text style={styles.noDataText}>No symptom data for this period</Text>
+              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                <AppIcon symbol="waveform.path.ecg" fallback="pulse-outline" size={28} tintColor={C.primary} />
+                <Text style={{ marginTop: 12, fontSize: 14, color: C.textSecondary }}>No symptom data for this period</Text>
               </View>
             )}
-          </View>
+          </AppCard>
 
-          {/* Bowel Movement Frequency */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Bowel Movement Frequency</Text>
-            <Text style={styles.cardSubtitle}>Count per day</Text>
-            {hasBowelData ? (
-              <SimpleBarChart
-                points={bowelPoints}
-                color={C.info}
-                borderColor={C.border}
-                labelColor={C.textMuted}
-              />
+          <AppCard style={{ marginHorizontal: 20, marginBottom: 16, padding: 18 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.4 }}>
+              Bowel Frequency
+            </Text>
+            <Text style={{ marginTop: 3, fontSize: 13, color: C.textSecondary }}>Count per day</Text>
+            {bowelPoints.some((point) => point.y > 0) ? (
+              <BarChart points={bowelPoints} color={C.info} />
             ) : (
-              <View style={styles.noDataContainer}>
-                <IconBadge label="BW" size={34} />
-                <Text style={styles.noDataText}>No bowel movement data for this period</Text>
+              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                <AppIcon symbol="drop.fill" fallback="water-outline" size={28} tintColor={C.info} />
+                <Text style={{ marginTop: 12, fontSize: 14, color: C.textSecondary }}>No bowel data for this period</Text>
               </View>
             )}
-          </View>
+          </AppCard>
 
-          {/* Potential Triggers */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Potential Triggers</Text>
-            <Text style={styles.cardSubtitle}>Foods you marked as triggers</Text>
+          <AppCard style={{ marginHorizontal: 20, marginBottom: 16, padding: 18 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.4 }}>
+              Potential Triggers
+            </Text>
+            <Text style={{ marginTop: 3, fontSize: 13, color: C.textSecondary }}>Foods you marked as triggers</Text>
             {topTriggers.length > 0 ? (
-              <>
+              <View style={{ marginTop: 14, gap: 10 }}>
                 {topTriggers.map(([food, count]) => (
-                  <View key={food} style={styles.triggerRow}>
-                    <View style={styles.triggerDot} />
-                    <Text style={styles.triggerText}>
-                      You logged{' '}
-                      <Text style={styles.triggerFoodName}>
-                        {food.charAt(0).toUpperCase() + food.slice(1)}
-                      </Text>{' '}
-                      {count} {count === 1 ? 'time' : 'times'} this period
-                    </Text>
-                  </View>
+                  <GlassSurface key={food} radius={18} intensity={40} style={{ padding: 14 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.danger, marginRight: 10 }} />
+                      <Text style={{ flex: 1, fontSize: 15, lineHeight: 20, color: C.textSecondary }}>
+                        <Text style={{ fontWeight: '700', color: C.textPrimary }}>
+                          {food.charAt(0).toUpperCase() + food.slice(1)}
+                        </Text>{' '}
+                        showed up {count} {count === 1 ? 'time' : 'times'}.
+                      </Text>
+                    </View>
+                  </GlassSurface>
                 ))}
-              </>
+              </View>
             ) : (
-              <View style={styles.noDataContainer}>
-                <IconBadge label="TR" size={34} tone="success" />
-                <Text style={styles.noDataText}>No trigger foods logged yet</Text>
+              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                <AppIcon symbol="leaf.fill" fallback="leaf-outline" size={28} tintColor={C.success} />
+                <Text style={{ marginTop: 12, fontSize: 14, color: C.textSecondary }}>No trigger foods logged yet</Text>
               </View>
             )}
-          </View>
+          </AppCard>
 
-          {/* Calendar Heatmap */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Pain Heatmap</Text>
-            <Text style={styles.cardSubtitle}>Last 30 days — {format(subDays(new Date(), 29), 'MMMM d')} to {format(new Date(), 'MMMM d')}</Text>
-            <View style={styles.heatmapGrid}>
+          <AppCard style={{ marginHorizontal: 20, marginBottom: 16, padding: 18 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.4 }}>
+              Pain Heatmap
+            </Text>
+            <Text style={{ marginTop: 3, fontSize: 13, color: C.textSecondary }}>
+              Last 30 days. Tap a day for detail.
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
               {heatmapDays.map((day) => {
                 const key = format(day, 'yyyy-MM-dd');
-                const pain = painByDayMap[key] ?? null;
-                const color = heatmapColor(pain, C);
+                const pain = painByDay[key];
                 return (
-                  <View key={key} style={[styles.heatmapCell, { backgroundColor: color }]}>
-                    <Text style={styles.heatmapDayText}>{format(day, 'd')}</Text>
-                  </View>
+                  <HeatCell
+                    key={key}
+                    date={day}
+                    pain={pain}
+                    onPress={() => {
+                      selectionHaptic();
+                      setSelectedHeatDay({
+                        label: format(day, 'MMMM d'),
+                        pain,
+                      });
+                    }}
+                  />
                 );
               })}
             </View>
-            <View style={styles.heatmapLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: C.riskLow }]} />
-                <Text style={styles.legendText}>Low (0-3)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: C.warning }]} />
-                <Text style={styles.legendText}>Moderate (4-6)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: C.riskHigh }]} />
-                <Text style={styles.legendText}>High (7-10)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: C.border }]} />
-                <Text style={styles.legendText}>No data</Text>
-              </View>
-            </View>
-          </View>
+            {selectedHeatDay ? (
+              <GlassSurface radius={18} intensity={52} style={{ marginTop: 14, padding: 14 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: C.textPrimary }}>
+                  {selectedHeatDay.label}
+                </Text>
+                <Text style={{ marginTop: 4, fontSize: 13, color: C.textSecondary }}>
+                  {selectedHeatDay.pain == null ? 'No symptom data recorded.' : `Average pain level: ${selectedHeatDay.pain}/10`}
+                </Text>
+              </GlassSurface>
+            ) : null}
+          </AppCard>
         </>
       )}
     </ScrollView>
   );
-}
-
-function createStyles(C: AppColors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: C.background,
-    },
-    content: {
-      paddingBottom: 120,
-    },
-    header: {
-      backgroundColor: C.surface,
-      paddingTop: 56,
-      paddingBottom: 16,
-      paddingHorizontal: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: C.glassBorder,
-    },
-    headerTitle: {
-      fontSize: 22,
-      fontWeight: '700',
-      color: C.textPrimary,
-    },
-    headerSubtitle: {
-      fontSize: 13,
-      color: C.textSecondary,
-      marginTop: 2,
-    },
-    rangeToggle: {
-      flexDirection: 'row',
-      margin: 20,
-      backgroundColor: C.surfaceMuted,
-      borderRadius: 10,
-      padding: 3,
-      borderWidth: 1,
-      borderColor: C.glassBorder,
-    },
-    rangeButton: {
-      flex: 1,
-      paddingVertical: 8,
-      alignItems: 'center',
-      borderRadius: 8,
-    },
-    rangeButtonActive: {
-      backgroundColor: C.surface,
-      shadowColor: '#000',
-      shadowOpacity: 0.08,
-      shadowRadius: 3,
-      elevation: 2,
-    },
-    rangeButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: C.textSecondary,
-    },
-    rangeButtonTextActive: {
-      color: C.textPrimary,
-    },
-    loadingContainer: {
-      alignItems: 'center',
-      paddingVertical: 60,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: C.textSecondary,
-      marginTop: 12,
-    },
-    card: {
-      backgroundColor: C.surface,
-      borderRadius: Theme.radius.lg,
-      marginHorizontal: 20,
-      marginBottom: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: C.glassBorder,
-      ...Theme.shadow.card,
-    },
-    cardTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: C.textPrimary,
-      marginBottom: 2,
-    },
-    cardSubtitle: {
-      fontSize: 12,
-      color: C.textSecondary,
-      marginBottom: 12,
-    },
-    noDataContainer: {
-      alignItems: 'center',
-      paddingVertical: 28,
-    },
-    noDataText: {
-      fontSize: 14,
-      color: C.textSecondary,
-      marginTop: 10,
-    },
-    triggerRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: C.separator,
-    },
-    triggerDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: C.danger,
-      marginTop: 5,
-      marginRight: 10,
-      flexShrink: 0,
-    },
-    triggerText: {
-      fontSize: 14,
-      color: C.textSecondary,
-      flex: 1,
-      lineHeight: 20,
-    },
-    triggerFoodName: {
-      fontWeight: '600',
-      color: C.textPrimary,
-    },
-    heatmapGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 5,
-      marginBottom: 14,
-    },
-    heatmapCell: {
-      width: 36,
-      height: 36,
-      borderRadius: 6,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    heatmapDayText: {
-      fontSize: 10,
-      color: '#FFFFFF',
-      fontWeight: '600',
-    },
-    heatmapLegend: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-    },
-    legendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    legendDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-    },
-    legendText: {
-      fontSize: 11,
-      color: C.textSecondary,
-    },
-  });
 }

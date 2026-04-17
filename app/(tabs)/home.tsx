@@ -1,67 +1,78 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  RefreshControl, ActivityIndicator, Platform,
+  ActivityIndicator,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../store/authStore';
-import { useFoodLogs, useBowelLogs, useSymptomLogs, useMedicationLogs } from '../../hooks/useLogs';
-import { useRiskIndicator } from '../../hooks/useRiskIndicator';
-import { useColors } from '../../constants/colors';
-import { RiskIndicator, FoodLog, BowelLog, SymptomLog, MedicationLog } from '../../types';
-import { UserAvatar } from '../../components/ui/DesignPrimitives';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '../../store/authStore';
+import { useFoodLogs, useBowelLogs, useMedicationLogs, useSymptomLogs } from '../../hooks/useLogs';
+import { useRiskIndicator } from '../../hooks/useRiskIndicator';
+import { BowelLog, FoodLog, MedicationLog, RiskIndicator, SymptomLog } from '../../types';
+import {
+  AppCard,
+  AppIcon,
+  GlassSheet,
+  PressScale,
+  UserAvatar,
+} from '../../components/ui/DesignPrimitives';
+import { useColors } from '../../constants/colors';
+import { impactLightHaptic, selectionHaptic } from '../../lib/haptics';
 
-type AnyLog = { id: string; logged_at?: string; created_at: string; _type: string; was_taken?: boolean };
+type AnyLog = {
+  id: string;
+  logged_at?: string;
+  created_at: string;
+  type: 'food' | 'bowel' | 'symptom' | 'medication';
+  was_taken?: boolean;
+};
 
 function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
   return 'Good evening';
 }
 
-// ─── Nav Header ───────────────────────────────────────────────────────────────
-
-function NavHeader({ name, topInset }: { name: string | null; topInset: number }) {
+function NavHeader({
+  name,
+  topInset,
+  onProfilePress,
+}: {
+  name: string | null;
+  topInset: number;
+  onProfilePress: () => void;
+}) {
   const C = useColors();
+
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingTop: Math.max(topInset + 8, Platform.OS === 'ios' ? 24 : 20),
-      paddingBottom: 4,
-    }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: topInset + 8, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <View>
-        <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '500', marginBottom: 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '500', color: C.textSecondary, letterSpacing: -0.08 }}>
           {format(new Date(), 'EEEE, MMMM d')}
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-          <Text style={{ fontSize: 14, color: C.textSecondary, fontWeight: '500' }}>
-            {greeting()},
-          </Text>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: C.textPrimary }}>
-            {name ?? 'there'}
-          </Text>
-        </View>
+        <Text style={{ marginTop: 6, fontSize: 28, fontWeight: '800', letterSpacing: -0.5, color: C.textPrimary }}>
+          {greeting()}, {name ?? 'there'}
+        </Text>
       </View>
-      {name ? (
-        <UserAvatar name={name} size={36} />
-      ) : (
-        <View style={{
-          width: 36, height: 36, borderRadius: 18,
-          backgroundColor: C.primary + '20', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ionicons name="person-outline" size={18} color={C.primary} />
-        </View>
-      )}
+      <PressScale onPress={onProfilePress}>
+        {name ? (
+          <UserAvatar name={name} size={42} />
+        ) : (
+          <AppCard style={{ width: 42, height: 42, alignItems: 'center', justifyContent: 'center' }} intensity={70}>
+            <AppIcon symbol="person.fill" fallback="person" size={18} tintColor={C.primary} />
+          </AppCard>
+        )}
+      </PressScale>
     </View>
   );
 }
-
-// ─── Hero Card ────────────────────────────────────────────────────────────────
 
 function HeroCard({
   risk,
@@ -72,388 +83,432 @@ function HeroCard({
   foodCount: number;
   bowelCount: number;
 }) {
+  const C = useColors();
   const score = risk?.score ?? 0;
   const level = risk?.level ?? 'low';
-  const riskColor = level === 'high' ? '#FF6B6B' : level === 'medium' ? '#FBBF24' : '#4ADE80';
+  const riskColor = level === 'high' ? C.riskHigh : level === 'medium' ? C.riskMedium : C.riskLow;
 
   return (
-    <View style={{
-      backgroundColor: '#6366F1',
-      borderRadius: 24, overflow: 'hidden',
-      marginHorizontal: 20, marginTop: 16, marginBottom: 24,
-    }}>
-      {/* Decorative blobs */}
-      <View style={{
-        position: 'absolute', width: 200, height: 200, borderRadius: 100,
-        backgroundColor: '#FFFFFF', opacity: 0.06, right: -40, top: -60,
-      }} />
-      <View style={{
-        position: 'absolute', width: 140, height: 140, borderRadius: 70,
-        backgroundColor: '#8B5CF6', opacity: 0.5, left: -30, bottom: -40,
-      }} />
+    <View style={{ marginHorizontal: 20, marginTop: 14, marginBottom: 24 }}>
+      <AppCard style={{ overflow: 'hidden', borderRadius: 26 }} intensity={52}>
+        <LinearGradient
+          colors={[C.gradientBrandStart, C.gradientBrandEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', inset: 0 }}
+        />
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: C.onGradient, opacity: 0.08, right: -60, top: -90 }} />
+        <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: C.glassHighlight, opacity: C.isDark ? 0.08 : 0.2, left: -34, bottom: -60 }} />
 
-      <View style={{ padding: 24 }}>
-        {/* Label */}
-        <Text style={{
-          fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600',
-          letterSpacing: 0.4, marginBottom: 6,
-        }}>
-          Flare Risk Score
-        </Text>
-
-        {/* Score + level */}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Text style={{
-              fontSize: 40, fontWeight: '800', color: '#FFFFFF', lineHeight: 44,
-            }}>
-              {score}
-            </Text>
-            <Text style={{
-              fontSize: 18, fontWeight: '600', color: 'rgba(255,255,255,0.6)',
-              marginTop: 6, marginLeft: 2,
-            }}>
-              %
-            </Text>
-          </View>
-          <View style={{
-            backgroundColor: riskColor + '28',
-            borderRadius: 20, borderWidth: 1, borderColor: riskColor + '70',
-            paddingHorizontal: 10, paddingVertical: 4, marginBottom: 4,
-          }}>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: riskColor }}>
-              {level.toUpperCase()}
-            </Text>
-          </View>
-        </View>
-
-        {(risk?.factors?.length ?? 0) > 0 && (
-          <Text style={{
-            fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 18,
-          }}>
-            {risk!.factors.slice(0, 2).join(' · ')}
+        <View style={{ padding: 24 }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: `${C.onGradient}B8`, letterSpacing: 0.2 }}>
+            Flare Risk Score
           </Text>
-        )}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 14 }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <Text style={{ fontSize: 48, fontWeight: '800', color: C.onGradient, lineHeight: 50, letterSpacing: -1 }}>
+                  {score}
+                </Text>
+                <Text style={{ marginTop: 8, marginLeft: 4, fontSize: 22, fontWeight: '600', color: `${C.onGradient}CC` }}>
+                  %
+                </Text>
+              </View>
+              <Text style={{ marginTop: 6, fontSize: 17, fontWeight: '600', color: `${C.onGradient}D1`, letterSpacing: -0.24 }}>
+                {level.charAt(0).toUpperCase() + level.slice(1)} risk today
+              </Text>
+            </View>
 
-        {/* Divider */}
-        <View style={{
-          height: 1, backgroundColor: 'rgba(255,255,255,0.18)',
-          marginBottom: 16,
-          marginTop: (risk?.factors?.length ?? 0) > 0 ? 0 : 18,
-        }} />
+            <View style={{ backgroundColor: `${riskColor}26`, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: `${riskColor}78` }}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: riskColor, letterSpacing: 0.3 }}>
+                {level.toUpperCase()}
+              </Text>
+            </View>
+          </View>
 
-        {/* Mini-stats */}
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 }}>
-              {foodCount}
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
-              Meals Today
-            </Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 }}>
-              {bowelCount}
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
-              Bowel Today
-            </Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 }}>
-              {level.charAt(0).toUpperCase() + level.slice(1)}
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
-              Risk Level
-            </Text>
+          <Text style={{ marginTop: 12, fontSize: 13, lineHeight: 18, color: `${C.onGradient}B8` }}>
+            {(risk?.factors?.length ?? 0) > 0 ? risk!.factors.slice(0, 2).join(' · ') : 'No elevated risk factors detected in the last week.'}
+          </Text>
+
+          <View style={{ height: 1, backgroundColor: `${C.onGradient}29`, marginVertical: 18 }} />
+
+          <View style={{ flexDirection: 'row' }}>
+            {[
+              { label: 'Meals Today', value: String(foodCount) },
+              { label: 'Bowel Today', value: String(bowelCount) },
+              { label: 'Risk Level', value: level.charAt(0).toUpperCase() + level.slice(1) },
+            ].map((item, index) => (
+              <View key={item.label} style={{ flex: 1, alignItems: index === 0 ? 'flex-start' : index === 2 ? 'flex-end' : 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: C.onGradient, letterSpacing: -0.24 }}>
+                  {item.value}
+                </Text>
+                <Text style={{ marginTop: 4, fontSize: 11, fontWeight: '600', color: `${C.onGradient}A8`, textTransform: 'uppercase', letterSpacing: 0.32 }}>
+                  {item.label}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
+      </AppCard>
     </View>
   );
 }
 
-// ─── Stats Strip ──────────────────────────────────────────────────────────────
-
-type StatCell = { label: string; value: string; icon: string; color: string };
-
-function StatsStrip({ cells }: { cells: StatCell[] }) {
+function StatStrip({
+  cells,
+  onPressCell,
+}: {
+  cells: { label: string; value: string; color: string; icon: { symbol: React.ComponentProps<typeof AppIcon>['symbol']; fallback: React.ComponentProps<typeof AppIcon>['fallback'] } }[];
+  onPressCell: (label: string) => void;
+}) {
   const C = useColors();
   return (
-    <View style={{
-      flexDirection: 'row',
-      backgroundColor: C.surface,
-      borderRadius: 20,
-      marginHorizontal: 20,
-      marginBottom: 24,
-      shadowColor: '#000',
-      shadowOpacity: C.background === '#000000' ? 0.22 : 0.08,
-      shadowRadius: 12, shadowOffset: { width: 0, height: 2 },
-      elevation: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder,
-    }}>
-      {cells.map((cell, i) => (
-        <View key={cell.label} style={{
-          flex: 1, alignItems: 'center', paddingVertical: 16,
-          borderRightWidth: i < cells.length - 1 ? 0.5 : 0,
-          borderRightColor: C.separator,
-        }}>
-          <View style={{
-            width: 32, height: 32, borderRadius: 10,
-            backgroundColor: cell.color + '18',
-            alignItems: 'center', justifyContent: 'center', marginBottom: 6,
-          }}>
-            <Ionicons name={cell.icon as any} size={15} color={cell.color} />
-          </View>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: cell.color, marginBottom: 2 }}>
-            {cell.value}
-          </Text>
-          <Text style={{
-            fontSize: 10, color: C.textMuted, fontWeight: '600',
-            textTransform: 'uppercase', letterSpacing: 0.3,
-          }}>
-            {cell.label}
-          </Text>
-        </View>
-      ))}
-    </View>
+    <AppCard style={{ marginHorizontal: 20, marginBottom: 24, paddingVertical: 6 }}>
+      <View style={{ flexDirection: 'row' }}>
+        {cells.map((cell, index) => (
+          <PressScale key={cell.label} onPress={() => onPressCell(cell.label)} style={{ flex: 1 }}>
+            <View style={{ paddingVertical: 14, alignItems: 'center', borderRightWidth: index < cells.length - 1 ? 1 : 0, borderRightColor: C.separator }}>
+              <View style={{ width: 36, height: 36, borderRadius: 14, backgroundColor: `${cell.color}20`, alignItems: 'center', justifyContent: 'center' }}>
+                <AppIcon symbol={cell.icon.symbol} fallback={cell.icon.fallback} size={17} tintColor={cell.color} />
+              </View>
+              <Text style={{ marginTop: 10, fontSize: 18, fontWeight: '800', color: cell.color, letterSpacing: -0.24 }}>
+                {cell.value}
+              </Text>
+              <Text style={{ marginTop: 4, fontSize: 11, fontWeight: '600', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.32 }}>
+                {cell.label}
+              </Text>
+            </View>
+          </PressScale>
+        ))}
+      </View>
+    </AppCard>
   );
 }
-
-// ─── Section Title ────────────────────────────────────────────────────────────
 
 function SectionTitle({ title }: { title: string }) {
   const C = useColors();
   return (
-    <Text style={{
-      fontSize: 20, fontWeight: '700', color: C.textPrimary,
-      marginBottom: 12, paddingHorizontal: 20,
-    }}>
+    <Text style={{ marginHorizontal: 20, marginBottom: 12, fontSize: 22, fontWeight: '700', letterSpacing: -0.4, color: C.textPrimary }}>
       {title}
     </Text>
   );
 }
 
-// ─── Quick Log Buttons ────────────────────────────────────────────────────────
-
-function QuickActions({ onPress }: { onPress: (tab: string) => void }) {
+function QuickActions({ onPress }: { onPress: (tab: 'food' | 'bowel' | 'symptoms') => void }) {
   const C = useColors();
-  const actions = [
-    { icon: 'restaurant-outline', label: 'Food',     tab: 'food',     iconBg: '#38BDF8' },
-    { icon: 'water-outline',      label: 'Bowel',    tab: 'bowel',    iconBg: '#10B981' },
-    { icon: 'pulse-outline',      label: 'Symptoms', tab: 'symptoms', iconBg: '#6366F1' },
+  const actions: {
+    key: 'food' | 'bowel' | 'symptoms';
+    label: string;
+    color: string;
+    symbol: React.ComponentProps<typeof AppIcon>['symbol'];
+    fallback: React.ComponentProps<typeof AppIcon>['fallback'];
+  }[] = [
+    { key: 'food' as const, label: 'Food', color: C.info, symbol: 'fork.knife', fallback: 'restaurant-outline' as const },
+    { key: 'bowel' as const, label: 'Bowel', color: C.success, symbol: 'drop.fill', fallback: 'water-outline' as const },
+    { key: 'symptoms' as const, label: 'Symptoms', color: C.primary, symbol: 'waveform.path.ecg', fallback: 'pulse-outline' as const },
   ];
+
   return (
     <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 28 }}>
-      {actions.map((a) => (
-        <TouchableOpacity
-          key={a.tab}
-          style={{
-            flex: 1, borderRadius: 20,
-            backgroundColor: C.surface,
-            paddingVertical: 18,
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOpacity: C.background === '#000000' ? 0.2 : 0.08,
-            shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
-            borderWidth: 1, borderColor: C.glassBorder,
-          }}
-          onPress={() => onPress(a.tab)}
-          activeOpacity={0.72}
-        >
-          <View style={{
-            width: 44, height: 44, borderRadius: 22,
-            backgroundColor: a.iconBg,
-            alignItems: 'center', justifyContent: 'center', marginBottom: 8,
-          }}>
-            <Ionicons name={a.icon as any} size={20} color="#FFFFFF" />
-          </View>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: C.textPrimary }}>{a.label}</Text>
-        </TouchableOpacity>
+      {actions.map((action) => (
+        <PressScale key={action.key} onPress={() => onPress(action.key)} style={{ flex: 1 }}>
+          <AppCard style={{ paddingVertical: 18, alignItems: 'center' }} intensity={50}>
+            <View style={{ width: 46, height: 46, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: `${action.color}22` }}>
+              <AppIcon symbol={action.symbol} fallback={action.fallback} size={20} tintColor={action.color} />
+            </View>
+            <Text style={{ marginTop: 10, fontSize: 13, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.08 }}>
+              {action.label}
+            </Text>
+          </AppCard>
+        </PressScale>
       ))}
     </View>
   );
 }
 
-// ─── Timeline Entry ───────────────────────────────────────────────────────────
-
 function TimelineEntry({ entry }: { entry: AnyLog }) {
   const C = useColors();
   const time = format(new Date(entry.logged_at ?? entry.created_at), 'h:mm a');
-  type Config = { icon: string; label: string; color: string };
-  const config: Record<string, Config> = {
-    food:       { icon: 'restaurant-outline', label: 'Meal logged',     color: '#38BDF8' },
-    bowel:      { icon: 'water-outline',      label: 'Bowel movement',  color: C.success },
-    symptom:    { icon: 'pulse-outline',      label: 'Symptoms logged', color: C.warning },
+  const config: Record<
+    AnyLog['type'],
+    {
+      icon: {
+        symbol: React.ComponentProps<typeof AppIcon>['symbol'];
+        fallback: React.ComponentProps<typeof AppIcon>['fallback'];
+      };
+      label: string;
+      color: string;
+    }
+  > = {
+    food: { icon: { symbol: 'fork.knife', fallback: 'restaurant-outline' as const }, label: 'Meal logged', color: C.info },
+    bowel: { icon: { symbol: 'drop.fill', fallback: 'water-outline' as const }, label: 'Bowel movement', color: C.success },
+    symptom: { icon: { symbol: 'waveform.path.ecg', fallback: 'pulse-outline' as const }, label: 'Symptoms logged', color: C.warning },
     medication: {
-      icon: 'medkit-outline',
+      icon: { symbol: 'pill.fill', fallback: 'medkit-outline' as const },
       label: `Medication ${entry.was_taken ? 'taken' : 'missed'}`,
       color: entry.was_taken ? C.success : C.danger,
     },
   };
-  const { icon, label, color } = config[entry._type] ?? { icon: 'ellipse-outline', label: 'Entry', color: C.textMuted };
+  const item = config[entry.type];
 
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: C.surface, borderRadius: 16, padding: 14,
-      marginBottom: 8, marginHorizontal: 20,
-      shadowColor: '#000',
-      shadowOpacity: C.background === '#000000' ? 0.18 : 0.06,
-      shadowRadius: 8, shadowOffset: { width: 0, height: 1 }, elevation: 2,
-      borderWidth: 1, borderColor: C.glassBorder,
-    }}>
-      <View style={{
-        width: 42, height: 42, borderRadius: 13,
-        backgroundColor: color + '18',
-        alignItems: 'center', justifyContent: 'center', marginRight: 14,
-      }}>
-        <Ionicons name={icon as any} size={19} color={color} />
+    <AppCard style={{ marginHorizontal: 20, marginBottom: 10, padding: 14 }} intensity={44}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: `${item.color}18`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+          <AppIcon symbol={item.icon.symbol} fallback={item.icon.fallback} size={19} tintColor={item.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: C.textPrimary, letterSpacing: -0.24 }}>
+            {item.label}
+          </Text>
+          <Text style={{ marginTop: 2, fontSize: 13, fontWeight: '500', color: C.textSecondary }}>
+            {time}
+          </Text>
+        </View>
+        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: item.color }} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: C.textPrimary }}>{label}</Text>
-        <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{time}</Text>
-      </View>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color, opacity: 0.7 }} />
-    </View>
+    </AppCard>
   );
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+function QuickLogSheet({
+  visible,
+  onClose,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (tab: 'food' | 'bowel' | 'symptoms') => void;
+}) {
+  const C = useColors();
+  const options: {
+    key: 'food' | 'bowel' | 'symptoms';
+    title: string;
+    subtitle: string;
+    icon: {
+      symbol: React.ComponentProps<typeof AppIcon>['symbol'];
+      fallback: React.ComponentProps<typeof AppIcon>['fallback'];
+    };
+    color: string;
+  }[] = [
+    { key: 'food' as const, title: 'Log Food', subtitle: 'Capture meals and hydration', icon: { symbol: 'fork.knife', fallback: 'restaurant-outline' as const }, color: C.info },
+    { key: 'bowel' as const, title: 'Log Bowel', subtitle: 'Record urgency and Bristol type', icon: { symbol: 'drop.fill', fallback: 'water-outline' as const }, color: C.success },
+    { key: 'symptoms' as const, title: 'Log Symptoms', subtitle: 'Track pain, stress, and flare status', icon: { symbol: 'waveform.path.ecg', fallback: 'pulse-outline' as const }, color: C.primary },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: C.scrim, padding: 12 }}>
+        <GlassSheet style={{ padding: 20, gap: 10 }}>
+          <View style={{ alignItems: 'center', paddingBottom: 6 }}>
+            <View style={{ width: 38, height: 5, borderRadius: 999, backgroundColor: C.fillTertiary }} />
+          </View>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: C.textPrimary, letterSpacing: -0.5 }}>
+            Quick Log
+          </Text>
+          <Text style={{ fontSize: 15, fontWeight: '500', color: C.textSecondary, letterSpacing: -0.24 }}>
+            Jump into the entry you need right now.
+          </Text>
+          {options.map((option) => (
+            <PressScale
+              key={option.key}
+              onPress={() => {
+                onSelect(option.key);
+                onClose();
+              }}
+            >
+              <AppCard style={{ padding: 16 }} intensity={54}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: `${option.color}22` }}>
+                    <AppIcon symbol={option.icon.symbol} fallback={option.icon.fallback} size={21} tintColor={option.color} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.24 }}>
+                      {option.title}
+                    </Text>
+                    <Text style={{ marginTop: 2, fontSize: 13, fontWeight: '500', color: C.textSecondary }}>
+                      {option.subtitle}
+                    </Text>
+                  </View>
+                  <AppIcon symbol="chevron.right" fallback="chevron-forward" size={16} tintColor={C.textMuted} />
+                </View>
+              </AppCard>
+            </PressScale>
+          ))}
+        </GlassSheet>
+      </View>
+    </Modal>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
+  const C = useColors();
+  const insets = useSafeAreaInsets();
   const { profile } = useAuthStore();
-  const { fetchToday: fetchFood }    = useFoodLogs();
-  const { fetchToday: fetchBowel }   = useBowelLogs();
+  const { fetchToday: fetchFood } = useFoodLogs();
+  const { fetchToday: fetchBowel } = useBowelLogs();
   const { fetchToday: fetchSymptom } = useSymptomLogs();
   const { fetchToday: fetchMedLogs } = useMedicationLogs();
   const { calculate } = useRiskIndicator();
-  const C = useColors();
-  const insets = useSafeAreaInsets();
 
-  const [risk, setRisk]               = useState<RiskIndicator | null>(null);
-  const [foodLogs, setFoodLogs]       = useState<FoodLog[]>([]);
-  const [bowelLogs, setBowelLogs]     = useState<BowelLog[]>([]);
+  const [risk, setRisk] = useState<RiskIndicator | null>(null);
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
+  const [bowelLogs, setBowelLogs] = useState<BowelLog[]>([]);
   const [symptomLogs, setSymptomLogs] = useState<SymptomLog[]>([]);
-  const [medLogs, setMedLogs]         = useState<MedicationLog[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [refreshing, setRefreshing]   = useState(false);
+  const [medLogs, setMedLogs] = useState<MedicationLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showQuickSheet, setShowQuickSheet] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [food, bowel, symptom, meds, r] = await Promise.all([
-        fetchFood(), fetchBowel(), fetchSymptom(), fetchMedLogs(), calculate(),
+      const [food, bowel, symptom, meds, nextRisk] = await Promise.all([
+        fetchFood(),
+        fetchBowel(),
+        fetchSymptom(),
+        fetchMedLogs(),
+        calculate(),
       ]);
-      setFoodLogs(food); setBowelLogs(bowel); setSymptomLogs(symptom);
-      setMedLogs(meds); setRisk(r);
+      setFoodLogs(food);
+      setBowelLogs(bowel);
+      setSymptomLogs(symptom);
+      setMedLogs(meds);
+      setRisk(nextRisk);
     } finally {
-      setLoading(false); setRefreshing(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [fetchFood, fetchBowel, fetchSymptom, fetchMedLogs, calculate]);
+  }, [calculate, fetchBowel, fetchFood, fetchMedLogs, fetchSymptom]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const medsTaken = medLogs.filter((m) => m.was_taken).length;
-  const medsTotal = medLogs.length;
+  const timeline = useMemo<AnyLog[]>(() => {
+    return [
+      ...foodLogs.map((log) => ({ id: log.id, logged_at: log.logged_at, created_at: log.created_at, type: 'food' as const })),
+      ...bowelLogs.map((log) => ({ id: log.id, logged_at: log.logged_at, created_at: log.created_at, type: 'bowel' as const })),
+      ...symptomLogs.map((log) => ({ id: log.id, logged_at: log.logged_at, created_at: log.created_at, type: 'symptom' as const })),
+      ...medLogs.map((log) => ({ id: log.id, logged_at: log.taken_at ?? undefined, created_at: log.created_at, type: 'medication' as const, was_taken: log.was_taken })),
+    ].sort(
+      (a, b) =>
+        new Date(b.logged_at ?? b.created_at).getTime() -
+        new Date(a.logged_at ?? a.created_at).getTime()
+    );
+  }, [bowelLogs, foodLogs, medLogs, symptomLogs]);
 
-  const allEntries: AnyLog[] = [
-    ...foodLogs.map((l): AnyLog => ({ id: l.id, logged_at: l.logged_at, created_at: l.created_at, _type: 'food' })),
-    ...bowelLogs.map((l): AnyLog => ({ id: l.id, logged_at: l.logged_at, created_at: l.created_at, _type: 'bowel' })),
-    ...symptomLogs.map((l): AnyLog => ({ id: l.id, logged_at: l.logged_at, created_at: l.created_at, _type: 'symptom' })),
-    ...medLogs.map((l): AnyLog => ({ id: l.id, logged_at: l.taken_at ?? undefined, created_at: l.created_at, _type: 'medication', was_taken: l.was_taken })),
-  ];
-  const timeline = allEntries.sort(
-    (a, b) => new Date(b.logged_at ?? b.created_at).getTime() - new Date(a.logged_at ?? a.created_at).getTime(),
-  );
+  const statCells = [
+    { label: 'Meals', value: String(foodLogs.length), color: C.info, icon: { symbol: 'fork.knife', fallback: 'restaurant-outline' as const } },
+    { label: 'Bowel', value: String(bowelLogs.length), color: C.success, icon: { symbol: 'drop.fill', fallback: 'water-outline' as const } },
+    { label: 'Symptoms', value: symptomLogs.length > 0 ? String(symptomLogs.length) : '—', color: C.warning, icon: { symbol: 'waveform.path.ecg', fallback: 'pulse-outline' as const } },
+    { label: 'Meds', value: medLogs.length > 0 ? `${medLogs.filter((item) => item.was_taken).length}/${medLogs.length}` : '—', color: C.primary, icon: { symbol: 'pill.fill', fallback: 'medkit-outline' as const } },
+  ] as const;
 
-  const statCells: StatCell[] = [
-    { label: 'Meals',    value: String(foodLogs.length),   icon: 'restaurant-outline', color: '#38BDF8' },
-    { label: 'Bowel',    value: String(bowelLogs.length),  icon: 'water-outline',      color: C.success },
-    { label: 'Symptoms', value: symptomLogs.length > 0 ? String(symptomLogs.length) : '—', icon: 'pulse-outline', color: C.warning },
-    { label: 'Meds',     value: medsTotal > 0 ? `${medsTaken}/${medsTotal}` : '—', icon: 'medkit-outline', color: C.primary },
-  ];
+  function openLog(tab?: string) {
+    if (tab) {
+      router.push(`/(tabs)/log?tab=${tab}` as never);
+      return;
+    }
+    router.push('/(tabs)/log' as never);
+  }
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.background }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.background }}>
+    <View style={{ flex: 1 }}>
+      <QuickLogSheet visible={showQuickSheet} onClose={() => setShowQuickSheet(false)} onSelect={(tab) => openLog(tab)} />
+
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 150 + Math.max(insets.bottom, 12) }}
+        contentContainerStyle={{ paddingBottom: 160 + Math.max(insets.bottom, 12) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(); }}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
             tintColor={C.primary}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-  <NavHeader name={profile?.display_name ?? null} topInset={insets.top} />
-        <HeroCard
-          risk={risk}
-          foodCount={foodLogs.length}
-          bowelCount={bowelLogs.length}
+        <NavHeader
+          name={profile?.display_name ?? null}
+          topInset={insets.top}
+          onProfilePress={() => router.push('/(tabs)/profile' as never)}
         />
 
+        <HeroCard risk={risk} foodCount={foodLogs.length} bowelCount={bowelLogs.length} />
+
         <SectionTitle title="Today at a Glance" />
-        <StatsStrip cells={statCells} />
+        <StatStrip
+          cells={statCells as any}
+          onPressCell={(label) => {
+            selectionHaptic();
+            if (label === 'Meals' || label === 'Bowel' || label === 'Symptoms') {
+              openLog(label.toLowerCase() === 'meals' ? 'food' : label.toLowerCase() as 'bowel' | 'symptoms');
+              return;
+            }
+            openLog('meds');
+          }}
+        />
 
         <SectionTitle title="Quick Log" />
-        <QuickActions onPress={(tab) => router.push(`/(tabs)/log?tab=${tab}` as any)} />
+        <QuickActions onPress={openLog} />
 
-        {timeline.length > 0 && (
+        {timeline.length > 0 ? (
           <>
             <SectionTitle title="Today's Timeline" />
             {timeline.map((entry) => (
-              <TimelineEntry key={`${entry._type}-${entry.id}`} entry={entry} />
+              <TimelineEntry key={`${entry.type}-${entry.id}`} entry={entry} />
             ))}
           </>
-        )}
-
-        {timeline.length === 0 && (
-          <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 }}>
-            <View style={{
-              width: 80, height: 80, borderRadius: 40,
-              backgroundColor: C.primary + '18',
-              alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-            }}>
-              <Ionicons name="clipboard-outline" size={38} color={C.primary} style={{ opacity: 0.6 }} />
-            </View>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: C.textPrimary, marginBottom: 6 }}>
+        ) : (
+          <View style={{ alignItems: 'center', paddingHorizontal: 20, paddingTop: 18 }}>
+            <AppCard style={{ width: 92, height: 92, alignItems: 'center', justifyContent: 'center' }} intensity={50}>
+              <AppIcon symbol="clipboard" fallback="clipboard-outline" size={36} tintColor={C.primary} />
+            </AppCard>
+            <Text style={{ marginTop: 18, fontSize: 22, fontWeight: '700', color: C.textPrimary, letterSpacing: -0.4 }}>
               Nothing logged today
             </Text>
-            <Text style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', lineHeight: 20 }}>
-              Tap Quick Log above or use the + button to get started.
+            <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 22, fontWeight: '500', color: C.textSecondary, textAlign: 'center' }}>
+              Use Quick Log or the floating button to capture meals, symptoms, and bowel activity.
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute', bottom: 94 + Math.max(insets.bottom, 12), right: 24,
-          width: 56, height: 56, borderRadius: 28,
-          backgroundColor: C.primary,
-          borderWidth: 1,
-          borderColor: C.glassBorder,
-          alignItems: 'center', justifyContent: 'center',
-          shadowColor: C.primary, shadowOpacity: 0.4,
-          shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+      <PressScale
+        onPress={() => {
+          impactLightHaptic();
+          setShowQuickSheet(true);
         }}
-        onPress={() => router.push('/(tabs)/log' as any)}
-        activeOpacity={0.85}
+        style={{
+          position: 'absolute',
+          right: 24,
+          bottom: 98 + Math.max(insets.bottom, 12),
+        }}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+        <AppCard style={{ width: 60, height: 60, borderRadius: 30, overflow: 'hidden' }} intensity={60}>
+          <LinearGradient
+            colors={[C.gradientBrandStart, C.gradientBrandEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ position: 'absolute', inset: 0 }}
+          />
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <AppIcon symbol="plus" fallback="add" size={26} tintColor={C.onGradient} />
+          </View>
+        </AppCard>
+      </PressScale>
     </View>
   );
 }

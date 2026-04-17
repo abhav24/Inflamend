@@ -1,15 +1,24 @@
 import { useEffect } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../lib/supabase';
 import { ENV } from '../lib/env';
+import { Profile } from '../types';
+import { useColors } from '../constants/colors';
 import { useAuthStore } from '../store/authStore';
 import { useSyncQueue } from '../hooks/useSyncQueue';
-import NetInfo from '@react-native-community/netinfo';
-import { Profile } from '../types';
+import { getDemoProfile, setDemoProfile } from '../lib/demoData';
+
+const DEMO_PROFILE_ID = 'demo-local-profile';
+const DEMO_USER_ID = 'demo-local-user';
 
 export default function RootLayout() {
-  const { setSession, setProfile, setLoading } = useAuthStore();
+  const C = useColors();
+  const { setSession, setProfile, setDemoProfile: setDemoState, setLoading } = useAuthStore();
   const session = useAuthStore((s) => s.session);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { flush, getPendingCount } = useSyncQueue();
@@ -19,20 +28,33 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isDemoMode) {
-      const demoProfile: Profile = {
-        id: 'demo-local-profile',
+      const now = new Date().toISOString();
+      const fallbackProfile: Profile = {
+        id: DEMO_PROFILE_ID,
         display_name: 'Bob',
         date_of_birth: null,
         diagnosis_type: null,
         diagnosis_date: null,
         tracks_menstrual_cycle: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
       };
 
-      setSession(null);
-      setProfile(demoProfile);
-      setLoading(false);
+      getDemoProfile(fallbackProfile)
+        .then(async (profile) => {
+          const hydrated = {
+            ...fallbackProfile,
+            ...profile,
+            id: DEMO_PROFILE_ID,
+          };
+          setDemoState(hydrated, DEMO_USER_ID);
+          await setDemoProfile(hydrated);
+          setLoading(false);
+        })
+        .catch(() => {
+          setDemoState(fallbackProfile, DEMO_USER_ID);
+          setLoading(false);
+        });
       return;
     }
 
@@ -40,11 +62,7 @@ export default function RootLayout() {
       setSession(s);
       if (s?.user) {
         try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', s.user.id)
-            .single();
+          const { data } = await supabase.from('profiles').select('*').eq('id', s.user.id).single();
           setProfile(data);
         } catch (error) {
           console.error('Failed to load initial profile', error);
@@ -54,15 +72,13 @@ export default function RootLayout() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s?.user) {
         try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', s.user.id)
-            .single();
+          const { data } = await supabase.from('profiles').select('*').eq('id', s.user.id).single();
           setProfile(data);
         } catch (error) {
           console.error('Failed to load auth-change profile', error);
@@ -74,7 +90,7 @@ export default function RootLayout() {
     });
 
     return () => subscription.unsubscribe();
-  }, [isDemoMode, setSession, setProfile, setLoading]);
+  }, [isDemoMode, setDemoState, setLoading, setProfile, setSession]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -95,7 +111,6 @@ export default function RootLayout() {
     }
   }, [session, isLoading, segments, router, isDemoMode]);
 
-  // Background sync when online
   useEffect(() => {
     getPendingCount();
     const unsub = NetInfo.addEventListener((state) => {
@@ -105,8 +120,37 @@ export default function RootLayout() {
   }, [flush, getPendingCount]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
+    <GestureHandlerRootView style={styles.root}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={[C.meshStart, C.meshAccent, C.meshEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={C.isDark ? ['rgba(103,116,255,0.16)', 'transparent'] : ['rgba(255,255,255,0.55)', 'transparent']}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 0.5 }}
+          style={[StyleSheet.absoluteFill, { opacity: Platform.OS === 'ios' ? 1 : 0.8 }]}
+        />
+      </View>
+
+      <StatusBar style={C.isDark ? 'light' : 'dark'} />
+
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'default',
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
