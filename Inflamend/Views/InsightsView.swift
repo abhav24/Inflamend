@@ -23,7 +23,9 @@ struct InsightsView: View {
                     // 7d / 30d toggle
                     HStack(spacing: 2) {
                         ForEach(["7d","30d"], id: \.self) { r in
-                            Button { withAnimation { range = r } } label: {
+                            Button {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { range = r }
+                            } label: {
                                 Text(r)
                                     .font(DS.mono(12))
                                     .foregroundColor(range == r ? .bgPrimary : .fgDim)
@@ -31,8 +33,9 @@ struct InsightsView: View {
                                     .padding(.vertical, 8)
                                     .background(range == r ? Color.fgPrimary : Color.clear)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .animation(.spring(response: 0.28, dampingFraction: 0.75), value: range)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableButtonStyle())
                         }
                     }
                     .padding(2)
@@ -42,6 +45,7 @@ struct InsightsView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0)
 
                 // Stat tiles
                 HStack(spacing: 8) {
@@ -50,6 +54,7 @@ struct InsightsView: View {
                     StatTile(value: "18",  unit: "d",    label: "Since flare", trend: nil)
                 }
                 .padding(.horizontal, 20)
+                .appearAnimation(delay: 0.07)
 
                 // Trend chart card
                 VStack(alignment: .leading, spacing: 0) {
@@ -79,6 +84,7 @@ struct InsightsView: View {
                 }
                 .card()
                 .padding(.horizontal, 20)
+                .appearAnimation(delay: 0.14)
 
                 // Bowel frequency
                 VStack(alignment: .leading, spacing: 4) {
@@ -97,6 +103,7 @@ struct InsightsView: View {
                 }
                 .card()
                 .padding(.horizontal, 20)
+                .appearAnimation(delay: 0.21)
 
                 // Heatmap
                 VStack(alignment: .leading, spacing: 0) {
@@ -131,6 +138,7 @@ struct InsightsView: View {
                 }
                 .card()
                 .padding(.horizontal, 20)
+                .appearAnimation(delay: 0.28)
 
                 // Top triggers
                 VStack(alignment: .leading, spacing: 0) {
@@ -157,6 +165,7 @@ struct InsightsView: View {
                 .card()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
+                .appearAnimation(delay: 0.35)
             }
         }
         .background(Color.bgPrimary)

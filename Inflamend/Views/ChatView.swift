@@ -48,6 +48,10 @@ struct ChatView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(appState.chatMessages) { msg in
                             ChatBubble(message: msg)
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .offset(y: 10)),
+                                    removal: .opacity
+                                ))
                         }
 
                         if isTyping {
@@ -80,7 +84,7 @@ struct ChatView: View {
                                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.strokeDefault, lineWidth: 0.5))
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(PressableButtonStyle(scale: 0.97))
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -132,10 +136,10 @@ struct ChatView: View {
                                 color: input.trimmingCharacters(in: .whitespaces).isEmpty ? .fgFaint : .darkText
                             )
                         }
+                        .animation(.spring(response: 0.28, dampingFraction: 0.7), value: input.isEmpty)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle(scale: 0.9))
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .animation(.easeInOut(duration: 0.2), value: input)
                     .padding(.trailing, 6)
                 }
                 .background(Color.bgCard)
@@ -152,15 +156,18 @@ struct ChatView: View {
         let t = (text ?? input).trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return }
         input = ""
-        appState.chatMessages.append(ChatMessage(role: .user, content: t))
-        isTyping = true
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+            appState.chatMessages.append(ChatMessage(role: .user, content: t))
+            isTyping = true
+        }
 
-        // Simulate AI response after a short delay
         let response = responses[t] ?? "That's a great question, Priya. Based on your recent logs, things look manageable — but I'd recommend chatting with your GI doctor about this one for proper guidance."
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
-            isTyping = false
-            appState.chatMessages.append(ChatMessage(role: .assistant, content: response))
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                isTyping = false
+                appState.chatMessages.append(ChatMessage(role: .assistant, content: response))
+            }
         }
     }
 }

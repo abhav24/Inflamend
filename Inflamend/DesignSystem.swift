@@ -331,7 +331,7 @@ struct PrimaryButton: View {
                 .background(Color.sage)
                 .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle(scale: 0.97))
     }
 }
 
@@ -371,8 +371,9 @@ struct LogPill: View {
                 .padding(.vertical, 9)
                 .background(isActive ? Color.fgPrimary : Color.bgInset)
                 .clipShape(Capsule())
+                .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isActive)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 }
 
@@ -458,5 +459,52 @@ struct SheetHandle: View {
         RoundedRectangle(cornerRadius: 999)
             .fill(Color.fgGhost)
             .frame(width: 40, height: 5)
+    }
+}
+
+// MARK: - Pressable Button Style
+
+struct PressableButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.95
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .animation(.spring(response: 0.22, dampingFraction: 0.62), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Appear Animation
+
+struct AppearModifier: ViewModifier {
+    let delay: Double
+    @State private var visible = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(visible ? 1 : 0)
+            .offset(y: visible ? 0 : 18)
+            .onAppear {
+                withAnimation(.spring(response: 0.48, dampingFraction: 0.82).delay(delay)) {
+                    visible = true
+                }
+            }
+            .onDisappear { visible = false }
+    }
+}
+
+extension View {
+    func appearAnimation(delay: Double = 0) -> some View {
+        modifier(AppearModifier(delay: delay))
+    }
+}
+
+// MARK: - Page Transition
+
+extension AnyTransition {
+    static var pageFade: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: 12)),
+            removal: .opacity
+        )
     }
 }

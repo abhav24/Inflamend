@@ -19,6 +19,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 HStack(alignment: .bottom) {
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THURSDAY · APR 17")
                             .dsLabel()
@@ -46,11 +47,12 @@ struct HomeView: View {
                                 .offset(x: 2, y: -2)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle(scale: 0.92))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 18)
+                .appearAnimation(delay: 0)
 
                 // Risk card + Today summary side by side
                 HStack(alignment: .top, spacing: 10) {
@@ -97,6 +99,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.07)
 
                 // Check-in card
                 VStack(alignment: .leading, spacing: 0) {
@@ -118,7 +121,9 @@ struct HomeView: View {
                     HStack(spacing: 8) {
                         ForEach(MoodOption.allCases, id: \.self) { option in
                             Button {
-                                appState.mood = option
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                                    appState.mood = option
+                                }
                                 appState.showToast("Logged: feeling \(option.label.lowercased())")
                             } label: {
                                 VStack(spacing: 6) {
@@ -137,15 +142,16 @@ struct HomeView: View {
                                         .stroke(appState.mood == option ? option.color : Color.clear, lineWidth: 1)
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 18))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: appState.mood)
                             }
-                            .buttonStyle(.plain)
-                            .animation(.easeInOut(duration: 0.15), value: appState.mood)
+                            .buttonStyle(PressableButtonStyle())
                         }
                     }
                 }
                 .card()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.14)
 
                 // Rapid log row
                 VStack(spacing: 10) {
@@ -158,7 +164,7 @@ struct HomeView: View {
                                 .tracking(0.8)
                                 .foregroundColor(.sage)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableButtonStyle())
                     }
                     .padding(.horizontal, 4)
 
@@ -171,6 +177,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.21)
 
                 // Timeline
                 VStack(spacing: 10) {
@@ -194,6 +201,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.28)
 
                 // AI nudge card
                 HStack(alignment: .top, spacing: 12) {
@@ -227,7 +235,7 @@ struct HomeView: View {
                                 .tracking(0.8)
                                 .foregroundColor(.sage)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableButtonStyle())
                         .padding(.top, 6)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -243,6 +251,7 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.35)
             }
         }
         .background(Color.bgPrimary)
@@ -322,7 +331,7 @@ struct RapidButton: View {
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.strokeDefault, lineWidth: 0.5))
             .clipShape(RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 }
 

@@ -57,13 +57,16 @@ struct ContentView: View {
                     ProfileView(appState: appState)
                 }
             }
+            .id(selectedTab)
+            .transition(.pageFade)
+            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Leave space for tab bar
-            .padding(.bottom, 88)
+            .padding(.bottom, 96)
 
-            // Custom tab bar
+            // Custom tab bar — floats over content, anchored near physical bottom
             CustomTabBar(selectedTab: $selectedTab)
         }
+        .ignoresSafeArea(edges: .bottom)
         .overlay(alignment: .top) {
             if let msg = appState.toast {
                 ToastView(message: msg)
@@ -104,7 +107,7 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(.spring(duration: 0.2)) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
                         selectedTab = tab
                     }
                 } label: {
@@ -114,6 +117,8 @@ struct CustomTabBar: View {
                             size: 22,
                             color: selectedTab == tab ? .fgPrimary : .fgFaint
                         )
+                        .scaleEffect(selectedTab == tab ? 1.14 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.58), value: selectedTab)
                         Text(tab.label)
                             .font(DS.mono(10))
                             .tracking(0.4)
@@ -121,15 +126,16 @@ struct CustomTabBar: View {
                             .foregroundColor(selectedTab == tab ? .fgPrimary : .fgFaint)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
+                            .animation(.easeInOut(duration: 0.18), value: selectedTab)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle(scale: 0.88))
             }
         }
-        .frame(height: 68)
+        .frame(maxWidth: .infinity, minHeight: 68)
         .padding(.horizontal, 10)
         .background {
             Capsule()
@@ -139,8 +145,8 @@ struct CustomTabBar: View {
                 )
                 .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 8)
         }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 18)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 14)
     }
 }
 
