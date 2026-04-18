@@ -422,15 +422,11 @@ struct ScreenHeader: View {
                         .dsLabel()
                         .padding(.bottom, 2)
                 }
-                HStack(spacing: 0) {
-                    Text(title)
-                        .font(DS.serif(36))
-                        .foregroundColor(.fgPrimary)
-                    if let suffix = titleItalicSuffix {
-                        Text(suffix)
-                            .font(DS.serif(36, italic: true))
-                            .foregroundColor(.fgPrimary)
-                    }
+                if let suffix = titleItalicSuffix {
+                    (Text(title).font(DS.serif(36)).foregroundColor(.fgPrimary)
+                    + Text(suffix).font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
+                } else {
+                    Text(title).font(DS.serif(36)).foregroundColor(.fgPrimary)
                 }
             }
             Spacer()
@@ -439,7 +435,7 @@ struct ScreenHeader: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 8)
+        .padding(.top, 16)
         .padding(.bottom, 18)
     }
 }
