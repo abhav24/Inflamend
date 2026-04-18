@@ -22,14 +22,12 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THURSDAY · APR 17")
                             .dsLabel()
-                        HStack(spacing: 0) {
-                            Text("\(greeting), ")
-                                .font(DS.serif(36))
-                                .foregroundColor(.fgPrimary)
-                            Text("Priya")
-                                .font(DS.serif(36, italic: true))
-                                .foregroundColor(.fgPrimary)
-                        }
+                        (Text("\(greeting), ")
+                            .font(DS.serif(36))
+                            .foregroundColor(.fgPrimary)
+                        + Text("Priya")
+                            .font(DS.serif(36, italic: true))
+                            .foregroundColor(.fgPrimary))
                     }
                     Spacer()
                     // Bell button
@@ -51,7 +49,7 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .padding(.top, 16)
                 .padding(.bottom, 18)
 
                 // Risk card + Today summary side by side

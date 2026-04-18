@@ -26,10 +26,8 @@ struct ChatView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ALWAYS HERE · PRIVATE").dsLabel()
-                    HStack(spacing: 0) {
-                        Text("Ask ").font(DS.serif(36)).foregroundColor(.fgPrimary)
-                        Text("Inflamend").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary)
-                    }
+                    (Text("Ask ").font(DS.serif(36)).foregroundColor(.fgPrimary)
+                    + Text("Inflamend").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
                 }
                 Spacer()
                 // AI avatar
@@ -41,7 +39,7 @@ struct ChatView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .padding(.top, 16)
             .padding(.bottom, 18)
 
             // Messages

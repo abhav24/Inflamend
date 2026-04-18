@@ -116,9 +116,11 @@ struct CustomTabBar: View {
                         )
                         Text(tab.label)
                             .font(DS.mono(10))
-                            .tracking(0.8)
+                            .tracking(0.4)
                             .textCase(.uppercase)
                             .foregroundColor(selectedTab == tab ? .fgPrimary : .fgFaint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 8)
@@ -226,10 +228,10 @@ struct QuickBristolSheet: View {
                         selected = i
                     } label: {
                         Text("\(i)")
-                            .font(DS.mono(18, weight: .semibold))
+                            .font(DS.mono(16, weight: .semibold))
                             .foregroundColor(selected == i ? .darkText : .fgPrimary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
+                            .padding(.vertical, 14)
                             .background(selected == i ? Color.sage : Color.bgInset)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }

@@ -16,10 +16,8 @@ struct InsightsView: View {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("PATTERNS · TRENDS").dsLabel()
-                        HStack(spacing: 0) {
-                            Text("Your ").font(DS.serif(36)).foregroundColor(.fgPrimary)
-                            Text("insights").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary)
-                        }
+                        (Text("Your ").font(DS.serif(36)).foregroundColor(.fgPrimary)
+                        + Text("insights").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
                     }
                     Spacer()
                     // 7d / 30d toggle
@@ -42,8 +40,8 @@ struct InsightsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.top, 16)
+                .padding(.bottom, 14)
 
                 // Stat tiles
                 HStack(spacing: 8) {
