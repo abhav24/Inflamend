@@ -2,7 +2,7 @@
 
 ## Baseline
 
-The app uses native SwiftUI controls and readable contrast in most places, but accessibility has not been systematically implemented. Several custom buttons, charts, and visual-only indicators need explicit labels and summaries.
+The app uses native SwiftUI controls and readable contrast in most places, but accessibility has not been systematically implemented. Several custom buttons, manual chart flows, and visual-only indicators still need explicit review.
 
 ## Screen Checklist
 
@@ -12,7 +12,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in and timeline delete confirmation paths verified | Safety card and delete confirmation use text | In progress |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save, food save, medication dose row, voice confirmation, and voice permission fallback paths verified | Voice permission fallback, voice confirmation, blood choices, food tags, and medication rows use text | In progress |
-| Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty and populated summary paths are identifier-backed and smoke-tested | Empty and populated summaries use explanatory text; charts need summaries | In progress |
+| Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty and populated summary paths plus chart containers are identifier-backed and smoke-tested | Empty and populated summaries use explanatory text; populated trend, bowel, and heatmap charts expose summary labels | In progress |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
 | Profile | Partial | Unverified | Likely acceptable | Rows OK; sync status, report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Sync blocked state and destructive actions use visible text | In progress |
 
@@ -34,6 +34,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
 - Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 - Added stable identifiers and UI smoke coverage for populated Insights confidence text, stat tiles, chart containers, and food pattern rows.
+- Added accessibility labels and UI assertions for populated Insights trend, bowel, and pain heatmap chart summaries.
 - Replaced tiny medication dose toggles with full-row buttons and added UI smoke coverage for Log medication dose tracking, Home meds summary, and timeline feedback.
 - Added stable identifiers and UI smoke coverage for Log food description, food trigger tags, food save action, and Home timeline feedback.
 - Added stable identifiers, keyboard Done controls, and UI smoke coverage for Log voice transcript parsing, editable confirmation fields, save/discard actions, and Home timeline feedback.
@@ -44,7 +45,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 ## Required Fixes
 
 - Add VoiceOver labels to tab bar icons and rapid log controls where generated labels are insufficient.
-- Add chart summaries for line/bar/heatmap views.
+- Manually verify populated chart summaries with VoiceOver and large Dynamic Type.
 - Respect Reduce Motion for staggered animations.
 - Verify largest Dynamic Type sizes do not overlap.
 - Ensure red-flag safety cards are announced clearly.
@@ -56,4 +57,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline delete confirmation, Insights empty and populated summary states, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, chart summaries, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline delete confirmation, Insights empty and populated summary states, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

@@ -945,6 +945,34 @@ What remains:
 What was committed:
 - Commit message: `Add timeline log delete confirmation`
 
+## Current Checkpoint: Insights Chart Accessibility Summaries
+
+What changed:
+- Added domain-specific VoiceOver labels to the populated Insights trend, bowel, and pain heatmap chart containers.
+- Extended `testInsightsPopulatedSummaryUsesLocalLogsSmoke` to assert trend pain/fatigue values, bowel chart values, and heatmap intensity through the chart accessibility labels.
+- Kept the summaries derived from local timeline data and framed as tracked values/frequency, not trigger or diagnosis claims.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testInsightsPopulatedSummaryUsesLocalLogsSmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused populated Insights UI smoke test passed.
+- Full test run passed with 44 tests: 25 unit tests and 19 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- No implementation failures in this checkpoint.
+
+What remains:
+- Manually verify chart summaries with VoiceOver and large Dynamic Type.
+- Replace timeline-text inference with structured dated records and add richer partial-data chart scenarios.
+- Add backend-synced summaries and export/share integration.
+
+What was committed:
+- Commit message: `Add Insights chart accessibility summaries`
+
 ## Command Log
 
 ```text
@@ -1243,6 +1271,15 @@ Result after timeline delete pass: TEST SUCCEEDED with 44 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after timeline delete pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testInsightsPopulatedSummaryUsesLocalLogsSmoke
+Result after Insights chart accessibility pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Insights chart accessibility pass: TEST SUCCEEDED with 44 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Insights chart accessibility pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -1250,7 +1287,7 @@ Result after timeline delete pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue with Profile blocked-retry UI smoke coverage, core logging with Today check-in, bowel red-flag, food, medication dose, editable voice confirmation, native voice permission fallback, and timeline delete confirmation UI smoke coverage, data-backed Insights with empty-state and populated local-log UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, Profile sign-out/export/destructive UI smoke tests wired, and preview asset catalog packaging cleaned up |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue with Profile blocked-retry UI smoke coverage, core logging with Today check-in, bowel red-flag, food, medication dose, editable voice confirmation, native voice permission fallback, and timeline delete confirmation UI smoke coverage, data-backed Insights with empty-state, populated local-log, and chart accessibility-summary UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, Profile sign-out/export/destructive UI smoke tests wired, and preview asset catalog packaging cleaned up |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -1277,7 +1314,7 @@ Result after timeline delete pass: BUILD SUCCEEDED.
 | Voice logging parser | Logic implemented/tested and surfaced with UI smoke coverage | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add native speech capture and backend parity |
 | Voice logging confirmation | Implemented locally with editable confirmation and UI smoke coverage | `LogVoiceForm`, `VoiceDraftConfirmation`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add microphone/Speech integration, structured record save paths, backend sync, retention enforcement, edit/delete, and field validation |
 | Voice permission fallback | Scaffolded with UI smoke coverage | Generated microphone/speech usage descriptions, deterministic denied state, manual transcript fallback, `testVoicePermissionDeniedKeepsManualFallbackSmoke` | Add real Speech/microphone authorization and capture, Settings path, backend retention enforcement, and parser parity |
-| Insights | Implemented locally with empty and populated UI smoke coverage | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, and empty states; `testInsightsEmptyStateAvoidsDemoClaimsSmoke`; `testInsightsPopulatedSummaryUsesLocalLogsSmoke` | Add structured dated records, chart accessibility summaries, backend-synced summaries, richer populated scenarios, and export/share integration |
+| Insights | Implemented locally with empty, populated, and chart-summary UI smoke coverage | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, empty states, and populated chart accessibility labels; `testInsightsEmptyStateAvoidsDemoClaimsSmoke`; `testInsightsPopulatedSummaryUsesLocalLogsSmoke` | Add structured dated records, backend-synced summaries, richer populated/partial scenarios, export/share integration, and manual VoiceOver/Dynamic Type verification |
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded, with local safety mirror and UI smoke coverage | `supabase/functions/ai-chat`, `CareResponseService`, `ChatView`, `testCareRedFlagPromptShowsSafetyGuidanceSmoke`, `testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke` | Wire live provider setup and Supabase iOS service |
 | Red-flag safety handling | Wired in UI with Care and Log smoke coverage | Care safety card, Today safety card, log/check-in detectors, `testCareRedFlagPromptShowsSafetyGuidanceSmoke`, `testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke` | Add server parity checks and broader UI tests |
@@ -1330,10 +1367,10 @@ Stop condition is not satisfied.
 - Build: passes on available iPhone 17 simulator.
 - Tests: passing with 25 unit tests through `InflamendTests` and 19 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile sync status with blocked-retry UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, timeline log deletion with confirmation UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, voice permission fallback with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty and populated UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile sync status with blocked-retry UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, timeline log deletion with confirmation UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, voice permission fallback with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty, populated, and chart accessibility-summary UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, generated microphone/speech usage strings, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Profile sync blocked-state UI smoke coverage, Profile privacy-toggle UI smoke coverage, Today check-in UI smoke coverage, timeline delete confirmation UI smoke coverage, Insights empty-state and populated local-log UI smoke coverage, Log bowel red-flag UI smoke coverage, Log food UI smoke coverage, Log medication dose UI smoke coverage, Log voice confirmation UI smoke coverage, Log voice permission fallback UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, destructive confirmation UI smoke coverage, and preview asset resource cleanup now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, privacy toggle UI, voice permission fallback, Profile sync status UI, asset catalog cleanup, populated Insights UI, and timeline log delete checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, generated microphone/speech usage strings, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Profile sync blocked-state UI smoke coverage, Profile privacy-toggle UI smoke coverage, Today check-in UI smoke coverage, timeline delete confirmation UI smoke coverage, Insights empty-state, populated local-log, and chart-summary UI smoke coverage, Log bowel red-flag UI smoke coverage, Log food UI smoke coverage, Log medication dose UI smoke coverage, Log voice confirmation UI smoke coverage, Log voice permission fallback UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, destructive confirmation UI smoke coverage, and preview asset resource cleanup now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, privacy toggle UI, voice permission fallback, Profile sync status UI, asset catalog cleanup, populated Insights UI, timeline log delete, and Insights chart accessibility checkpoints exist.
 
 Continue working.
 

@@ -793,7 +793,7 @@ Product Simplicity Reviewer:
 
 Apple UI Quality Reviewer:
 - Findings: Insights empty states now expose stable identifiers and combine their title/message for assistive technologies, while still using the existing visual design.
-- Required fixes: Add chart accessibility summaries, Dynamic Type review, and VoiceOver review for the full Insights scroll view.
+- Required fixes: Add Dynamic Type review and VoiceOver review for the full Insights scroll view, including the populated chart summaries.
 - Status: Accept checkpoint.
 
 Backend and Data Integrity Reviewer:
@@ -1081,7 +1081,7 @@ Product Simplicity Reviewer:
 
 Apple UI Quality Reviewer:
 - Findings: Populated Insights content now has stable identifiers for confidence text, stat tiles, chart containers, and food-pattern rows.
-- Required fixes: Add actual chart accessibility summaries, Dynamic Type checks, and manual VoiceOver notes for the chart sections.
+- Required fixes: Add Dynamic Type checks and manual VoiceOver notes for the chart sections.
 - Status: Accept checkpoint.
 
 Backend and Data Integrity Reviewer:
@@ -1096,11 +1096,11 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused populated Insights UI test passes. `xcodebuild test` passes with 42 tests: 24 unit tests and 18 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Add partial-data scenarios, chart accessibility assertions, and export/share integration tests after structured records exist.
+- Required fixes: Add partial-data scenarios, richer chart-summary cases, and export/share integration tests after structured records exist.
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with structured records, chart accessibility summaries, sync-worker implementation, and edit support.
+- Ship now, then continue with structured records, manual chart accessibility verification, sync-worker implementation, and edit support.
 
 ## Timeline Log Delete Confirmation Audit
 
@@ -1133,3 +1133,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with edit support, structured records, and sync-worker implementation.
+
+## Insights Chart Accessibility Summaries Audit
+
+### Feature Audit: Populated Chart VoiceOver Labels
+
+Product Simplicity Reviewer:
+- Findings: Populated Insights charts now have spoken summaries so users do not have to reverse-engineer trend, bowel, or heatmap visuals.
+- Required fixes: Keep summaries concise as structured records add more data points.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Trend, bowel, and pain heatmap chart containers now expose stable accessibility identifiers and labels with tracked values.
+- Required fixes: Manually verify VoiceOver order, Dynamic Type wrapping, and chart discoverability on compact devices.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Chart labels are derived from the same current local timeline summary as the visible chart data.
+- Required fixes: Replace timeline-text inference with structured dated records and backend-synced summaries before production analytics.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Summaries state self-tracked values and frequencies only, without trigger, causation, or diagnosis claims.
+- Required fixes: Preserve this framing in exports, live AI context, and backend-generated summaries.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused populated Insights UI test passes with chart-label assertions. `xcodebuild test` passes with 44 tests: 25 unit tests and 19 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add partial-data chart scenarios and manual VoiceOver/Dynamic Type verification.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with structured records, partial Insights cases, manual accessibility QA, and sync-worker implementation.

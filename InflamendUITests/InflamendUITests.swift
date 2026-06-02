@@ -109,13 +109,18 @@ final class InflamendUITests: XCTestCase {
         let flareMarks = app.descendants(matching: .any)["insights-stat-flare-marks"]
         waitForLabel(flareMarks, contains: "1")
 
-        XCTAssertTrue(app.descendants(matching: .any)["insights-populated-trend-chart"].waitForExistence(timeout: 5))
+        let trendChart = app.descendants(matching: .any)["insights-populated-trend-chart"]
+        XCTAssertTrue(trendChart.waitForExistence(timeout: 5))
+        XCTAssertTrue(trendChart.label.contains("Pain scores 7, 0"))
+        XCTAssertTrue(trendChart.label.contains("Fatigue scores 8, 1"))
 
         let bowelChart = app.descendants(matching: .any)["insights-populated-bowel-chart"]
         waitForElement(bowelChart, in: app)
+        XCTAssertTrue(bowelChart.label.contains("Bowel chart values 5, 1, 1, 0"))
 
         let heatmap = app.descendants(matching: .any)["insights-populated-pain-heatmap"]
         waitForElement(heatmap, in: app)
+        XCTAssertTrue(heatmap.label.contains("Highest intensity 4 of 5"))
 
         let foodPattern = app.descendants(matching: .any)["insights-food-pattern-meal-logged"]
         waitForElement(foodPattern, in: app)

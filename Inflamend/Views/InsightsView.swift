@@ -93,6 +93,8 @@ struct InsightsView: View {
                     .padding(.bottom, 16)
                     if summary.hasTrendData {
                         LineChartView(series: chartSeries)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(trendChartAccessibilityLabel)
                             .accessibilityIdentifier("insights-populated-trend-chart")
                     } else {
                         InsightEmptyState(
@@ -117,6 +119,8 @@ struct InsightsView: View {
                         .padding(.bottom, 12)
                     if summary.hasBowelData {
                         BarChartView(data: summary.bowelValues, labels: bowelLabels)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(bowelChartAccessibilityLabel)
                             .accessibilityIdentifier("insights-populated-bowel-chart")
                     } else {
                         InsightEmptyState(
@@ -166,6 +170,8 @@ struct InsightsView: View {
                         )
                     } else {
                         HeatmapView(values: summary.painHeatmapValues)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(painHeatmapAccessibilityLabel)
                             .accessibilityIdentifier("insights-populated-pain-heatmap")
                     }
                 }
@@ -208,6 +214,29 @@ struct InsightsView: View {
     private func formatted(_ value: Double?) -> String {
         guard let value else { return "--" }
         return String(format: "%.1f", value)
+    }
+
+    private var trendChartAccessibilityLabel: String {
+        "Symptom trend chart. Pain scores \(chartValues(summary.painValues)). Fatigue scores \(chartValues(summary.fatigueValues))."
+    }
+
+    private var bowelChartAccessibilityLabel: String {
+        "Bowel chart values \(chartValues(summary.bowelValues)). Recent values include check-in stool counts and bowel logs."
+    }
+
+    private var painHeatmapAccessibilityLabel: String {
+        let values = summary.painHeatmapValues
+        let highest = values.max() ?? 0
+        return "Pain heatmap. \(values.count) pain scores. Highest intensity \(highest) of 5. Values \(values.map(String.init).joined(separator: ", "))."
+    }
+
+    private func chartValues(_ values: [Double]) -> String {
+        guard !values.isEmpty else { return "none" }
+        return values
+            .map { value in
+                value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
+            }
+            .joined(separator: ", ")
     }
 }
 
