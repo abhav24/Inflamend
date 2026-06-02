@@ -1108,7 +1108,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: Users can now remove an accidental local timeline entry from Home after a focused confirmation, without adding a separate management screen.
-- Required fixes: Add undo and type-specific structured editing only if they stay fast enough for daily logging.
+- Required fixes: Add type-specific structured editing only if it stays fast enough for daily logging.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -1128,11 +1128,11 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: Focused unit and UI tests pass. `xcodebuild test` passes with 44 tests: 25 unit tests and 19 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Add undo, type-specific structured editing, backend replay, and manual accessibility verification.
+- Required fixes: Add type-specific structured editing, backend replay, and manual accessibility verification.
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with undo, structured records, and sync-worker implementation.
+- Ship now, then continue with structured records and sync-worker implementation.
 
 ## Insights Chart Accessibility Summaries Audit
 
@@ -1192,11 +1192,11 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: Focused edit unit/UI tests pass; the first focused UI run failed due an over-specific detail assertion and was fixed. Full `xcodebuild test` passes with 46 tests: 26 unit tests and 20 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Add structured type-specific edit cases, undo, backend replay tests, and manual accessibility QA.
+- Required fixes: Add structured type-specific edit cases, backend replay tests, and manual accessibility QA.
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with type-specific structured records, undo, sync-worker implementation, and manual accessibility QA.
+- Ship now, then continue with type-specific structured records, sync-worker implementation, and manual accessibility QA.
 
 ## Sync Replay Planner and Blocked Error Metadata Audit
 
@@ -1225,6 +1225,38 @@ Privacy, Security, and Medical Safety Reviewer:
 QA and Regression Reviewer:
 - Findings: Focused replay-plan and adjacent queue/edit/delete unit tests pass; Profile sync retry UI still passes. Full `xcodebuild test` passes with 47 tests: 27 unit tests and 20 UI smoke tests. `xcodebuild clean build` also passes.
 - Required fixes: Add tests for live replay success/failure, network retry, conflict resolution, and server receipt persistence once Supabase is available.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay wiring, server IDs, structured records, and manual accessibility QA.
+
+## Timeline Delete Undo Audit
+
+### Feature Audit: Toast Undo and Queue Restoration
+
+Product Simplicity Reviewer:
+- Findings: A confirmed delete now gives users a short, direct Undo action in the existing toast pattern, which corrects accidental removals without adding a timeline management screen.
+- Required fixes: Keep the undo window understandable and avoid expanding this into a complex history stack before structured records exist.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The toast now exposes the message and Undo action as separate accessibility elements, and the UI smoke test verifies the action is discoverable and tappable after delete.
+- Required fixes: Manually verify VoiceOver announcement order, Dynamic Type wrapping, and compact-device placement for the toast action.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `restoreDeletedLog` reinserts the row at its original index, removes a staged `healthLogDeletion`, and restores pending create/update mutations that were removed during delete. This preserves future replay intent for both unreplayed local creates and existing-like edited records.
+- Required fixes: Replace local-only mutation restoration with server IDs, idempotency keys, live delete/update replay, conflict handling, and receipts once Supabase is connected.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Undo remains local and does not imply cloud deletion or cloud restoration. The toast text is plain and avoids permanence claims.
+- Required fixes: Add production copy and receipts once cloud deletion/export behavior exists.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused undo unit and UI tests pass; adjacent edit/delete/queue tests pass. Full `xcodebuild test` passes with 49 tests: 28 unit tests and 21 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add live replay success/failure tests, manual accessibility verification, and structured type-specific undo/edit cases after backend and structured records land.
 - Status: Accept checkpoint.
 
 Final decision:

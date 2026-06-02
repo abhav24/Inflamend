@@ -374,6 +374,73 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUndoDeleteRestoresLogAndPendingMutations() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-undo-delete-log-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "undo-delete@example.com", displayName: "Undo Delete")
+        appState.addLog(type: .note, title: "Undoable note", sub: "Restore")
+
+        let createdLogID = appState.logs[0].id
+        let createdMutationID = appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLogID.uuidString
+        }?.id
+        guard let createdMutationID else {
+            XCTFail("Expected pending create mutation before delete")
+            store.delete()
+            return
+        }
+
+        appState.deleteLog(id: createdLogID)
+        XCTAssertFalse(appState.logs.contains { $0.id == createdLogID })
+        XCTAssertFalse(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLog && $0.localRecordId == createdLogID.uuidString
+        })
+        XCTAssertEqual(appState.toastActionTitle, "Undo")
+
+        appState.performToastAction()
+        XCTAssertEqual(appState.logs.first?.id, createdLogID)
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.id == createdMutationID && $0.kind == .healthLog && $0.localRecordId == createdLogID.uuidString
+        })
+        XCTAssertEqual(appState.toast, "Log restored")
+
+        let existingEntry = LogEntry(type: .food, title: "Existing food", sub: "Local copy", time: "8:00am")
+        appState.logs = [existingEntry]
+        XCTAssertTrue(appState.updateLog(id: existingEntry.id, title: "Existing food edited", sub: "Dinner detail"))
+        let updateMutationID = appState.pendingSyncMutations.first {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        }?.id
+        guard let updateMutationID else {
+            XCTFail("Expected pending update mutation before delete")
+            store.delete()
+            return
+        }
+
+        appState.deleteLog(id: existingEntry.id)
+        XCTAssertFalse(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogDeletion && $0.localRecordId == existingEntry.id.uuidString
+        })
+
+        appState.performToastAction()
+        XCTAssertEqual(appState.logs.first?.id, existingEntry.id)
+        XCTAssertFalse(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogDeletion && $0.localRecordId == existingEntry.id.uuidString
+        })
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.id == updateMutationID && $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+
+        store.delete()
+    }
+
+    @MainActor
     func testUpdateLogPersistsAndCoalescesPendingCreate() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-update-log-\(UUID().uuidString).json")

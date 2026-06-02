@@ -285,6 +285,29 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testTimelineEntryDeleteUndoRestoresLocalRowSmoke() {
+        let app = openSeededHome()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+        let noteEntry = app.descendants(matching: .any)["timeline-entry-note"]
+        XCTAssertTrue(noteEntry.waitForExistence(timeout: 5))
+
+        tapWhenVisible(app.buttons["timeline-delete-note"], in: app)
+        XCTAssertTrue(app.staticTexts["Delete log entry?"].waitForExistence(timeout: 5))
+        app.buttons.matching(identifier: "timeline-confirm-delete-note-button").firstMatch.tap()
+
+        XCTAssertTrue(app.staticTexts["0 entries"].waitForExistence(timeout: 5))
+        let undoButton = app.buttons["toast-action-button"]
+        XCTAssertTrue(undoButton.waitForExistence(timeout: 5))
+        undoButton.tap()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].waitForExistence(timeout: 5))
+        let restoredEntry = app.descendants(matching: .any)["timeline-entry-note"]
+        XCTAssertTrue(restoredEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(restoredEntry.label.contains("UI test export note"), restoredEntry.label)
+    }
+
+    @MainActor
     func testTimelineEntryEditUpdatesLocalRowSmoke() {
         let app = openSeededHome()
 

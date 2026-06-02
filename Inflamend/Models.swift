@@ -364,6 +364,9 @@ class AppState {
         ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage)
     ]
     var toast: String? = nil
+    var toastActionTitle: String? = nil
+    @ObservationIgnored private var toastActionHandler: (() -> Void)? = nil
+    @ObservationIgnored private var toastGeneration = 0
     private var toastTask: Task<Void, Never>? = nil
 
     init(store: AppSnapshotStore = .live, syncReplayWorker: LocalSyncReplayWorker = LocalSyncReplayWorker()) {
@@ -432,13 +435,34 @@ class AppState {
         syncReplayWorker.plan(for: pendingSyncMutations)
     }
 
-    func showToast(_ message: String) {
-        toast = message
+    func showToast(_ message: String, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         toastTask?.cancel()
+        toastGeneration += 1
+        let generation = toastGeneration
+        toastActionTitle = actionTitle
+        toastActionHandler = action
+        toast = message
+        let duration: Duration = actionTitle == nil ? .seconds(2.2) : .seconds(5.5)
         toastTask = Task {
-            try? await Task.sleep(for: .seconds(2.2))
-            self.toast = nil
+            do {
+                try await Task.sleep(for: duration)
+            } catch {
+                return
+            }
+            guard self.toastGeneration == generation else { return }
+            self.clearToast()
         }
+    }
+
+    func clearToast() {
+        toastGeneration += 1
+        toast = nil
+        toastActionTitle = nil
+        toastActionHandler = nil
+    }
+
+    func performToastAction() {
+        toastActionHandler?()
     }
 
     func addLog(type: LogType, title: String, sub: String = "", date: Date = Date()) {
@@ -449,20 +473,28 @@ class AppState {
     }
 
     func deleteLog(id: LogEntry.ID) {
-        guard let entry = logs.first(where: { $0.id == id }) else { return }
+        guard let index = logs.firstIndex(where: { $0.id == id }) else { return }
+        let entry = logs[index]
 
-        logs.removeAll { $0.id == id }
+        logs.remove(at: index)
 
         let localRecordId = entry.id.uuidString
         let hasUnreplayedCreate = pendingSyncMutations.contains {
             $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
         }
 
+        var removedMutations: [PendingSyncMutation] = []
         if hasUnreplayedCreate {
+            removedMutations = pendingSyncMutations.filter {
+                $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
+            }
             pendingSyncMutations.removeAll {
                 $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
             }
         } else {
+            removedMutations = pendingSyncMutations.filter {
+                $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
+            }
             pendingSyncMutations.removeAll {
                 $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
             }
@@ -474,7 +506,29 @@ class AppState {
         }
 
         persist()
-        showToast("Log removed")
+        showToast("Log removed", actionTitle: "Undo") { [weak self] in
+            self?.restoreDeletedLog(entry, originalIndex: index, removedMutations: removedMutations)
+        }
+    }
+
+    private func restoreDeletedLog(_ entry: LogEntry, originalIndex: Int, removedMutations: [PendingSyncMutation]) {
+        toastTask?.cancel()
+        clearToast()
+
+        guard !logs.contains(where: { $0.id == entry.id }) else { return }
+        let insertIndex = min(max(0, originalIndex), logs.count)
+        logs.insert(entry, at: insertIndex)
+
+        let localRecordId = entry.id.uuidString
+        pendingSyncMutations.removeAll {
+            $0.kind == .healthLogDeletion && $0.localRecordId == localRecordId && $0.status != .synced
+        }
+        for mutation in removedMutations.reversed() where !pendingSyncMutations.contains(where: { $0.id == mutation.id }) {
+            pendingSyncMutations.insert(mutation, at: 0)
+        }
+
+        persist()
+        showToast("Log restored")
     }
 
     @discardableResult

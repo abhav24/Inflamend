@@ -433,16 +433,36 @@ struct DSSliderStyle: View {
 
 struct ToastView: View {
     let message: String
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        Text(message)
-            .font(DS.sans(14, weight: .medium))
-            .foregroundColor(.darkText)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            .background(Color.sage)
-            .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+        HStack(spacing: 12) {
+            Text(message)
+                .font(DS.sans(14, weight: .medium))
+                .foregroundColor(.darkText)
+                .accessibilityIdentifier("toast-message")
+
+            if let actionTitle {
+                Button(actionTitle) {
+                    action?()
+                }
+                    .font(DS.sans(13, weight: .semibold))
+                    .foregroundColor(.darkText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(0.08))
+                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("toast-action-button")
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(Color.sage)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+        .accessibilityElement(children: .contain)
     }
 }
 

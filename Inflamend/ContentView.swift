@@ -51,7 +51,9 @@ struct ContentView: View {
         .ignoresSafeArea(edges: .bottom)
         .overlay(alignment: .top) {
             if let msg = appState.toast {
-                ToastView(message: msg)
+                ToastView(message: msg, actionTitle: appState.toastActionTitle) {
+                    appState.performToastAction()
+                }
                     .padding(.top, 60)
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),
