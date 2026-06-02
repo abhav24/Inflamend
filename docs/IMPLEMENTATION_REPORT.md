@@ -198,8 +198,40 @@ What remains:
 - Add per-record server IDs, conflict handling, retry backoff, and network reachability.
 - Add UI tests for Profile sync status and first-log offline save behavior.
 
+What was committed:
+- `34802be Add local sync queue and snapshot recovery`
+
+## Current Checkpoint: Data-Backed Insights and Honest Empty States
+
+What changed:
+- Replaced static Insights chart arrays and hardcoded trigger rows with `InsightSummaryBuilder`.
+- Passed `AppState` into `InsightsView` so trend charts, bowel charts, pain heatmap, and food pattern rows are derived from local logs.
+- Added honest empty states when the user has not saved enough local data for a chart.
+- Reframed food rows as frequency summaries and removed 48-hour trigger/correlation claims from the UI.
+- Added unit tests for no-data Insights and local-log-derived Insights summaries.
+
+What was tested:
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 16 tests, including `testInsightSummaryReturnsEmptyStateForNoLogs` and `testInsightSummaryUsesLocalLogsWithoutDemoData`.
+
+What failed during the loop:
+- The first Insights test attempt failed while replacing static demo data because score parsing and one assertion needed tightening.
+
+Fixes made:
+- Replaced regex score extraction with deterministic label/digit scanning for Swift test compatibility.
+- Adjusted the test to assert average pain with a numeric fallback and to treat bowel values as a chronological series.
+
+What remains:
+- Add structured dated health-log models so charts do not have to infer scores from timeline copy.
+- Add UI tests for Insights empty states and populated local-log summaries.
+- Add clinician-facing export/share output for these summaries.
+
 What will be committed:
-- Commit message: `Add local sync queue and snapshot recovery`
+- Commit message: `Make Insights use local logs`
 
 ## Command Log
 
@@ -247,6 +279,12 @@ Result after sync-queue pass: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after sync-queue pass: TEST SUCCEEDED with 14 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Insights pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Insights pass: TEST SUCCEEDED with 16 tests.
 ```
 
 ## Pass Progress
@@ -254,7 +292,7 @@ Result after sync-queue pass: TEST SUCCEEDED with 14 tests.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, safety, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, safety, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -279,7 +317,7 @@ Result after sync-queue pass: TEST SUCCEEDED with 14 tests.
 | Offline sync queue | Implemented locally | `PendingSyncMutation`, Profile sync row, queue persistence tests | Add Supabase replay worker, server IDs, conflicts, backoff |
 | Voice logging parser | Logic implemented/tested and surfaced | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm` | Add speech capture and editable parsed fields |
 | Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
-| Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
+| Insights | Implemented locally | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, and empty states | Add structured dated records, UI tests, and export/share integration |
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
 | Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
@@ -330,12 +368,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 14 unit tests through `InflamendTests`.
+- Tests: passing with 16 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, and auth/persistence checkpoints exist; sync queue checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, and sync queue checkpoints exist; Insights checkpoint pending commit.
 
 Continue working.
 

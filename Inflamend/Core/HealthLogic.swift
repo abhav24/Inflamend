@@ -207,6 +207,144 @@ enum RiskScoreService {
     }
 }
 
+struct InsightFoodPattern: Equatable {
+    let label: String
+    let count: Int
+    let severity: Double
+}
+
+struct InsightSummary: Equatable {
+    let logCount: Int
+    let painValues: [Double]
+    let fatigueValues: [Double]
+    let averagePain: Double?
+    let averageFatigue: Double?
+    let bowelValues: [Double]
+    let foodPatterns: [InsightFoodPattern]
+    let bowelLogCount: Int
+    let flareMentionCount: Int
+
+    var hasTrendData: Bool { painValues.count >= 2 || fatigueValues.count >= 2 }
+    var hasBowelData: Bool { bowelValues.contains { $0 > 0 } }
+    var hasFoodPatterns: Bool { !foodPatterns.isEmpty }
+
+    var confidenceLabel: String {
+        switch logCount {
+        case 0:
+            return "No local logs yet"
+        case 1...5:
+            return "Early local data"
+        default:
+            return "Local trends"
+        }
+    }
+
+    var painHeatmapValues: [Int] {
+        let values = painValues.map { min(5, max(0, Int(($0 / 2.0).rounded(.up)))) }
+        return Array(values.suffix(35))
+    }
+}
+
+enum InsightSummaryBuilder {
+    static func build(logs: [LogEntry], limit: Int? = nil) -> InsightSummary {
+        let scopedLogs = limit.map { Array(logs.prefix($0)) } ?? logs
+        let chronologicalLogs = scopedLogs.reversed()
+        let painValues = chronologicalLogs.compactMap { extractScore(label: "pain", from: $0.searchableText) }
+        let fatigueValues = chronologicalLogs.compactMap { extractScore(label: "fatigue", from: $0.searchableText) }
+        let bowelValues = chronologicalLogs.map { log -> Double in
+            if log.type == .bowel { return 1 }
+            if log.type == .checkin {
+                return Double(extractInteger(label: "stool", from: log.searchableText) ?? 0)
+            }
+            return 0
+        }
+        let flareMentionCount = scopedLogs.filter { $0.searchableText.localizedCaseInsensitiveContains("flare") }.count
+
+        return InsightSummary(
+            logCount: scopedLogs.count,
+            painValues: painValues,
+            fatigueValues: fatigueValues,
+            averagePain: average(painValues),
+            averageFatigue: average(fatigueValues),
+            bowelValues: Array(bowelValues.suffix(7)),
+            foodPatterns: foodPatterns(from: scopedLogs),
+            bowelLogCount: scopedLogs.filter { $0.type == .bowel }.count,
+            flareMentionCount: flareMentionCount
+        )
+    }
+
+    private static func extractScore(label: String, from text: String) -> Double? {
+        extractInteger(label: label, from: text).map(Double.init)
+    }
+
+    private static func average(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        let total = values.reduce(0.0) { partial, value in
+            partial + value
+        }
+        return total / Double(values.count)
+    }
+
+    private static func extractInteger(label: String, from text: String) -> Int? {
+        let normalized = text.lowercased()
+        guard let labelRange = normalized.range(of: label.lowercased()) else { return nil }
+        let suffix = normalized[labelRange.upperBound...]
+        let digits = suffix
+            .drop(while: { !$0.isNumber })
+            .prefix(while: { $0.isNumber })
+        return digits.isEmpty ? nil : Int(digits)
+    }
+
+    private static func foodPatterns(from logs: [LogEntry]) -> [InsightFoodPattern] {
+        let foodLogs = logs.filter { $0.type == .food }
+        guard !foodLogs.isEmpty else { return [] }
+
+        let counts = foodLogs.reduce(into: [String: Int]()) { result, log in
+            let labels = foodLabels(from: log)
+            for label in labels {
+                result[label, default: 0] += 1
+            }
+        }
+        let maxCount = Double(counts.values.max() ?? 1)
+        return counts
+            .map { InsightFoodPattern(label: $0.key, count: $0.value, severity: Double($0.value) / maxCount) }
+            .sorted { lhs, rhs in
+                if lhs.count == rhs.count { return lhs.label < rhs.label }
+                return lhs.count > rhs.count
+            }
+            .prefix(4)
+            .map { $0 }
+    }
+
+    private static func foodLabels(from log: LogEntry) -> [String] {
+        let normalizedText = log.searchableText.lowercased()
+        let knownLabels: [(needle: String, label: String)] = [
+            ("dairy", "Dairy"),
+            ("spicy", "Spicy food"),
+            ("coffee", "Coffee"),
+            ("raw vegetable", "Raw vegetables"),
+            ("fried", "Fried foods"),
+            ("alcohol", "Alcohol"),
+            ("gluten", "Gluten"),
+            ("fiber", "High fiber")
+        ]
+        let matches = knownLabels.compactMap { normalizedText.contains($0.needle) ? $0.label : nil }
+        if !matches.isEmpty { return matches }
+
+        let cleaned = log.title
+            .replacingOccurrences(of: "Meal ·", with: "")
+            .replacingOccurrences(of: "Safe meal", with: "Meal logged")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return [cleaned.isEmpty ? "Meal logged" : cleaned]
+    }
+}
+
+private extension LogEntry {
+    var searchableText: String {
+        "\(title) \(sub)"
+    }
+}
+
 enum VoiceLogType: String, Equatable {
     case bowel
     case meal

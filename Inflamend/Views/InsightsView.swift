@@ -1,28 +1,45 @@
 import SwiftUI
 
 struct InsightsView: View {
-    @State private var range = "7d"
+    var appState: AppState
+    @State private var range = "Recent"
 
-    let painData:    [Double] = [3,4,2,3,5,4,3,2,3,4,5,6,5,4,3,3,4,5,7,6,5,4,3,4,5,4,3,4,3,2]
-    let fatigueData: [Double] = [5,6,4,5,6,7,6,5,4,5,6,7,7,6,5,5,6,7,8,7,6,5,4,5,6,5,4,5,4,3]
+    private var summary: InsightSummary {
+        InsightSummaryBuilder.build(logs: appState.logs, limit: range == "Recent" ? 7 : nil)
+    }
 
-    var painSlice:    [Double] { range == "7d" ? Array(painData.suffix(7))    : painData }
-    var fatigueSlice: [Double] { range == "7d" ? Array(fatigueData.suffix(7)) : fatigueData }
+    private var chartSeries: [(data: [Double], color: Color)] {
+        [
+            (data: summary.painValues, color: .clay),
+            (data: summary.fatigueValues, color: .amber)
+        ]
+    }
+
+    private var bowelLabels: [String] {
+        summary.bowelValues.indices.map { "\($0 + 1)" }
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
-                // Header
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("PATTERNS · TRENDS").dsLabel()
-                        (Text("Your ").font(DS.serif(36)).foregroundColor(.fgPrimary)
-                        + Text("insights").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
+                        HStack(spacing: 0) {
+                            Text("Your ")
+                                .font(DS.serif(36))
+                                .foregroundColor(.fgPrimary)
+                            Text("insights")
+                                .font(DS.serif(36, italic: true))
+                                .foregroundColor(.fgPrimary)
+                        }
+                        Text(summary.confidenceLabel)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
                     }
                     Spacer()
-                    // 7d / 30d toggle
                     HStack(spacing: 2) {
-                        ForEach(["7d","30d"], id: \.self) { r in
+                        ForEach(["Recent","All"], id: \.self) { r in
                             Button {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { range = r }
                             } label: {
@@ -47,16 +64,14 @@ struct InsightsView: View {
                 .padding(.bottom, 14)
                 .appearAnimation(delay: 0)
 
-                // Stat tiles
                 HStack(spacing: 8) {
-                    StatTile(value: "4.2", unit: "/10",  label: "Avg pain",    trend: -0.8)
-                    StatTile(value: "2.1", unit: "/day", label: "BM avg",      trend: 0.1)
-                    StatTile(value: "18",  unit: "d",    label: "Since flare", trend: nil)
+                    StatTile(value: formatted(summary.averagePain), unit: summary.averagePain == nil ? "" : "/10", label: "Avg pain", trend: nil)
+                    StatTile(value: "\(summary.bowelLogCount)", unit: "", label: "BM logs", trend: nil)
+                    StatTile(value: "\(summary.flareMentionCount)", unit: "", label: "Flare marks", trend: nil)
                 }
                 .padding(.horizontal, 20)
                 .appearAnimation(delay: 0.07)
 
-                // Trend chart card
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .lastTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -75,37 +90,41 @@ struct InsightsView: View {
                         }
                     }
                     .padding(.bottom, 16)
-                    LineChartView(
-                        series: [
-                            (data: painSlice,    color: .clay),
-                            (data: fatigueSlice, color: .amber),
-                        ]
-                    )
+                    if summary.hasTrendData {
+                        LineChartView(series: chartSeries)
+                    } else {
+                        InsightEmptyState(
+                            title: "Trend needs more logs",
+                            message: "Save at least two check-ins or symptom logs with pain or fatigue scores."
+                        )
+                    }
                 }
                 .card()
                 .padding(.horizontal, 20)
                 .appearAnimation(delay: 0.14)
 
-                // Bowel frequency
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Bowel frequency")
+                    Text("Bowel logs")
                         .font(DS.sans(16, weight: .medium))
                         .foregroundColor(.fgPrimary)
                         .tracking(-0.1)
-                    Text("Movements per day")
+                    Text("Recent local entries")
                         .font(DS.sans(12))
                         .foregroundColor(.fgDim)
                         .padding(.bottom, 12)
-                    BarChartView(
-                        data:   [2,3,2,4,3,2,3],
-                        labels: ["Fri","Sat","Sun","Mon","Tue","Wed","Thu"]
-                    )
+                    if summary.hasBowelData {
+                        BarChartView(data: summary.bowelValues, labels: bowelLabels)
+                    } else {
+                        InsightEmptyState(
+                            title: "No bowel pattern yet",
+                            message: "Log bowel movements or check-ins to populate this chart."
+                        )
+                    }
                 }
                 .card()
                 .padding(.horizontal, 20)
                 .appearAnimation(delay: 0.21)
 
-                // Heatmap
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .lastTextBaseline) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -113,7 +132,7 @@ struct InsightsView: View {
                                 .font(DS.sans(16, weight: .medium))
                                 .foregroundColor(.fgPrimary)
                                 .tracking(-0.1)
-                            Text("Last 30 days")
+                            Text("Saved pain scores")
                                 .font(DS.sans(12))
                                 .foregroundColor(.fgDim)
                         }
@@ -134,32 +153,39 @@ struct InsightsView: View {
                         }
                     }
                     .padding(.bottom, 16)
-                    HeatmapView()
+                    if summary.painHeatmapValues.isEmpty {
+                        InsightEmptyState(
+                            title: "No pain scores yet",
+                            message: "Pain scores from check-ins and symptom logs will appear here."
+                        )
+                    } else {
+                        HeatmapView(values: summary.painHeatmapValues)
+                    }
                 }
                 .card()
                 .padding(.horizontal, 20)
                 .appearAnimation(delay: 0.28)
 
-                // Top triggers
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Top triggers")
+                    Text("Food patterns")
                         .font(DS.sans(16, weight: .medium))
                         .foregroundColor(.fgPrimary)
                         .tracking(-0.1)
                         .padding(.bottom, 4)
-                    Text("Foods correlated with symptom spikes within 48h")
+                    Text("Frequency only · not a trigger claim")
                         .font(DS.sans(12))
                         .foregroundColor(.fgDim)
                         .padding(.bottom, 14)
 
-                    let triggers: [(food: String, count: Int, severity: Double)] = [
-                        ("Dairy (milk, cheese)", 5, 0.9),
-                        ("Spicy food",           3, 0.7),
-                        ("Raw vegetables",       3, 0.5),
-                        ("Coffee",               2, 0.4),
-                    ]
-                    ForEach(Array(triggers.enumerated()), id: \.offset) { idx, t in
-                        TriggerRow(food: t.food, count: t.count, severity: t.severity, isLast: idx == triggers.count - 1)
+                    if summary.hasFoodPatterns {
+                        ForEach(Array(summary.foodPatterns.enumerated()), id: \.offset) { idx, pattern in
+                            PatternRow(pattern: pattern, isLast: idx == summary.foodPatterns.count - 1)
+                        }
+                    } else {
+                        InsightEmptyState(
+                            title: "No food patterns yet",
+                            message: "Meal logs will be summarized by frequency after you save them."
+                        )
                     }
                 }
                 .card()
@@ -169,6 +195,11 @@ struct InsightsView: View {
             }
         }
         .background(Color.bgPrimary)
+    }
+
+    private func formatted(_ value: Double?) -> String {
+        guard let value else { return "--" }
+        return String(format: "%.1f", value)
     }
 }
 
@@ -229,11 +260,9 @@ struct LineChartView: View {
             let h: CGFloat = 140
             let pad: CGFloat = 8
             let maxVal: Double = 10
-            let len = series[0].data.count
-            let xStep = (w - pad * 2) / max(1, Double(len - 1))
+            let nonEmptySeries = series.filter { !$0.data.isEmpty }
 
             ZStack {
-                // Grid lines
                 ForEach([0.0, 0.5, 1.0], id: \.self) { t in
                     Path { p in
                         let y = pad + t * (h - pad * 2)
@@ -243,9 +272,9 @@ struct LineChartView: View {
                     .stroke(Color.strokeDefault, style: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
                 }
 
-                // Series
-                ForEach(0..<series.count, id: \.self) { si in
-                    let s = series[si]
+                ForEach(0..<nonEmptySeries.count, id: \.self) { si in
+                    let s = nonEmptySeries[si]
+                    let xStep = (w - pad * 2) / max(1, Double(s.data.count - 1))
                     let pts = s.data.enumerated().map { (i, v) in
                         CGPoint(
                             x: pad + Double(i) * xStep,
@@ -253,7 +282,6 @@ struct LineChartView: View {
                         )
                     }
 
-                    // Fill
                     Path { p in
                         guard !pts.isEmpty else { return }
                         p.move(to: CGPoint(x: pad, y: h - pad))
@@ -263,7 +291,6 @@ struct LineChartView: View {
                     }
                     .fill(s.color.opacity(0.08))
 
-                    // Line
                     Path { p in
                         guard !pts.isEmpty else { return }
                         p.move(to: pts[0])
@@ -271,7 +298,6 @@ struct LineChartView: View {
                     }
                     .stroke(s.color, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
 
-                    // Dots
                     ForEach(0..<pts.count, id: \.self) { i in
                         Circle()
                             .fill(s.color)
@@ -324,14 +350,15 @@ struct BarChartView: View {
 // MARK: - Heatmap
 
 struct HeatmapView: View {
-    let seed: [Int] = [0,1,2,3,1,0,2, 1,3,4,3,2,1,0, 1,2,3,5,4,3,2, 1,1,2,3,2,1,0, 1,2,3,4]
+    let values: [Int]
     let days = ["M","T","W","T","F","S","S"]
 
     var body: some View {
         let cols = [GridItem(.fixed(20))] + Array(repeating: GridItem(.flexible()), count: 7)
+        let trimmedValues = Array(values.suffix(35))
+        let paddedValues = Array(repeating: 0, count: max(0, 35 - trimmedValues.count)) + trimmedValues
 
         LazyVGrid(columns: cols, spacing: 4) {
-            // Header row
             Color.clear.frame(width: 20, height: 14)
             ForEach(days, id: \.self) { d in
                 Text(d)
@@ -340,14 +367,13 @@ struct HeatmapView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            // Weeks
             ForEach(0..<5) { w in
                 Text("W\(w+1)")
                     .font(DS.mono(10))
                     .foregroundColor(.fgFaint)
                     .frame(width: 20)
                 ForEach(0..<7) { d in
-                    let v = seed[(w * 7 + d) % seed.count]
+                    let v = paddedValues[w * 7 + d]
                     let hasValue = v > 0
                     RoundedRectangle(cornerRadius: 5)
                         .fill(hasValue
@@ -361,22 +387,20 @@ struct HeatmapView: View {
     }
 }
 
-// MARK: - Trigger Row
+// MARK: - Pattern Row
 
-struct TriggerRow: View {
-    let food: String
-    let count: Int
-    let severity: Double
+struct PatternRow: View {
+    let pattern: InsightFoodPattern
     var isLast: Bool = false
 
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(food)
+                Text(pattern.label)
                     .font(DS.sans(14))
                     .foregroundColor(.fgPrimary)
                     .tracking(-0.1)
-                Text("\(count) events · 48h window")
+                Text("\(pattern.count) food logs")
                     .font(DS.mono(11))
                     .tracking(0.4)
                     .foregroundColor(.fgFaint)
@@ -385,7 +409,7 @@ struct TriggerRow: View {
 
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.bgInset).frame(width: 100, height: 6)
-                Capsule().fill(Color.clay).frame(width: 100 * severity, height: 6)
+                Capsule().fill(Color.clay).frame(width: 100 * pattern.severity, height: 6)
             }
         }
         .padding(.vertical, 10)
@@ -397,8 +421,29 @@ struct TriggerRow: View {
     }
 }
 
+struct InsightEmptyState: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(DS.sans(14, weight: .medium))
+                .foregroundColor(.fgPrimary)
+            Text(message)
+                .font(DS.sans(12))
+                .foregroundColor(.fgFaint)
+                .lineSpacing(2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
 #Preview {
-    InsightsView()
+    InsightsView(appState: AppState())
         .background(Color.bgPrimary)
         .preferredColorScheme(.dark)
 }

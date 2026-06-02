@@ -1,6 +1,6 @@
 # Inflamend
 
-A native iOS health tracking and AI companion app for people living with Inflammatory Bowel Disease (IBD), specifically Ulcerative Colitis. Inflamend helps patients log daily health data, monitor flare risk, identify food and lifestyle triggers, and get AI-powered insights — all in a dark, minimal, medically-informed UI.
+A native iOS health tracking and AI companion app for people living with Inflammatory Bowel Disease (IBD), specifically Ulcerative Colitis. Inflamend helps patients log daily health data, monitor flare risk, summarize food and lifestyle patterns, and review careful local insights — all in a dark, minimal, medically-informed UI.
 
 ---
 
@@ -8,8 +8,8 @@ A native iOS health tracking and AI companion app for people living with Inflamm
 
 - **Flare Risk Score** — AI-driven 0–100 risk indicator updated from logged data, shown as an animated ring on the home screen
 - **Daily Logging** — 7-category logging system: food, bowel movements (Bristol scale), symptoms, medications, sleep, weight, and rapid check-ins
-- **Trigger Analysis** — Correlates food intake with symptom patterns to surface personalized triggers (e.g. dairy → urgency spikes 48h later)
-- **Insights & Charts** — Line charts (pain/fatigue), bar charts (bowel frequency), pain heatmap calendar, and top trigger list
+- **Food Pattern Summaries** — Summarizes local meal logs by frequency without making trigger or causation claims
+- **Insights & Charts** — Local-log trend summaries, empty states, pain heatmap, bowel-log chart, and food frequency list
 - **AI Chat** — In-app assistant ("Ask Inflamend") for medication questions, dietary advice, and symptom explanation
 - **Medication Tracking** — Daily schedule with check-off, streak tracking, and reminder support
 - **Profile & Export** — Days logged, time since flare, medication streak, and 30-day PDF report export
@@ -69,7 +69,7 @@ Inflamend/
 └── Views/
     ├── HomeView.swift        # Dashboard: risk ring, mood check-in, timeline
     ├── LogView.swift         # 7-tab logging interface
-    ├── InsightsView.swift    # Charts, heatmap, trigger analysis
+    ├── InsightsView.swift    # Local-log summaries, charts, heatmap, and empty states
     ├── ChatView.swift        # AI assistant chat UI
     └── ProfileView.swift     # Account, stats, settings
 ```
@@ -189,12 +189,13 @@ Staggered appear animations with 0–0.35s delays.
 
 ### Insights (`InsightsView.swift`)
 
-- **7d / 30d toggle** with spring animation
-- **Stat tiles**: Avg pain, BM frequency, days since flare
-- **Line chart**: Pain (red) + Fatigue (orange), area fill, dot markers
-- **Bar chart**: Bowel frequency per day, last bar highlighted
-- **Pain Heatmap**: 5-week calendar grid, color intensity by severity 0–5
-- **Top Triggers list**: Dairy, spicy, raw veg, coffee — with severity bar + event count
+- **Recent / All toggle** with spring animation
+- **Stat tiles**: Avg pain, bowel log count, flare mention count
+- **Line chart**: Local pain and fatigue scores, area fill, dot markers
+- **Bar chart**: Recent bowel/check-in entries from local logs
+- **Pain Heatmap**: 5-week calendar grid, color intensity by saved pain severity
+- **Food patterns list**: Meal log frequency summaries with no trigger or causation claim
+- **Honest empty states** when saved logs do not yet support a chart
 
 All charts implemented in pure SwiftUI using `Path` and `GeometryReader`.
 
@@ -346,5 +347,5 @@ xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17
 ## Business Model
 
 - **Free tier**: Core logging, basic insights
-- **Premium ($4.99/month)**: AI Risk Indicator, AI Chat, Trigger Analysis
+- **Premium ($4.99/month)**: AI Risk Indicator, AI Chat, advanced food pattern summaries
 - Premium gating not implemented in current MVP — all features available to all users

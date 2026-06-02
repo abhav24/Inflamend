@@ -126,6 +126,36 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertFalse(report.contains("caused"))
     }
 
+    func testInsightSummaryReturnsEmptyStateForNoLogs() {
+        let summary = InsightSummaryBuilder.build(logs: [])
+
+        XCTAssertEqual(summary.logCount, 0)
+        XCTAssertEqual(summary.confidenceLabel, "No local logs yet")
+        XCTAssertNil(summary.averagePain)
+        XCTAssertFalse(summary.hasTrendData)
+        XCTAssertFalse(summary.hasFoodPatterns)
+    }
+
+    func testInsightSummaryUsesLocalLogsWithoutDemoData() {
+        let logs = [
+            LogEntry(type: .food, title: "Dinner", sub: "Dairy · Spicy", time: "7:00pm"),
+            LogEntry(type: .symptom, title: "Pain 3/10 · fatigue 4/10", sub: "Mood 5/10", time: "2:00pm"),
+            LogEntry(type: .checkin, title: "Flare check-in · pain 7/10", sub: "Fatigue 8/10 · urgency 7/10 · stool 5", time: "8:00am")
+        ]
+
+        let summary = InsightSummaryBuilder.build(logs: logs)
+
+        XCTAssertEqual(summary.logCount, 3)
+        XCTAssertEqual(summary.painValues, [7, 3])
+        XCTAssertEqual(summary.fatigueValues, [8, 4])
+        XCTAssertEqual(summary.averagePain ?? -1, 5.0, accuracy: 0.001)
+        XCTAssertTrue(summary.bowelValues.contains(5))
+        XCTAssertEqual(summary.flareMentionCount, 1)
+        XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Dairy" })
+        XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Spicy food" })
+        XCTAssertEqual(summary.confidenceLabel, "Early local data")
+    }
+
     func testValidationHelpers() {
         XCTAssertTrue(HealthLogValidator.isValidBristolType(4))
         XCTAssertFalse(HealthLogValidator.isValidBristolType(8))

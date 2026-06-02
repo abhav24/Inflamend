@@ -333,3 +333,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with repository/sync worker boundaries, UI tests, or insights/report polish.
+
+## Data-Backed Insights and Honest Empty States Audit
+
+### Feature Audit: Insights
+
+Product Simplicity Reviewer:
+- Findings: Insights now summarizes the user's own local logs instead of showing polished demo patterns. Empty states make the next useful logging action clear.
+- Required fixes: Move from timeline-text inference to structured dated health records so future summaries are less brittle.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The pass keeps the existing card, chart, segmented control, and typography patterns. The header avoids the iOS 26 concatenated-Text warning path.
+- Required fixes: Add UI screenshots or UI tests for no-data, partial-data, and populated Insights states.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The summary builder is deterministic and testable, but still parses scores from local timeline strings because the app does not yet have a structured repository model.
+- Required fixes: Add typed health-log records with dates, server IDs, and sync metadata before production analytics.
+- Status: Accept local scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The UI no longer claims foods are triggers or correlated with symptoms. Food rows are frequency summaries only.
+- Required fixes: Keep this framing in any future AI/report export path and avoid causal language without clinician-reviewed methodology.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` passes with 16 tests, including empty Insights and local-log-derived summary coverage.
+- Required fixes: Add UI tests for the Insights tab and report/export integration for summary output.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with structured repositories, UI tests, and report export/share polish.

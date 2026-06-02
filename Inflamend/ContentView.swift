@@ -100,7 +100,7 @@ struct ContentView: View {
             case .log:
                 LogView(appState: appState)
             case .insights:
-                InsightsView()
+                InsightsView(appState: appState)
             case .chat:
                 ChatView(appState: appState)
             case .profile:
