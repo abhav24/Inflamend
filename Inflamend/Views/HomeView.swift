@@ -131,6 +131,7 @@ struct HomeView: View {
                     PrimaryButton(title: "Start check-in") {
                         showCheckInSheet = true
                     }
+                    .accessibilityIdentifier("home-start-checkin-button")
                     .padding(.bottom, 12)
 
                     HStack(spacing: 8) {

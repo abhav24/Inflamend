@@ -10,7 +10,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 |---|---|---|---|---|---|---|
 | Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt; keyboard Done path verified | Text labels on mode buttons | In progress |
 | Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
-| Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt | Safety card uses text | Needs work |
+| Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in action path verified | Safety card uses text | In progress |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer and submit path verified by UI smoke test | Safety copy visible and identifier-backed | In progress |
@@ -22,6 +22,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added auth keyboard focus management and a keyboard toolbar Done action so the primary local sign-up button is not trapped behind the software keyboard.
 - Added UI smoke coverage for fresh local sign-up, auth keyboard dismissal, default onboarding completion, and arrival on the Home tab.
 - Added stable identifiers and UI smoke coverage for the Care composer and red-flag safety message.
+- Added stable identifiers and UI smoke coverage for opening the Today check-in sheet, saving the default check-in, and verifying the new timeline row.
 - Refactored Profile rows so actionable rows use a concrete `Button(action:)` and an explicit rectangular hit target.
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
@@ -35,9 +36,9 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Ensure red-flag safety cards are announced clearly.
 - Avoid color-only risk/trigger communication.
 - Add manual VoiceOver notes for destructive Profile confirmation dialogs.
-- Add UI tests or manual VoiceOver notes for check-in, voice confirmation, and privacy toggles.
+- Add UI tests or manual VoiceOver notes for voice confirmation and privacy toggles.
 - Add labels/hints for auth mode selection and onboarding pill selections.
 
 ## Status
 
-Core safety/privacy UI exists, and the auth/onboarding, Care red-flag, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth/onboarding, Today check-in, Care red-flag, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

@@ -77,6 +77,20 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayCheckInSavesToTimelineSmoke() {
+        let app = openSeededHome()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+        tapWhenVisible(app.buttons["home-start-checkin-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["checkin-sheet-title"].waitForExistence(timeout: 5))
+        tapWhenVisible(app.buttons["checkin-save-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["2 entries"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Okay check-in · pain 3/10"].exists)
+    }
+
+    @MainActor
     private func openSeededHome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [

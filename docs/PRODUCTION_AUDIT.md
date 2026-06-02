@@ -621,3 +621,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with broader Care coverage and live backend safety parity.
+
+## Today Check-In UI Coverage Audit
+
+### Feature Audit: Today Check-In Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The Today tab's primary daily workflow now has visible UI coverage from CTA to saved timeline row, which directly protects the app's core "quick daily check-in" promise.
+- Required fixes: Add edit/delete and structured trend history so the saved check-in remains useful after the initial save.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Stable identifiers now exist for the Today check-in CTA, sheet title, and save button. The UI test validates that the sheet can be opened and saved through the actual visible controls.
+- Required fixes: Add Dynamic Type and VoiceOver review for sliders, toggles, and the sheet's save action.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The smoke test verifies the local `AppState.recordCheckIn` path and snapshot-backed timeline update. Supabase replay, server IDs, and conflict handling remain unverified until credentials are available.
+- Required fixes: Add backend sync for check-ins and record-level edit/delete semantics.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The tested flow saves local health data through the existing protected snapshot path and preserves the cautious "check-in" language rather than presenting diagnosis.
+- Required fixes: Verify cloud storage, export, deletion, and retention behavior once live backend integration exists.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Today check-in UI test passes. `xcodebuild test` now passes with 29 tests: 24 unit tests and 5 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to bowel movement red flags, medication logging, sign-in/sign-out, report/share flows, and Insights empty states.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with logging UI coverage and backend sync readiness.

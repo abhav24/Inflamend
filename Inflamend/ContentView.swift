@@ -605,6 +605,7 @@ struct CheckInSheet: View {
                     Text("Thirty-second gut check")
                         .font(DS.serif(24))
                         .foregroundColor(.fgPrimary)
+                        .accessibilityIdentifier("checkin-sheet-title")
                     Text("Skip anything you do not want to answer.")
                         .font(DS.sans(13))
                         .foregroundColor(.fgDim)
@@ -656,6 +657,7 @@ struct CheckInSheet: View {
                     )
                     isPresented = false
                 }
+                .accessibilityIdentifier("checkin-save-button")
 
                 GhostButton(title: "Skip for now") {
                     isPresented = false
