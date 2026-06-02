@@ -198,6 +198,7 @@ struct LogFoodForm: View {
                 HStack(spacing: 6) {
                     ForEach(mealTimes, id: \.self) { m in
                         LogPill(title: m.capitalized, isActive: meal == m) { meal = m }
+                            .accessibilityIdentifier("food-meal-\(m)")
                     }
                 }
             }
@@ -210,6 +211,7 @@ struct LogFoodForm: View {
                 .padding(12)
                 .background(Color.bgInset)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("food-name-field")
         }
 
         FormCard(title: "Known triggers", label: "TAG IF PRESENT") {
@@ -218,6 +220,7 @@ struct LogFoodForm: View {
                     PillToggle(label: t, isActive: tags.contains(t), color: .clay) {
                         if tags.contains(t) { tags.remove(t) } else { tags.insert(t) }
                     }
+                    .accessibilityIdentifier(foodTagIdentifier(prefix: "trigger", tag: t))
                 }
             }
         }
@@ -228,6 +231,7 @@ struct LogFoodForm: View {
                     PillToggle(label: t, isActive: tags.contains(t), color: .sage) {
                         if tags.contains(t) { tags.remove(t) } else { tags.insert(t) }
                     }
+                    .accessibilityIdentifier(foodTagIdentifier(prefix: "safe", tag: t))
                 }
             }
         }
@@ -239,6 +243,19 @@ struct LogFoodForm: View {
             appState.showToast("Meal logged")
             name = ""; tags = []
         }
+        .accessibilityIdentifier("food-save-entry-button")
+    }
+
+    private func foodTagIdentifier(prefix: String, tag: String) -> String {
+        "food-\(prefix)-\(slug(for: tag))"
+    }
+
+    private func slug(for text: String) -> String {
+        text
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
     }
 }
 

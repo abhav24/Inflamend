@@ -220,6 +220,31 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testFoodLogSavesPatternEntrySmoke() {
+        let app = openSeededHome()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+        app.buttons["tab-log"].tap()
+        app.buttons["log-tab-food"].tap()
+
+        app.textFields["food-name-field"].tap()
+        app.textFields["food-name-field"].typeText("Greek yogurt and rice")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["food-trigger-dairy"], in: app)
+        tapWhenVisible(app.buttons["food-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        XCTAssertTrue(app.staticTexts["2 entries"].waitForExistence(timeout: 5))
+
+        let foodEntry = app.descendants(matching: .any)["timeline-entry-food"]
+        XCTAssertTrue(foodEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(foodEntry.label.contains("Greek yogurt and rice"))
+        XCTAssertTrue(foodEntry.label.contains("Dairy"))
+        XCTAssertFalse(foodEntry.label.localizedCaseInsensitiveContains("calorie"))
+    }
+
+    @MainActor
     private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--inflamend-reset-state"]
