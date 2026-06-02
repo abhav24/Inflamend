@@ -768,6 +768,69 @@ final class HealthLogicTests: XCTestCase {
         store.delete()
     }
 
+    @MainActor
+    func testSyncReplayPlanCarriesHealthLogPayloadSnapshots() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-sync-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "sync-payload@example.com", displayName: "Sync Payload")
+        appState.addLog(
+            type: .food,
+            title: "Breakfast",
+            sub: "Dairy",
+            payload: .food(mealTime: "breakfast", description: "Breakfast", tags: ["Dairy"])
+        )
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        let createMutation = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(createMutation.payload?.kind, .healthLog)
+        XCTAssertEqual(createMutation.payload?.healthLog?.title, "Breakfast")
+        XCTAssertEqual(createMutation.payload?.healthLog?.typedPayload?.kind, .food)
+        XCTAssertEqual(createMutation.payload?.healthLog?.typedPayload?.foodTags, ["Dairy"])
+
+        let restored = AppState(store: store)
+        let createPlan = try XCTUnwrap(restored.pendingSyncReplayPlan.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(createPlan.payload?.kind, createMutation.payload?.kind)
+        XCTAssertEqual(createPlan.payload?.healthLog?.localId, createdLog.id.uuidString)
+        XCTAssertEqual(createPlan.payload?.healthLog?.title, "Breakfast")
+        XCTAssertEqual(createPlan.payload?.healthLog?.typedPayload?.foodTags, ["Dairy"])
+        XCTAssertEqual(
+            createPlan.payload?.healthLog?.loggedAt.timeIntervalSince1970 ?? 0,
+            createdLog.loggedAt.timeIntervalSince1970,
+            accuracy: 1
+        )
+
+        XCTAssertTrue(restored.updateLog(id: createdLog.id, title: "Breakfast edited", sub: "Edited details"))
+        let coalescedCreate = try XCTUnwrap(restored.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Breakfast edited")
+        XCTAssertNil(coalescedCreate.payload?.healthLog?.typedPayload)
+
+        let existingEntry = LogEntry(
+            type: .food,
+            title: "Existing dinner",
+            sub: "Coffee",
+            payload: .food(mealTime: "dinner", description: "Existing dinner", tags: ["Coffee"])
+        )
+        restored.logs.insert(existingEntry, at: 0)
+        XCTAssertTrue(restored.updateLog(id: existingEntry.id, title: "Existing dinner edited", sub: "Manual edit"))
+        let updateMutation = try XCTUnwrap(restored.pendingSyncMutations.first {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+        XCTAssertEqual(updateMutation.payload?.healthLog?.title, "Existing dinner edited")
+        XCTAssertNil(updateMutation.payload?.healthLog?.typedPayload)
+
+        store.delete()
+    }
+
     func testLegacyPendingSyncMutationDecodesWithReplayMetadata() throws {
         let legacyMutation = """
         {
@@ -791,6 +854,7 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertNil(mutation.serverRecordId)
         XCTAssertNil(mutation.receiptId)
         XCTAssertNil(mutation.receiptRecordedAt)
+        XCTAssertNil(mutation.payload)
     }
 
     @MainActor

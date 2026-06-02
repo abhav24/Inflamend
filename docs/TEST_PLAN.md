@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 35 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
+Coverage: 36 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 56 tests.
+Result: TEST SUCCEEDED with 57 tests.
 ```
 
 ## Unit Test Priorities
@@ -91,8 +91,10 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Local edits coalesce into unreplayed health-log creates or queue update mutations for existing records.
 - Replay plan routes each pending mutation to a future Supabase table/function action.
 - Replay metadata carries stable idempotency keys plus optional server record and receipt IDs.
+- Replay payload snapshots carry typed health-log create/update fields into future backend plans.
 - Backend-blocked retries store per-record attempt timestamps and error details.
 - Legacy queued mutations decode with generated idempotency metadata.
+- Legacy queued mutations without replay payload snapshots decode safely.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
 - Typed local log payloads persist and legacy timeline logs without `payload` decode safely.
 - Generic timeline text edits clear stale typed payloads until type-specific edit forms exist.
@@ -100,7 +102,7 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -163,6 +165,7 @@ When Supabase CLI and credentials are available:
 - Verify cross-user access is denied.
 - Verify Edge Functions reject unauthenticated requests.
 - Verify Edge Functions never trust client-provided `user_id`.
+- Verify health-log create/update replay serializes typed payload snapshots into approved backend columns or JSONB without logging PHI.
 - Verify seed data creates realistic development records without PHI.
 - Verify AI provider keys and service role keys are only server-side secrets.
 
@@ -193,7 +196,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, pending queue, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -232,6 +235,7 @@ When Supabase CLI and credentials are available:
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
+- `testSyncReplayPlanCarriesHealthLogPayloadSnapshots`
 - `testUndoDeleteRestoresLogAndPendingMutations`
 - `testLegacyPendingSyncMutationDecodesWithReplayMetadata`
 

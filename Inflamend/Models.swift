@@ -111,11 +111,45 @@ enum SyncMutationStatus: String, Codable, Equatable {
     case failedNeedsUser
 }
 
+struct HealthLogReplayPayload: Codable, Equatable {
+    var localId: String
+    var type: LogType
+    var title: String
+    var details: String
+    var displayTime: String
+    var loggedAt: Date
+    var typedPayload: HealthLogPayload?
+
+    init(log: LogEntry) {
+        localId = log.id.uuidString
+        type = log.type
+        title = log.title
+        details = log.sub
+        displayTime = log.time
+        loggedAt = log.loggedAt
+        typedPayload = log.payload
+    }
+}
+
+struct SyncMutationPayload: Codable, Equatable {
+    enum PayloadKind: String, Codable {
+        case healthLog
+    }
+
+    var kind: PayloadKind
+    var healthLog: HealthLogReplayPayload?
+
+    static func healthLogSnapshot(for log: LogEntry) -> SyncMutationPayload {
+        SyncMutationPayload(kind: .healthLog, healthLog: HealthLogReplayPayload(log: log))
+    }
+}
+
 struct PendingSyncMutation: Identifiable, Codable, Equatable {
     var id = UUID()
     var kind: SyncMutationKind
     var localRecordId: String
     var summary: String
+    var payload: SyncMutationPayload?
     var createdAt = Date()
     var idempotencyKey: String
     var serverRecordId: String? = nil
@@ -131,6 +165,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         kind: SyncMutationKind,
         localRecordId: String,
         summary: String,
+        payload: SyncMutationPayload? = nil,
         createdAt: Date = Date(),
         idempotencyKey: String? = nil,
         serverRecordId: String? = nil,
@@ -145,6 +180,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         self.kind = kind
         self.localRecordId = localRecordId
         self.summary = summary
+        self.payload = payload
         self.createdAt = createdAt
         self.idempotencyKey = idempotencyKey ?? Self.makeIdempotencyKey(kind: kind, localRecordId: localRecordId, mutationId: id)
         self.serverRecordId = serverRecordId
@@ -161,6 +197,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         case kind
         case localRecordId
         case summary
+        case payload
         case createdAt
         case idempotencyKey
         case serverRecordId
@@ -178,6 +215,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         kind = try container.decode(SyncMutationKind.self, forKey: .kind)
         localRecordId = try container.decode(String.self, forKey: .localRecordId)
         summary = try container.decode(String.self, forKey: .summary)
+        payload = try container.decodeIfPresent(SyncMutationPayload.self, forKey: .payload)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         idempotencyKey = try container.decodeIfPresent(String.self, forKey: .idempotencyKey)
             ?? Self.makeIdempotencyKey(kind: kind, localRecordId: localRecordId, mutationId: id)
@@ -196,6 +234,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         try container.encode(kind, forKey: .kind)
         try container.encode(localRecordId, forKey: .localRecordId)
         try container.encode(summary, forKey: .summary)
+        try container.encodeIfPresent(payload, forKey: .payload)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(idempotencyKey, forKey: .idempotencyKey)
         try container.encodeIfPresent(serverRecordId, forKey: .serverRecordId)
@@ -230,6 +269,7 @@ struct SyncReplayPlanItem: Identifiable, Codable, Equatable {
     var action: SyncReplayAction
     var target: String
     var summary: String
+    var payload: SyncMutationPayload?
     var requiresReceipt: Bool
     var receiptId: String?
 
@@ -312,6 +352,7 @@ struct LocalSyncReplayWorker: Equatable {
             action: route.action,
             target: route.target,
             summary: mutation.summary,
+            payload: mutation.payload,
             requiresReceipt: route.requiresReceipt,
             receiptId: mutation.receiptId
         )
@@ -563,7 +604,12 @@ class AppState {
     func addLog(type: LogType, title: String, sub: String = "", date: Date = Date(), payload: HealthLogPayload? = nil) {
         let entry = LogEntry(type: type, title: title, sub: sub, loggedAt: date, payload: payload)
         logs.insert(entry, at: 0)
-        enqueueSync(kind: .healthLog, localRecordId: entry.id.uuidString, summary: "\(type.rawValue): \(title)")
+        enqueueSync(
+            kind: .healthLog,
+            localRecordId: entry.id.uuidString,
+            summary: "\(type.rawValue): \(title)",
+            payload: .healthLogSnapshot(for: entry)
+        )
         persist()
     }
 
@@ -647,6 +693,7 @@ class AppState {
             $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
         }) {
             pendingSyncMutations[pendingCreateIndex].summary = "\(entry.type.rawValue): \(cleanedTitle)"
+            pendingSyncMutations[pendingCreateIndex].payload = .healthLogSnapshot(for: entry)
             pendingSyncMutations[pendingCreateIndex].status = .pending
             pendingSyncMutations[pendingCreateIndex].attemptCount = 0
             pendingSyncMutations[pendingCreateIndex].lastAttemptedAt = nil
@@ -655,6 +702,7 @@ class AppState {
             $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
         }) {
             pendingSyncMutations[pendingUpdateIndex].summary = "Updated \(entry.type.rawValue): \(cleanedTitle)"
+            pendingSyncMutations[pendingUpdateIndex].payload = .healthLogSnapshot(for: entry)
             pendingSyncMutations[pendingUpdateIndex].status = .pending
             pendingSyncMutations[pendingUpdateIndex].attemptCount = 0
             pendingSyncMutations[pendingUpdateIndex].lastAttemptedAt = nil
@@ -663,7 +711,8 @@ class AppState {
             enqueueSync(
                 kind: .healthLogUpdate,
                 localRecordId: localRecordId,
-                summary: "Updated \(entry.type.rawValue): \(cleanedTitle)"
+                summary: "Updated \(entry.type.rawValue): \(cleanedTitle)",
+                payload: .healthLogSnapshot(for: entry)
             )
         }
 
@@ -975,10 +1024,15 @@ class AppState {
         chatMessages = snapshot.chatMessages
     }
 
-    private func enqueueSync(kind: SyncMutationKind, localRecordId: String, summary: String) {
+    private func enqueueSync(
+        kind: SyncMutationKind,
+        localRecordId: String,
+        summary: String,
+        payload: SyncMutationPayload? = nil
+    ) {
         guard authSession != nil else { return }
         pendingSyncMutations.insert(
-            PendingSyncMutation(kind: kind, localRecordId: localRecordId, summary: summary),
+            PendingSyncMutation(kind: kind, localRecordId: localRecordId, summary: summary, payload: payload),
             at: 0
         )
     }

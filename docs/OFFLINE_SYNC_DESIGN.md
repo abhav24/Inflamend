@@ -42,17 +42,17 @@ Implemented:
 - iOS file protection is applied to the snapshot file.
 - Session scaffold, onboarding profile, logs, chat, privacy preferences, risk, meds, mood, and safety state restore across app launches.
 - Log actions save locally before any backend exists.
-- `PendingSyncMutation` records local mutations with kind, local record ID, summary, idempotency key, optional server record ID, optional receipt ID/timestamp, attempt count, status, last attempted timestamp, and last error.
-- `SyncReplayPlanItem` and `LocalSyncReplayWorker` turn pending mutations into deterministic future actions against Supabase Auth, public tables, soft-delete fields, or Edge Functions while carrying idempotency/server/receipt metadata into the plan.
+- `PendingSyncMutation` records local mutations with kind, local record ID, summary, optional typed payload snapshot, idempotency key, optional server record ID, optional receipt ID/timestamp, attempt count, status, last attempted timestamp, and last error.
+- `SyncReplayPlanItem` and `LocalSyncReplayWorker` turn pending mutations into deterministic future actions against Supabase Auth, public tables, soft-delete fields, or Edge Functions while carrying idempotency/server/receipt metadata and typed health-log payload snapshots into the plan.
 - Profile exposes pending sync count and lets users retry, which currently marks queued records as blocked with per-record errors because Supabase is not configured.
-- Local health-log edits coalesce into unreplayed creates when possible, existing-record edits reuse one pending update mutation, and edit-then-delete removes redundant pending updates.
+- Local health-log edits coalesce into unreplayed creates when possible, existing-record edits reuse one pending update mutation, edit payload snapshots update with the latest local row, and edit-then-delete removes redundant pending updates.
 - Chat messages are only queued for backend replay when AI memory is explicitly enabled.
 - Snapshot decode tolerates older snapshot files that do not contain the queue, and legacy queued mutations decode with generated idempotency keys.
 - Corrupt snapshots fall back to a clean state with a visible local status string.
 
 Not implemented:
 
-- Live Supabase network replay client.
+- Live Supabase network replay client that serializes typed health-log payload snapshots into backend columns or JSONB.
 - Network reachability state.
 - Conflict handling.
 - User-visible per-record sync detail screens.

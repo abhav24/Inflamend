@@ -1389,3 +1389,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with type-specific structured edits, live Supabase replay/serialization, custom reports, and manual accessibility QA.
+
+## Sync Replay Payload Snapshot Audit
+
+### Feature Audit: Typed Health-Log Replay Payloads
+
+Product Simplicity Reviewer:
+- Findings: The checkpoint adds no new user-facing sync complexity. Users still see the same Profile blocked-state copy while the local replay plan gains enough structure for future backend writes.
+- Required fixes: Keep any future per-record sync detail plain and only expose it when user action is needed.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visible UI changed, so there is no new layout risk. Existing Profile sync blocked-state UI coverage remains the user-facing contract.
+- Required fixes: Manually verify longer sync status copy if payload-aware per-record detail is later surfaced.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Health-log create/update mutations now carry optional typed replay payload snapshots into `SyncReplayPlanItem`, including local ID, log type, display fields, `loggedAt`, and optional `HealthLogPayload`. Legacy queued mutations without payloads still decode.
+- Required fixes: Connect the payload snapshots to a live Supabase replay client, choose normalized columns versus JSONB storage, persist returned server IDs/receipts, add backoff, and handle conflicts.
+- Status: Accept local replay contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Replay payload snapshots contain health text, event dates, and typed health fields, so the privacy inventory now explicitly treats them as protected health data. No new cloud transmission was added.
+- Required fixes: Do not log replay payloads in production diagnostics, and review live serialization before enabling backend replay.
+- Status: Accept checkpoint with privacy follow-up.
+
+QA and Regression Reviewer:
+- Findings: The first focused replay-payload test failed due exact `Date` equality after JSON round-trip and was fixed with field comparisons plus timestamp tolerance. Focused replay payload, legacy decode, and existing replay routing tests pass. Full unit tests pass with 36 tests, full scheme tests pass with 57 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add live replay success/failure tests and backend payload mapping tests once Supabase credentials exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay, type-specific structured edits, backend summary parity, and manual accessibility QA.
