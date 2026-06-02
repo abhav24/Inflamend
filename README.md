@@ -27,10 +27,34 @@ A native iOS health tracking and AI companion app for people living with Inflamm
 | Charts | Pure SwiftUI (`Path`, `GeometryReader`) — no external library |
 | Navigation | Custom floating tab bar (no `NavigationStack`) |
 | Assets | SF Symbols only — no custom images |
-| Backend | None yet (mock data; ready for Claude API + Supabase) |
+| Backend | Supabase schema/RLS/Edge Function scaffolds; iOS app still uses mock/local state |
 | Dependencies | None (no Swift packages, no CocoaPods) |
+| Tests | Xcode unit test target `InflamendTests` |
 
 Dark mode only. No external dependencies.
+
+---
+
+## Current Local Commands
+
+This repository currently builds and tests on the available `iPhone 17` iOS 26.0 simulator. The originally requested `iPhone 16` simulator is not installed on this machine.
+
+```bash
+xcodebuild -list
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+Current test coverage is focused on deterministic health logic:
+
+- Red-flag detection.
+- Risk scoring.
+- Voice transcript parsing.
+- Medication schedule calculations.
+- Report summary wording.
+- Validation helpers.
+
+Supabase backend files are scaffolded under `supabase/`, but local migration/function verification requires installing the Supabase CLI and Deno.
 
 ---
 

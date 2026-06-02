@@ -16,10 +16,22 @@
 		C6D7E8F9A0B1C2D3E4F5A6B7 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* InsightsView.swift */; };
 		D6E7F8A9B0C1D2E3F4A5B6C7 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F5A6B7C8D9E0F1A2B3C4D5 /* ChatView.swift */; };
 		E6F7A8B9C0D1E2F3A4B5C6D7 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* ProfileView.swift */; };
+		D0D1D2D3D4D5D6D7D8D9D001 /* HealthLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1D2D3D4D5D6D7D8D9D011 /* HealthLogic.swift */; };
+		D0D1D2D3D4D5D6D7D8D9D002 /* HealthLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1D2D3D4D5D6D7D8D9D012 /* HealthLogicTests.swift */; };
 		A7B8C9D0E1F2A3B4C5D6E7F8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9A0B1C2D3E4F5A6 /* Assets.xcassets */; };
 		B7C8D9E0F1A2A3B4C5D6E7F8 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5D6E7F8A9B0C1D2E3F4A5B6 /* Preview Assets.xcassets */; };
 		C0D1E2F3A4B5C6D7E8F9A001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0D1E2F3A4B5C6D7E8F9A002 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D0D1D2D3D4D5D6D7D8D9D050 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1A2C3D4E5F6A7B8C9D0E1F2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F1A2B3C4D5E6F7A8B9C0D1E2;
+			remoteInfo = Inflamend;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A2B3C4D5E6F7A8B9C0D1E2F3 /* Inflamend.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Inflamend.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -32,6 +44,9 @@
 		D4E5F6A7B8C9D0E1F2A3B4C5 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
 		E4F5A6B7C8D9E0F1A2B3C4D5 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		D0D1D2D3D4D5D6D7D8D9D011 /* HealthLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthLogic.swift; sourceTree = "<group>"; };
+		D0D1D2D3D4D5D6D7D8D9D012 /* HealthLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthLogicTests.swift; sourceTree = "<group>"; };
+		D0D1D2D3D4D5D6D7D8D9D013 /* InflamendTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InflamendTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B5C6D7E8F9A0B1C2D3E4F5A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5D6E7F8A9B0C1D2E3F4A5B6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; name = "Preview Assets.xcassets"; };
 		C0D1E2F3A4B5C6D7E8F9A002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -45,6 +60,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0D1D2D3D4D5D6D7D8D9D032 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -52,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				D1E2F3A4B5C6D7E8F9A0B1C2 /* Inflamend */,
+				D0D1D2D3D4D5D6D7D8D9D021 /* InflamendTests */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -60,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				A2B3C4D5E6F7A8B9C0D1E2F3 /* Inflamend.app */,
+				D0D1D2D3D4D5D6D7D8D9D013 /* InflamendTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -71,6 +95,7 @@
 				F3A4B5C6D7E8F9A0B1C2D3E4 /* ContentView.swift */,
 				A4B5C6D7E8F9A0B1C2D3E4F5 /* DesignSystem.swift */,
 				A5B6C7D8E9F0A1B2C3D4E5F6 /* Models.swift */,
+				D0D1D2D3D4D5D6D7D8D9D020 /* Core */,
 				E1F2A3B4C5D6E7F8A9B0C1D2 /* Views */,
 				B5C6D7E8F9A0B1C2D3E4F5A6 /* Assets.xcassets */,
 				C0D1E2F3A4B5C6D7E8F9A002 /* PrivacyInfo.xcprivacy */,
@@ -89,6 +114,22 @@
 				F4A5B6C7D8E9F0A1B2C3D4E5 /* ProfileView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		D0D1D2D3D4D5D6D7D8D9D020 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1D2D3D4D5D6D7D8D9D011 /* HealthLogic.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		D0D1D2D3D4D5D6D7D8D9D021 /* InflamendTests */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1D2D3D4D5D6D7D8D9D012 /* HealthLogicTests.swift */,
+			);
+			path = InflamendTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -110,6 +151,24 @@
 			productName = Inflamend;
 			productReference = A2B3C4D5E6F7A8B9C0D1E2F3 /* Inflamend.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D0D1D2D3D4D5D6D7D8D9D030 /* InflamendTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D1D2D3D4D5D6D7D8D9D042 /* Build configuration list for PBXNativeTarget "InflamendTests" */;
+			buildPhases = (
+				D0D1D2D3D4D5D6D7D8D9D031 /* Sources */,
+				D0D1D2D3D4D5D6D7D8D9D032 /* Frameworks */,
+				D0D1D2D3D4D5D6D7D8D9D033 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0D1D2D3D4D5D6D7D8D9D051 /* PBXTargetDependency */,
+			);
+			name = InflamendTests;
+			productName = InflamendTests;
+			productReference = D0D1D2D3D4D5D6D7D8D9D013 /* InflamendTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -140,6 +199,7 @@
 			projectRoot = "";
 			targets = (
 				F1A2B3C4D5E6F7A8B9C0D1E2 /* Inflamend */,
+				D0D1D2D3D4D5D6D7D8D9D030 /* InflamendTests */,
 			);
 		};
 /* End PBXProject section */
@@ -155,6 +215,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0D1D2D3D4D5D6D7D8D9D033 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -166,6 +233,7 @@
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* ContentView.swift in Sources */,
 				F5A6B7C8D9E0F1A2B3C4D5E6 /* DesignSystem.swift in Sources */,
 				F6A7B8C9D0E1F2A3B4C5D6E7 /* Models.swift in Sources */,
+				D0D1D2D3D4D5D6D7D8D9D001 /* HealthLogic.swift in Sources */,
 				A6B7C8D9E0F1A2B3C4D5E6F7 /* HomeView.swift in Sources */,
 				B6C7D8E9F0A1B2C3D4E5F6A7 /* LogView.swift in Sources */,
 				C6D7E8F9A0B1C2D3E4F5A6B7 /* InsightsView.swift in Sources */,
@@ -174,7 +242,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0D1D2D3D4D5D6D7D8D9D031 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1D2D3D4D5D6D7D8D9D002 /* HealthLogicTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0D1D2D3D4D5D6D7D8D9D051 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F1A2B3C4D5E6F7A8B9C0D1E2 /* Inflamend */;
+			targetProxy = D0D1D2D3D4D5D6D7D8D9D050 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B2C3D4E5F6A7B8C9D0E1F2A3 /* Debug */ = {
@@ -316,6 +400,40 @@
 			};
 			name = Release;
 		};
+		D0D1D2D3D4D5D6D7D8D9D040 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.inflamend.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Inflamend.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Inflamend";
+			};
+			name = Debug;
+		};
+		D0D1D2D3D4D5D6D7D8D9D041 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.inflamend.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Inflamend.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Inflamend";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -333,6 +451,15 @@
 			buildConfigurations = (
 				F2A3B4C5D6E7F8A9B0C1D2E3 /* Debug */,
 				A3B4C5D6E7F8A9B0C1D2E3F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0D1D2D3D4D5D6D7D8D9D042 /* Build configuration list for PBXNativeTarget "InflamendTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D1D2D3D4D5D6D7D8D9D040 /* Debug */,
+				D0D1D2D3D4D5D6D7D8D9D041 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -67,7 +67,41 @@ What remains:
 - Add rate limiting and persistence writes inside Edge Functions before production.
 
 What was committed:
-- Pending for this checkpoint.
+- `b7d8ca9 Add Supabase schema and safety scaffolding`
+
+## Current Checkpoint: Test Target and Deterministic Health Logic
+
+What changed:
+- Added `Inflamend/Core/HealthLogic.swift` with deterministic red-flag detection, risk scoring, voice transcript parsing, medication schedule calculation, report summary generation, and validation helpers.
+- Added `InflamendTests/HealthLogicTests.swift`.
+- Added an `InflamendTests` unit test target to the Xcode project.
+- Updated the shared `Inflamend` scheme so `xcodebuild test -scheme Inflamend` runs tests.
+
+What was tested:
+- `xcodebuild -list`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Xcode now lists targets `Inflamend` and `InflamendTests`.
+- App build passed on `iPhone 17`.
+- Test run passed with 10 tests.
+
+What failed during the loop:
+- First build failed because `MedicationSchedule.Frequency` needed `Equatable` conformance.
+- First test run had one voice-parser failure because spoken number words were not normalized.
+
+Fixes made:
+- Added `Equatable` conformance to `MedicationSchedule.Frequency`.
+- Added number-word normalization for parser inputs such as "three bowel movements" and "Bristol six".
+
+What remains:
+- Use this logic in the visible iOS flows.
+- Add UI tests after auth/onboarding/log flows are implemented.
+- Add persistence/offline sync tests after local storage exists.
+
+What was committed:
+- Commit message: `Add health logic unit tests`
 
 ## Command Log
 
@@ -126,13 +160,13 @@ Result: failed because scheme is not currently configured for the test action.
 | Sleep logging | Partial | Static times and quality | Add editable times/duration and entry creation |
 | Weight logging | Partial | Text field only | Add validation, units, persistence |
 | Notes logging | Missing | No note flow | Add note model/flow |
-| Voice logging parser | Missing | No voice code | Add parser and confirmation scaffold |
+| Voice logging parser | Logic implemented/tested | `VoiceLogParser`, `HealthLogicTests` | Add speech/confirmation UI |
 | Voice logging confirmation | Missing | No voice UI | Add confirmation flow with manual edit |
 | Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
-| Risk score | Demo | Hardcoded `riskScore` | Add deterministic risk service and tests |
+| Risk score | Logic implemented/tested | `RiskScoreService`, `HealthLogicTests` | Wire into Today dashboard and persistence |
 | AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
-| Red-flag safety handling | Scaffolded backend | Edge functions detect several red flags | Add Swift detector, UI safety card, tests |
-| Doctor report/export | Scaffolded backend | `supabase/functions/export-report`; Profile export row still toast-only | Add iOS report model/export UI |
+| Red-flag safety handling | Logic scaffolded/tested | Edge functions plus `RedFlagDetector` | Add UI safety card |
+| Doctor report/export | Logic/backend scaffolded | `ReportSummaryGenerator`; `supabase/functions/export-report`; Profile export row still toast-only | Add iOS report UI/export service |
 | Profile/settings | Demo | `ProfileView.swift` | Add privacy controls, export/delete scaffolds |
 | Privacy controls | Missing | No controls/docs/manifest | Add controls and docs |
 | Data export/delete | Missing/toast-only | Export toast only | Add service scaffold and UI states |
@@ -179,12 +213,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: blocked by missing test action/test target.
-- Improvement passes completed: baseline audit only, pass 1 still in progress.
+- Tests: passing with 10 unit tests through `InflamendTests`.
+- Improvement passes completed: baseline audit plus backend/testability checkpoints; pass 1 still in progress.
 - Core flows: many missing or demo-only.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs and privacy manifest added; iOS UI implementation still pending.
-- Git checkpoints: baseline commit exists; backend scaffold commit pending.
+- Git checkpoints: baseline, backend scaffold, and health logic test commits exist.
 
 Continue working.
 
@@ -217,3 +251,33 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship this checkpoint, then continue with testable iOS logic and services.
+
+## Feature Audit: Test Target and Deterministic Health Logic
+
+Product Simplicity Reviewer:
+- Findings: The logic layer supports core product questions without requiring live backend or AI.
+- Required fixes: Connect the logic to Today, Log, Voice, Care, and Reports in small UI steps.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visible UI changed, but logic now enables safer UI states.
+- Required fixes: Add safety cards and confirmation screens using this logic.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Deterministic logic can run locally before sync and can be mirrored by Edge Functions.
+- Required fixes: Keep server and client risk/red-flag logic aligned or centralize rules later.
+- Status: Accept checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Red-flag and report wording tests enforce non-diagnostic, confirmation-first behavior.
+- Required fixes: Add UI tests for safety prompts once screens exist.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The previous no-test-target blocker is resolved. Ten unit tests pass through the shared scheme.
+- Required fixes: Expand coverage as persistence and UI flows are added.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now.

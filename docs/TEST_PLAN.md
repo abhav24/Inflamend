@@ -6,11 +6,11 @@ Current automated test status:
 
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: failed before execution.
-Reason: Scheme Inflamend is not currently configured for the test action.
+Result: TEST SUCCEEDED.
+Coverage: 10 unit tests in HealthLogicTests.
 ```
 
-The first testing priority is to add a test target and move deterministic medical/safety/product logic into testable Swift types that do not depend on SwiftUI views.
+The previous blocker, missing test target/test action, is resolved.
 
 ## Unit Test Priorities
 
@@ -24,6 +24,8 @@ The first testing priority is to add a test target and move deterministic medica
 - Rapid weight loss or rapid worsening.
 - Suicidal ideation/self-harm language.
 
+Status: started. Text and structured bowel-log red flags are covered.
+
 2. Risk score logic:
 - Low-risk baseline.
 - Increased bowel frequency.
@@ -36,6 +38,8 @@ The first testing priority is to add a test target and move deterministic medica
 - Score caps at 0 and 100.
 - Returned factors use cautious, non-diagnostic wording.
 
+Status: started. Stable and high-risk scenarios are covered.
+
 3. Voice parsing:
 - Meal logging examples.
 - Bowel movement examples.
@@ -47,11 +51,15 @@ The first testing priority is to add a test target and move deterministic medica
 - Ambiguous transcript handling.
 - No auto-save without confirmation.
 
+Status: started. Bowel, medication, and weight examples are covered, including spoken number words.
+
 4. Medication schedule calculations:
 - Daily, weekly, and multiple-dose schedules.
 - Taken/skipped/snoozed status.
 - Missed-dose history.
 - Timezone-safe date grouping.
+
+Status: started. Twice-daily schedule calculation is covered.
 
 5. Report generation:
 - 7-day, 30-day, and custom range summaries.
@@ -60,6 +68,8 @@ The first testing priority is to add a test target and move deterministic medica
 - Medication adherence summary.
 - Notes and doctor questions.
 - CSV/plain text export shape.
+
+Status: started. Plain-text report wording and possible-pattern language are covered.
 
 6. Offline/sync queue:
 - Pending mutation enqueue.
@@ -125,6 +135,19 @@ When Supabase CLI and credentials are available:
 | Offline | Log while offline | Local save or safe failure | Pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
+
+## Current Unit Test List
+
+- `testRedFlagDetectorFindsHeavyBleedingAndSeverePain`
+- `testStructuredBowelLogCanTriggerRedFlag`
+- `testRiskScoreUsesCautiousDeterministicFactors`
+- `testRiskScoreStaysLowForStableInputs`
+- `testVoiceParserParsesBowelMovementWithoutAutosave`
+- `testVoiceParserParsesMedication`
+- `testVoiceParserParsesWeight`
+- `testMedicationScheduleCalculatesTwiceDailyDoses`
+- `testReportSummaryUsesPossiblePatternLanguage`
+- `testValidationHelpers`
 
 ## Device Targets
 

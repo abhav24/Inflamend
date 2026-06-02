@@ -2,7 +2,7 @@
 
 ## Recommended GitHub Actions Workflow
 
-Add after the test target exists:
+The local test target exists and passes. Recommended workflow:
 
 ```yaml
 name: iOS
@@ -25,9 +25,9 @@ jobs:
         run: xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-## Current Blocker
+## Current Status
 
-`xcodebuild test` fails because no test target/action exists. Add tests before enabling CI as required.
+`xcodebuild test` succeeds locally on the available `iPhone 17` simulator. CI can be added once the repository is hosted in a provider with compatible Xcode/iOS simulator images.
 
 ## Supabase CI
 

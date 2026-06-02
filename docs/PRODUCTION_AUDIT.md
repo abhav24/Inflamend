@@ -205,3 +205,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now as a safe backend/privacy scaffold; continue immediately with test target and iOS logic.
+
+## Testability and Logic Audit
+
+### Feature Audit: Health Logic and Unit Tests
+
+Product Simplicity Reviewer:
+- Findings: Risk, red flags, voice parsing, schedules, report summaries, and validation are now in a single testable layer that supports the core product questions.
+- Required fixes: Avoid letting this become a catch-all file; split into services when UI integration grows.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visual changes, but the logic enables safer UI states and clearer confirmation flows.
+- Required fixes: Connect voice parser to a confirmation screen before save.
+- Status: Revise in next UI pass.
+
+Backend and Data Integrity Reviewer:
+- Findings: Client deterministic logic now matches the direction of the Edge Functions. Tests prevent regression in key rules.
+- Required fixes: Define how client/server rules stay synchronized before production.
+- Status: Accept checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Tests enforce red-flag detection and non-diagnostic report language. Voice parser requires confirmation and does not imply auto-save.
+- Required fixes: Add on-screen disclaimer/safety copy and transcript storage controls.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` now succeeds through the shared scheme with 10 tests.
+- Required fixes: Add UI tests once auth/logging screens exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now.
