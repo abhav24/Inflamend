@@ -2,10 +2,10 @@ import SwiftUI
 
 struct InsightsView: View {
     var appState: AppState
-    @State private var range = "Recent"
+    @State private var range: InsightRangeOption = .recent
 
     private var summary: InsightSummary {
-        if range == "Recent" {
+        if range == .recent {
             return InsightSummaryBuilder.build(logs: appState.logs, recentDays: 7)
         }
         return InsightSummaryBuilder.build(logs: appState.logs)
@@ -25,7 +25,7 @@ struct InsightsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
-                HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("PATTERNS · TRENDS").dsLabel()
                         HStack(spacing: 0) {
@@ -40,29 +40,23 @@ struct InsightsView: View {
                             .font(DS.sans(12))
                             .foregroundColor(.fgDim)
                             .accessibilityIdentifier("insights-confidence-label")
+                        Text(range.summaryLabel(logCount: summary.logCount))
+                            .font(DS.sans(11))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("insights-range-summary")
                     }
-                    Spacer()
-                    HStack(spacing: 2) {
-                        ForEach(["Recent","All"], id: \.self) { r in
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { range = r }
-                            } label: {
-                                Text(r)
-                                    .font(DS.mono(12))
-                                    .foregroundColor(range == r ? .bgPrimary : .fgDim)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(range == r ? Color.fgPrimary : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .animation(.spring(response: 0.28, dampingFraction: 0.75), value: range)
-                            }
-                            .buttonStyle(PressableButtonStyle())
+
+                    Picker("Insights range", selection: $range) {
+                        ForEach(InsightRangeOption.allCases) { option in
+                            Text(option.label).tag(option)
                         }
                     }
-                    .padding(2)
-                    .background(Color.bgInset)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 230)
+                    .tint(.fgPrimary)
+                    .accessibilityIdentifier("insights-range-selector")
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 14)
@@ -240,6 +234,32 @@ struct InsightsView: View {
                 value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
             }
             .joined(separator: ", ")
+    }
+}
+
+private enum InsightRangeOption: String, CaseIterable, Identifiable {
+    case recent
+    case all
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .recent:
+            return "Recent"
+        case .all:
+            return "All"
+        }
+    }
+
+    func summaryLabel(logCount: Int) -> String {
+        let countLabel = logCount == 1 ? "1 local log" : "\(logCount) local logs"
+        switch self {
+        case .recent:
+            return "Last 7 days · \(countLabel)"
+        case .all:
+            return "All local logs · \(countLabel)"
+        }
     }
 }
 

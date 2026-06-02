@@ -1134,6 +1134,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with legal review, public privacy/terms URLs, deletion URL/workflow, and App Store privacy questionnaire completion.
 
+## Insights Range Selector Audit
+
+### Feature Audit: Recent/All Segmented Range Control
+
+Product Simplicity Reviewer:
+- Findings: Insights now exposes the existing Recent and All summary modes with a direct native segmented control and a short visible summary. The control clarifies the current window without adding a custom date-picker workflow.
+- Required fixes: Add custom report/export range controls only when those flows can share a consistent, testable range model.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Moving the range control out of the compressed header row and into a native segmented picker fixes the compact-width tap/accessibility problem found during UI testing. The visible summary gives non-color context for the selected range.
+- Required fixes: Manually verify VoiceOver order and Dynamic Type wrapping for the Insights header and range summary.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The selected range feeds the existing local `loggedAt`-backed Recent/All summary builder, so the UI no longer hides a meaningful data-scope choice.
+- Required fixes: Add backend-synced range parity and richer partial-data scenarios once Supabase summary reads are implemented.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The selector and summary describe local log scope only, avoiding trigger, causation, diagnosis, or treatment claims.
+- Required fixes: Preserve this wording in backend summaries, report exports, and any future AI context.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused range UI smoke test passed after explicitly booting the simulator, and clean build passed. The first custom-control attempt revealed a no-visible-frame issue on compact width, and the first rerun failed before app launch with simulator `Mach error -308`; both were resolved without weakening the product assertion.
+- Required fixes: Add partial-data range UI coverage and manual accessibility verification.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with backend range parity, export range controls, partial Insights scenarios, and manual accessibility QA.
+
 ## Populated Insights UI Coverage Audit
 
 ### Feature Audit: Local-Log Summary and Food Frequency UI

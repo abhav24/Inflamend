@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 53 unit tests in HealthLogicTests plus 34 UI smoke tests in InflamendUITests.
+Coverage: 53 unit tests in HealthLogicTests plus 35 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -72,6 +72,9 @@ Result: TEST SUCCEEDED with 1 focused unit test.
 
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileEditUpdatesLocalHeaderSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
+
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testInsightsRangeToggleUpdatesSummarySmoke
+Result: TEST SUCCEEDED with 1 UI smoke test after explicitly booting the iPhone 17 simulator.
 
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED with 53 unit tests.
@@ -226,7 +229,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
-- Populated Insights uses local logs, typed payloads, frequency framing, recent `loggedAt` filtering, and chart accessibility summaries. Status: covered by UI smoke test plus unit date-range/payload coverage.
+- Populated Insights uses local logs, typed payloads, frequency framing, recent `loggedAt` filtering, visible Recent/All range summary, and chart accessibility summaries. Status: covered by UI smoke tests plus unit date-range/payload coverage.
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test; 30-day `loggedAt` range filtering covered by unit test.
@@ -277,7 +280,7 @@ When Supabase CLI and credentials are available:
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and covered by UI smoke test |
 | Insights | No data | Empty state, no fake claims | Implemented locally and covered by UI smoke test |
-| Insights | Local logs present | Charts, stats, and food patterns populate from recent local logs without trigger claims | Implemented locally with typed payloads and 7-day `loggedAt` filtering, covered by UI smoke and unit tests; chart accessibility summaries implemented and UI-asserted; manual VoiceOver/Dynamic Type pending |
+| Insights | Local logs present | Charts, stats, range summary, and food patterns populate from recent local logs without trigger claims | Implemented locally with typed payloads, 7-day `loggedAt` filtering, visible Recent/All selector summary, UI smoke coverage, and unit tests; chart accessibility summaries implemented and UI-asserted; manual VoiceOver/Dynamic Type pending |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable 30-day text report implemented with typed blood/tag payload extraction and covered by UI smoke and unit tests; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
 | Privacy | AI memory toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend AI enforcement pending |
@@ -354,6 +357,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
 - `InflamendUITests.testInsightsEmptyStateAvoidsDemoClaimsSmoke`
 - `InflamendUITests.testInsightsPopulatedSummaryUsesLocalLogsSmoke`
+- `InflamendUITests.testInsightsRangeToggleUpdatesSummarySmoke`
 - `InflamendUITests.testLocalSignInReachesOnboardingSmoke`
 - `InflamendUITests.testMedicationDoseUpdatesHomeSummarySmoke`
 - `InflamendUITests.testMedicationLogCanBeEditedFromTimelineSmoke`

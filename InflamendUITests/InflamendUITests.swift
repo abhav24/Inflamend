@@ -129,6 +129,27 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testInsightsRangeToggleUpdatesSummarySmoke() {
+        let app = openFreshOnboardedHome(
+            displayName: "UI Insight Range",
+            email: "ui-insight-range@example.com"
+        )
+
+        app.buttons["tab-log"].tap()
+        tapWhenVisible(app.buttons["rapid-log-flare"], in: app)
+
+        app.buttons["tab-insights"].tap()
+        waitForLabel(app.staticTexts["insights-range-summary"], contains: "Last 7 days")
+        waitForLabel(app.staticTexts["insights-range-summary"], contains: "1 local log")
+
+        let rangePicker = app.segmentedControls["insights-range-selector"]
+        XCTAssertTrue(rangePicker.waitForExistence(timeout: 5))
+        rangePicker.buttons["All"].tap()
+        waitForLabel(app.staticTexts["insights-range-summary"], contains: "All local logs")
+        XCTAssertTrue(rangePicker.buttons["All"].exists)
+    }
+
+    @MainActor
     func testProfileUserDataExportSheetSmoke() {
         let app = openSeededProfile()
 
