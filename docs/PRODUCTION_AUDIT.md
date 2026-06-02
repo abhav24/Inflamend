@@ -1486,6 +1486,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
 
+## Sleep Timeline Structured Edit Audit
+
+### Feature Audit: Sleep Field Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Sleep logs now support high-value corrections from Home for quality and bathroom wake count without making users delete and recreate a recent sleep entry.
+- Required fixes: Keep future sleep expansion focused on the saved values users need for trends before adding bedtime/duration editing.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet reuses the score stepper pattern for sleep quality and simple wake-count pills, keeping the sheet scannable and consistent with the logging surface.
+- Required fixes: Manually verify the expanded edit sheet at large Dynamic Type and with VoiceOver focus order before release.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: Sleep timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, and keep pending create/update replay snapshots aligned with the corrected row.
+- Required fixes: Add live backend update replay, conflict handling, and backend mapping tests for payload-bearing sleep edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category was added. Sleep quality and bathroom wake edits stay within the existing typed local health-log payload and do not add new cloud, analytics, or AI paths.
+- Required fixes: Avoid logging sleep replay payloads in diagnostics and keep future sleep-pattern wording framed as observation, not medical causation.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement sleep payload persistence and replay snapshots. Focused sleep UI smoke coverage passed after saving a sleep log, editing quality to 9/10 and bathroom wakes to 3, and verifying the updated row. Full unit tests pass with 40 tests, full scheme tests pass with 63 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add structured edit coverage for weight, medication, and check-in payloads as those controls land.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
+
 ## Symptom Timeline Structured Edit Audit
 
 ### Feature Audit: Symptom Field Editing From Timeline

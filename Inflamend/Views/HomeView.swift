@@ -612,6 +612,10 @@ private struct TimelineEditSheet: View {
                     TimelineSymptomPayloadFields(payload: symptomPayloadBinding)
                 }
 
+                if let sleepPayloadBinding {
+                    TimelineSleepPayloadFields(payload: sleepPayloadBinding)
+                }
+
                 PrimaryButton(title: "Save changes") {
                     if onSave(titleForSave, detailForSave, payload) {
                         dismiss()
@@ -671,6 +675,8 @@ private struct TimelineEditSheet: View {
             return payload?.bowelDisplayTitle ?? title
         case .symptom:
             return payload?.symptomDisplayTitle ?? title
+        case .sleep:
+            return payload?.sleepDisplayTitle ?? title
         default:
             return title
         }
@@ -685,6 +691,8 @@ private struct TimelineEditSheet: View {
             return payload?.bowelDisplayDetails ?? detail
         case .symptom:
             return payload?.symptomDisplayDetails ?? detail
+        case .sleep:
+            return payload?.sleepDisplayDetails ?? detail
         default:
             return detail
         }
@@ -694,6 +702,14 @@ private struct TimelineEditSheet: View {
         guard payload?.kind == .symptom else { return nil }
         return Binding(
             get: { payload ?? entry.payload ?? HealthLogPayload.symptom(pain: 0, fatigue: 0, mood: 5) },
+            set: { payload = $0 }
+        )
+    }
+
+    private var sleepPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .sleep else { return nil }
+        return Binding(
+            get: { payload ?? entry.payload ?? HealthLogPayload.sleep(quality: 7, bathroomWakeCount: 1) },
             set: { payload = $0 }
         )
     }
@@ -932,6 +948,40 @@ private struct TimelineSymptomPayloadFields: View {
                 color: .sage,
                 identifier: "timeline-edit-symptom-mood"
             )
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TimelineSleepPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            TimelineScoreStepper(
+                title: "Sleep quality",
+                value: Binding(
+                    get: { payload.sleepQuality ?? 0 },
+                    set: { payload.sleepQuality = $0 }
+                ),
+                color: .amber,
+                identifier: "timeline-edit-sleep-quality"
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bathroom wakes")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach([0, 1, 2, 3, 4], id: \.self) { count in
+                        LogPill(title: count == 4 ? "4+" : "\(count)", isActive: payload.bathroomWakeCount == count) {
+                            payload.bathroomWakeCount = count
+                        }
+                        .accessibilityIdentifier("timeline-edit-sleep-wake-\(count)")
+                    }
+                }
+            }
         }
         .padding(14)
         .background(Color.bgInset)

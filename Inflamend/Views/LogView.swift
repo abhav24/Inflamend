@@ -524,14 +524,9 @@ struct LogSleepForm: View {
         }
 
         PrimaryButton(title: "Save entry") {
-            appState.addLog(
-                type: .sleep,
-                title: "Sleep quality \(Int(quality))/10",
-                sub: "\(wake) bathroom wakes",
-                payload: .sleep(quality: Int(quality), bathroomWakeCount: wake)
-            )
-            appState.showToast("Sleep logged")
+            appState.recordSleep(quality: Int(quality), bathroomWakeCount: wake)
         }
+        .accessibilityIdentifier("sleep-save-entry-button")
     }
 }
 

@@ -845,6 +845,17 @@ class AppState {
         showToast("Symptoms saved")
     }
 
+    func recordSleep(quality: Int, bathroomWakeCount: Int) {
+        let payload = HealthLogPayload.sleep(quality: quality, bathroomWakeCount: bathroomWakeCount)
+        addLog(
+            type: .sleep,
+            title: payload.sleepDisplayTitle ?? "Sleep logged",
+            sub: payload.sleepDisplayDetails ?? "",
+            payload: payload
+        )
+        showToast("Sleep logged")
+    }
+
     func recordVoiceDraft(_ draft: VoiceLogDraft) {
         let fieldSummary = draft.fields
             .sorted { $0.key < $1.key }
@@ -1367,6 +1378,17 @@ struct HealthLogPayload: Codable, Equatable {
             dehydrationScore: 0,
             rapidWorsening: false
         )
+    }
+
+    var sleepDisplayTitle: String? {
+        guard kind == .sleep else { return nil }
+        return "Sleep quality \(sleepQuality ?? 0)/10"
+    }
+
+    var sleepDisplayDetails: String? {
+        guard kind == .sleep else { return nil }
+        let count = bathroomWakeCount ?? 0
+        return "\(count) bathroom \(count == 1 ? "wake" : "wakes")"
     }
 }
 

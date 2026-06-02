@@ -879,6 +879,53 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceSleepPayloadAndReplaySnapshot() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-sleep-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-sleep@example.com", displayName: "Update Sleep")
+        appState.recordSleep(quality: 7, bathroomWakeCount: 1)
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertEqual(createdLog.title, "Sleep quality 7/10")
+        XCTAssertEqual(createdLog.sub, "1 bathroom wake")
+
+        var editedPayload = try XCTUnwrap(createdLog.payload)
+        editedPayload.sleepQuality = 9
+        editedPayload.bathroomWakeCount = 3
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: editedPayload.sleepDisplayTitle ?? "Sleep logged",
+            sub: editedPayload.sleepDisplayDetails ?? "",
+            preservePayload: true,
+            payload: editedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Sleep quality 9/10")
+        XCTAssertEqual(appState.logs[0].sub, "3 bathroom wakes")
+        XCTAssertEqual(appState.logs[0].payload?.sleepQuality, 9)
+        XCTAssertEqual(appState.logs[0].payload?.bathroomWakeCount, 3)
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Sleep quality 9/10")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.details, "3 bathroom wakes")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.sleepQuality, 9)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.bathroomWakeCount, 3)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.sleepQuality, 9)
+        XCTAssertEqual(restored.logs.first?.payload?.bathroomWakeCount, 3)
+
+        store.delete()
+    }
+
+    @MainActor
     func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")

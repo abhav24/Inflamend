@@ -396,6 +396,31 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testSleepLogCanBeEditedFromTimelineSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-sleep"], in: app)
+        tapWhenVisible(app.buttons["sleep-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let sleepEntry = app.descendants(matching: .any)["timeline-entry-sleep"]
+        waitForLabel(sleepEntry, contains: "Sleep quality 7/10")
+
+        tapWhenVisible(app.buttons["timeline-edit-sleep"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        for _ in 0..<2 {
+            tapWhenVisible(app.buttons["timeline-edit-sleep-quality-increment"], in: app)
+        }
+        tapWhenVisible(app.buttons["timeline-edit-sleep-wake-3"], in: app)
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedSleepEntry = app.descendants(matching: .any)["timeline-entry-sleep"]
+        waitForLabel(editedSleepEntry, contains: "Sleep quality 9/10")
+        XCTAssertTrue(editedSleepEntry.label.contains("3 bathroom wakes"), editedSleepEntry.label)
+    }
+
+    @MainActor
     func testMedicationDoseUpdatesHomeSummarySmoke() {
         let app = openSeededHome()
 
