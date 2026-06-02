@@ -1421,3 +1421,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live Supabase replay, type-specific structured edits, backend summary parity, and manual accessibility QA.
+
+## Timeline Edit Payload Preservation Audit
+
+### Feature Audit: Preserved Structured Payloads During Display Edits
+
+Product Simplicity Reviewer:
+- Findings: The existing timeline edit sheet remains title/details only, but no longer discards structured local data when users make display-only edits from Home.
+- Required fixes: Add type-specific controls when users need to edit structured values directly, rather than making them infer payload changes through free text.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The visible edit flow did not gain new controls or layout risk. The same edit sheet continues to dismiss after a successful save.
+- Required fixes: Add manual VoiceOver and Dynamic Type notes for the edit sheet before release.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppState.updateLog` now has an explicit payload-preserving mode, while generic callers still default to clearing payloads. Preserved edits keep replay snapshots aligned with the local row and retain typed fields such as food tags.
+- Required fixes: Add type-specific edit forms for structured fields and validate payload-bearing update replay against the production backend mapping.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category or transmission path was added. Preserving typed payloads means existing local health data remains attached to an edited row and pending replay snapshot.
+- Required fixes: Keep replay payloads out of production logs and review backend serialization before enabling live sync.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused update-log/replay tests passed, including preserved typed payload persistence and replay snapshot assertions. Full unit tests pass with 37 tests, full scheme tests pass with 58 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add UI assertions around preserving structured edit behavior only if type-specific edit controls become visible; current UI smoke still covers the title/detail save path.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with type-specific structured edit controls, live backend update replay, conflict handling, and manual accessibility QA.

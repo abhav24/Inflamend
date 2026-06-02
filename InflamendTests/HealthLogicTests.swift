@@ -699,6 +699,60 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanPreserveTypedPayloadsForTimelineEdits() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-log-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-payload@example.com", displayName: "Update Payload")
+        appState.addLog(
+            type: .food,
+            title: "Breakfast",
+            sub: "Dairy",
+            payload: .food(mealTime: "breakfast", description: "Breakfast", tags: ["Dairy", "Coffee"])
+        )
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertTrue(appState.updateLog(id: createdLog.id, title: " Breakfast edited ", sub: " New display detail ", preservePayload: true))
+        XCTAssertEqual(appState.logs[0].title, "Breakfast edited")
+        XCTAssertEqual(appState.logs[0].sub, "New display detail")
+        XCTAssertEqual(appState.logs[0].payload?.kind, .food)
+        XCTAssertEqual(appState.logs[0].payload?.foodDescription, "Breakfast edited")
+        XCTAssertEqual(appState.logs[0].payload?.foodTags, ["Dairy", "Coffee"])
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Breakfast edited")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.foodTags, ["Dairy", "Coffee"])
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.kind, .food)
+        XCTAssertEqual(restored.logs.first?.payload?.foodDescription, "Breakfast edited")
+        XCTAssertEqual(restored.logs.first?.payload?.foodTags, ["Dairy", "Coffee"])
+
+        let existingEntry = LogEntry(
+            type: .note,
+            title: "Existing note",
+            sub: "Local detail",
+            payload: .note("Existing note")
+        )
+        restored.logs = [existingEntry]
+        XCTAssertTrue(restored.updateLog(id: existingEntry.id, title: "Existing note edited", sub: "Edited local detail", preservePayload: true))
+
+        let updateMutation = try XCTUnwrap(restored.pendingSyncMutations.first {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+        XCTAssertEqual(restored.logs.first?.payload?.kind, .note)
+        XCTAssertEqual(restored.logs.first?.payload?.note, "Existing note edited")
+        XCTAssertEqual(updateMutation.payload?.healthLog?.typedPayload?.note, "Existing note edited")
+
+        store.delete()
+    }
+
+    @MainActor
     func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")

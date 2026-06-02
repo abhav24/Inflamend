@@ -673,7 +673,7 @@ class AppState {
     }
 
     @discardableResult
-    func updateLog(id: LogEntry.ID, title: String, sub: String) -> Bool {
+    func updateLog(id: LogEntry.ID, title: String, sub: String, preservePayload: Bool = false) -> Bool {
         guard let index = logs.firstIndex(where: { $0.id == id }) else { return false }
 
         let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -683,9 +683,10 @@ class AppState {
             return false
         }
 
+        let payload = preservePayload ? logs[index].payload?.preservingDisplayEdits(title: cleanedTitle) : nil
         logs[index].title = cleanedTitle
         logs[index].sub = cleanedSub
-        logs[index].payload = nil
+        logs[index].payload = payload
 
         let entry = logs[index]
         let localRecordId = entry.id.uuidString
@@ -1275,6 +1276,19 @@ struct HealthLogPayload: Codable, Equatable {
             voiceFields: draft.fields,
             safetyFlags: draft.safetyFlags
         )
+    }
+
+    func preservingDisplayEdits(title: String) -> HealthLogPayload {
+        var updated = self
+        switch kind {
+        case .food:
+            updated.foodDescription = title
+        case .note:
+            updated.note = title
+        case .checkIn, .bowel, .symptom, .medication, .sleep, .weight, .voice:
+            break
+        }
+        return updated
     }
 }
 

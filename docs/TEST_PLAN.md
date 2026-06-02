@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 36 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
+Coverage: 37 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 57 tests.
+Result: TEST SUCCEEDED with 58 tests.
 ```
 
 ## Unit Test Priorities
@@ -97,12 +97,12 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Legacy queued mutations without replay payload snapshots decode safely.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
 - Typed local log payloads persist and legacy timeline logs without `payload` decode safely.
-- Generic timeline text edits clear stale typed payloads until type-specific edit forms exist.
+- Home timeline text edits preserve existing typed payloads for display-only changes, while generic model edits can still clear stale typed payloads until type-specific edit forms exist.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -178,7 +178,7 @@ When Supabase CLI and credentials are available:
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
-| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; generic edits clear typed payloads to avoid stale summaries; type-specific edit forms and backend update replay are pending |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; Home timeline edits preserve typed payloads and replay snapshots for display-only changes, while generic model edits can still clear payloads; type-specific edit forms and backend update replay are pending |
 | Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay planned but not connected |
 | Logging | Undo timeline deletion | Recently deleted local row is restored and pending sync mutations are restored/coalesced safely | Implemented locally and covered by unit plus UI smoke tests; backend delete/update replay still pending |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
@@ -234,6 +234,7 @@ When Supabase CLI and credentials are available:
 - `testInsightSummaryPrefersTypedPayloadOverDisplayText`
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
+- `testUpdateLogCanPreserveTypedPayloadsForTimelineEdits`
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
 - `testSyncReplayPlanCarriesHealthLogPayloadSnapshots`
 - `testUndoDeleteRestoresLogAndPendingMutations`

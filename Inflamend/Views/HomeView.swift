@@ -287,7 +287,7 @@ struct HomeView: View {
         .background(Color.bgPrimary)
         .sheet(item: $editingEntry) { entry in
             TimelineEditSheet(entry: entry) { title, sub in
-                appState.updateLog(id: entry.id, title: title, sub: sub)
+                appState.updateLog(id: entry.id, title: title, sub: sub, preservePayload: true)
             }
         }
     }
