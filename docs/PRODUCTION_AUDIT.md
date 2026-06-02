@@ -1485,3 +1485,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
+
+## Bowel Timeline Structured Edit Audit
+
+### Feature Audit: Bowel Field Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Bowel logs now support high-value corrections from Home for Bristol type, urgency, blood amount, pain, mucus, and nighttime without forcing users to delete and re-enter a health event.
+- Required fixes: Keep broader structured edit work focused on fields that influence summaries, reports, or safety behavior.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet reuses the existing Bristol rows, sliders, and pill controls from the bowel logging form, keeping the interaction familiar.
+- Required fixes: Manually verify the larger edit sheet at large Dynamic Type and with VoiceOver focus order before release.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: Bowel timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, and keep pending create/update replay snapshots aligned with the corrected row.
+- Required fixes: Add live backend update replay, conflict handling, and backend mapping tests for payload-bearing bowel edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category was added. Edited bowel fields can affect safety guidance locally, and red-flag edits publish the existing safety copy rather than diagnostic claims.
+- Required fixes: Preserve the no-diagnosis safety framing in live backend parity tests and avoid logging bowel replay payloads in diagnostics.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement bowel payload persistence, safety publication, and replay snapshots. Focused bowel UI smoke coverage passed after creating a significant-blood bowel log, editing it to Bristol 6/no blood/mucus, and verifying the updated row. Full unit tests pass with 38 tests, full scheme tests pass with 59 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add structured edit coverage for symptom, sleep, weight, medication, and check-in payloads as those controls land.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.

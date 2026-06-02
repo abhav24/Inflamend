@@ -775,6 +775,59 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceBowelPayloadAndPublishSafety() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-bowel-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-bowel@example.com", displayName: "Update Bowel")
+        appState.recordBowel(bristol: 4, urgency: 3, blood: .none, mucus: false, pain: 1, nighttime: false)
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        var editedPayload = try XCTUnwrap(createdLog.payload)
+        editedPayload.bristolType = 6
+        editedPayload.urgencyScore = 9
+        editedPayload.blood = .significant
+        editedPayload.mucus = true
+        editedPayload.painScore = 8
+        editedPayload.nighttime = true
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: editedPayload.bowelDisplayTitle ?? "Bowel movement",
+            sub: editedPayload.bowelDisplayDetails ?? "",
+            preservePayload: true,
+            payload: editedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Bristol 6 · urgency 9/10")
+        XCTAssertEqual(appState.logs[0].sub, "significant blood · mucus · nighttime")
+        XCTAssertEqual(appState.logs[0].payload?.bristolType, 6)
+        XCTAssertEqual(appState.logs[0].payload?.urgencyScore, 9)
+        XCTAssertEqual(appState.logs[0].payload?.blood, .significant)
+        XCTAssertEqual(appState.logs[0].payload?.mucus, true)
+        XCTAssertEqual(appState.logs[0].payload?.nighttime, true)
+        XCTAssertTrue(appState.latestSafetyMessage?.contains("cannot diagnose or triage emergencies") == true)
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Bristol 6 · urgency 9/10")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.details, "significant blood · mucus · nighttime")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.blood, .significant)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.painScore, 8)
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .safetyNotice })
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.blood, .significant)
+        XCTAssertTrue(restored.latestSafetyMessage?.contains("cannot diagnose or triage emergencies") == true)
+
+        store.delete()
+    }
+
+    @MainActor
     func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")

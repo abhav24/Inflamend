@@ -351,6 +351,19 @@ final class InflamendUITests: XCTestCase {
         let safetyCard = app.descendants(matching: .any)["home-safety-card"]
         XCTAssertTrue(safetyCard.waitForExistence(timeout: 5))
         XCTAssertTrue(safetyCard.label.contains("cannot diagnose or triage emergencies"))
+
+        tapWhenVisible(app.buttons["timeline-edit-bowel"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        tapWhenVisible(app.buttons["timeline-edit-bowel-bristol-6"], in: app)
+        tapWhenVisible(app.buttons["timeline-edit-bowel-blood-none"], in: app)
+        tapWhenVisible(app.buttons["timeline-edit-bowel-mucus"], in: app)
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedBowelEntry = app.descendants(matching: .any)["timeline-entry-bowel"]
+        waitForLabel(editedBowelEntry, contains: "Bristol 6")
+        XCTAssertTrue(editedBowelEntry.label.contains("no blood"), editedBowelEntry.label)
+        XCTAssertTrue(editedBowelEntry.label.contains("mucus"), editedBowelEntry.label)
+        XCTAssertFalse(editedBowelEntry.label.contains("significant blood"), editedBowelEntry.label)
     }
 
     @MainActor

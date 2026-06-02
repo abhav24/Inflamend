@@ -600,12 +600,16 @@ private struct TimelineEditSheet: View {
                         .accessibilityIdentifier("timeline-edit-detail-field")
                 }
 
-                if let payloadBinding {
-                    TimelineFoodPayloadFields(payload: payloadBinding)
+                if let foodPayloadBinding {
+                    TimelineFoodPayloadFields(payload: foodPayloadBinding)
+                }
+
+                if let bowelPayloadBinding {
+                    TimelineBowelPayloadFields(payload: bowelPayloadBinding)
                 }
 
                 PrimaryButton(title: "Save changes") {
-                    if onSave(title, detailForSave, payload) {
+                    if onSave(titleForSave, detailForSave, payload) {
                         dismiss()
                     }
                 }
@@ -632,7 +636,7 @@ private struct TimelineEditSheet: View {
         }
     }
 
-    private var payloadBinding: Binding<HealthLogPayload>? {
+    private var foodPayloadBinding: Binding<HealthLogPayload>? {
         guard payload?.kind == .food else { return nil }
         return Binding(
             get: { payload ?? entry.payload ?? HealthLogPayload.food(mealTime: "lunch", description: entry.title, tags: []) },
@@ -640,10 +644,38 @@ private struct TimelineEditSheet: View {
         )
     }
 
+    private var bowelPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .bowel else { return nil }
+        return Binding(
+            get: {
+                payload ?? entry.payload ?? HealthLogPayload.bowel(
+                    bristol: 4,
+                    urgency: 0,
+                    blood: .none,
+                    mucus: false,
+                    pain: 0,
+                    nighttime: false
+                )
+            },
+            set: { payload = $0 }
+        )
+    }
+
+    private var titleForSave: String {
+        guard payload?.kind == .bowel else { return title }
+        return payload?.bowelDisplayTitle ?? title
+    }
+
     private var detailForSave: String {
-        guard payload?.kind == .food else { return detail }
-        let tags = payload?.foodTags ?? []
-        return tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
+        switch payload?.kind {
+        case .food:
+            let tags = payload?.foodTags ?? []
+            return tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
+        case .bowel:
+            return payload?.bowelDisplayDetails ?? detail
+        default:
+            return detail
+        }
     }
 }
 
@@ -722,6 +754,127 @@ private struct TimelineFoodPayloadFields: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: "-")
+    }
+}
+
+private struct TimelineBowelPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    private let bristolLabels = [
+        "Hard lumps",
+        "Lumpy sausage",
+        "Cracked sausage",
+        "Smooth sausage",
+        "Soft blobs",
+        "Mushy",
+        "Watery"
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bristol Stool Scale")
+                    .dsLabel()
+                VStack(spacing: 6) {
+                    ForEach(1...7, id: \.self) { value in
+                        Button {
+                            payload.bristolType = value
+                        } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(payload.bristolType == value ? Color.sage : Color.bgPrimary)
+                                        .frame(width: 32, height: 32)
+                                    Text("\(value)")
+                                        .font(DS.mono(13, weight: .semibold))
+                                        .foregroundColor(payload.bristolType == value ? .darkText : .fgPrimary)
+                                }
+                                Text(bristolLabels[value - 1])
+                                    .font(DS.sans(14))
+                                    .foregroundColor(.fgPrimary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(payload.bristolType == value ? Color.sageDim : Color.bgPrimary)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(payload.bristolType == value ? Color.sage : Color.clear, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("timeline-edit-bowel-bristol-\(value)")
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Urgency \(payload.urgencyScore ?? 0)/10")
+                    .dsLabel()
+                Slider(
+                    value: Binding(
+                        get: { Double(payload.urgencyScore ?? 0) },
+                        set: { payload.urgencyScore = Int($0) }
+                    ),
+                    in: 0...10,
+                    step: 1
+                )
+                .tint(.amber)
+                .accessibilityIdentifier("timeline-edit-bowel-urgency-slider")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Blood")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach([BloodAmount.none, .trace, .visible, .significant], id: \.rawValue) { option in
+                        PillToggle(
+                            label: option.rawValue.capitalized,
+                            isActive: payload.blood == option,
+                            color: option == .none ? .sage : .clay
+                        ) {
+                            payload.blood = option
+                        }
+                        .accessibilityIdentifier("timeline-edit-bowel-blood-\(option.rawValue)")
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Pain \(payload.painScore ?? 0)/10")
+                    .dsLabel()
+                Slider(
+                    value: Binding(
+                        get: { Double(payload.painScore ?? 0) },
+                        set: { payload.painScore = Int($0) }
+                    ),
+                    in: 0...10,
+                    step: 1
+                )
+                .tint(.clay)
+                .accessibilityIdentifier("timeline-edit-bowel-pain-slider")
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Other")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    PillToggle(label: "Mucus", isActive: payload.mucus == true, color: .amber) {
+                        payload.mucus = !(payload.mucus ?? false)
+                    }
+                    .accessibilityIdentifier("timeline-edit-bowel-mucus")
+
+                    PillToggle(label: "Nighttime", isActive: payload.nighttime == true, color: .clay) {
+                        payload.nighttime = !(payload.nighttime ?? false)
+                    }
+                    .accessibilityIdentifier("timeline-edit-bowel-nighttime")
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

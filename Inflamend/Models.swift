@@ -728,6 +728,10 @@ class AppState {
             )
         }
 
+        if let bowelInput = payload?.bowelSafetyInput {
+            publishSafety(RedFlagDetector.assess(text: "\(cleanedTitle) \(cleanedSub)", bowelLog: bowelInput))
+        }
+
         persist()
         showToast("Log updated")
         return true
@@ -807,22 +811,19 @@ class AppState {
         )
         riskScore = risk.score
 
-        let bloodLabel = blood == .none ? "no blood" : "\(blood.rawValue) blood"
-        let details = [bloodLabel, mucus ? "mucus" : nil, nighttime ? "nighttime" : nil]
-            .compactMap { $0 }
-            .joined(separator: " · ")
+        let payload = HealthLogPayload.bowel(
+            bristol: bristol,
+            urgency: urgency,
+            blood: blood,
+            mucus: mucus,
+            pain: pain,
+            nighttime: nighttime
+        )
         addLog(
             type: .bowel,
-            title: "Bristol \(bristol) · urgency \(urgency)/10",
-            sub: details,
-            payload: .bowel(
-                bristol: bristol,
-                urgency: urgency,
-                blood: blood,
-                mucus: mucus,
-                pain: pain,
-                nighttime: nighttime
-            )
+            title: payload.bowelDisplayTitle ?? "Bowel movement",
+            sub: payload.bowelDisplayDetails ?? "",
+            payload: payload
         )
         showToast("Bowel movement saved")
     }
@@ -1300,6 +1301,33 @@ struct HealthLogPayload: Codable, Equatable {
             break
         }
         return updated
+    }
+
+    var bowelDisplayTitle: String? {
+        guard kind == .bowel else { return nil }
+        let bristol = bristolType ?? 4
+        let urgency = urgencyScore ?? 0
+        return "Bristol \(bristol) · urgency \(urgency)/10"
+    }
+
+    var bowelDisplayDetails: String? {
+        guard kind == .bowel else { return nil }
+        let bloodAmount = blood ?? .none
+        let bloodLabel = bloodAmount == .none ? "no blood" : "\(bloodAmount.rawValue) blood"
+        return [bloodLabel, mucus == true ? "mucus" : nil, nighttime == true ? "nighttime" : nil]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+
+    var bowelSafetyInput: BowelLogInput? {
+        guard kind == .bowel else { return nil }
+        return BowelLogInput(
+            bristolType: bristolType ?? 4,
+            urgencyScore: urgencyScore ?? 0,
+            blood: blood ?? .none,
+            painScore: painScore ?? 0,
+            nighttime: nighttime ?? false
+        )
     }
 }
 
