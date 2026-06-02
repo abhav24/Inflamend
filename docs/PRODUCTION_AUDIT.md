@@ -429,3 +429,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live Edge Function integration, UI tests, and offline provider-error handling.
+
+## Destructive Privacy Confirmations Audit
+
+### Feature Audit: Profile Privacy Actions
+
+Product Simplicity Reviewer:
+- Findings: Destructive privacy actions now ask for confirmation before mutating local state or recording a deletion request.
+- Required fixes: Keep backend-blocked language clear and avoid making users think cloud deletion has completed.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Native confirmation dialogs preserve the existing Profile layout and reduce accidental destructive taps.
+- Required fixes: Add UI tests or screenshots for confirmation wording and Dynamic Type behavior.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Account deletion still queues a local `accountDeletion` mutation and logs the request; backend deletion remains externally blocked.
+- Required fixes: Implement Supabase account/data deletion and audit receipts once production auth exists.
+- Status: Accept local scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Local AI history clearing and deletion requests now require explicit confirmation.
+- Required fixes: Add real cloud deletion, export receipts, and clear retention policy before release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild clean build` passes and `xcodebuild test` passes with 22 tests, including AI history clearing and account-deletion request queue/log behavior.
+- Required fixes: Add UI tests or manual VoiceOver notes for the confirmation dialogs.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with backend-backed deletion, UI tests, and retention/export policy polish.

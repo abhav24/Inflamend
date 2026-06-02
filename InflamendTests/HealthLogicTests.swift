@@ -293,6 +293,43 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testClearAIHistoryLeavesLocalConfirmationMessage() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-clear-ai-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.addChatMessage(role: .user, content: "What should I eat?")
+        appState.addChatMessage(role: .assistant, content: "Track context.")
+        XCTAssertGreaterThan(appState.chatMessages.count, 1)
+
+        appState.clearAIHistory()
+
+        XCTAssertEqual(appState.chatMessages.count, 1)
+        XCTAssertTrue(appState.chatMessages[0].content.contains("AI history cleared"))
+
+        store.delete()
+    }
+
+    @MainActor
+    func testAccountDeletionRequestQueuesAndLogsScaffold() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-delete-account-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "delete@example.com", displayName: "Delete User")
+        appState.requestAccountDeletionScaffold()
+
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .accountDeletion })
+        XCTAssertTrue(appState.logs.contains { $0.title == "Account deletion requested" })
+
+        store.delete()
+    }
+
+    @MainActor
     func testCorruptSnapshotFallsBackToCleanState() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-corrupt-test-\(UUID().uuidString).json")

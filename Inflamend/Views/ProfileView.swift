@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     var appState: AppState
     @State private var preparedReport: DoctorReportExport?
+    @State private var pendingConfirmation: ProfileConfirmation?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -142,10 +143,10 @@ struct ProfileView: View {
                         appState.requestDataExportScaffold()
                     }
                     ProfileRow(icon: "close", label: "Delete AI history", sub: "\(appState.chatMessages.count) messages", isDanger: true) {
-                        appState.clearAIHistory()
+                        pendingConfirmation = .clearAIHistory
                     }
                     ProfileRow(icon: "close", label: "Delete data/account", sub: "Requires signed-in backend account", isDanger: true, isLast: true) {
-                        appState.requestAccountDeletionScaffold()
+                        pendingConfirmation = .deleteDataAccount
                     }
                 }
                 .background(Color.bgCard)
@@ -166,6 +167,67 @@ struct ProfileView: View {
         .background(Color.bgPrimary)
         .sheet(item: $preparedReport) { export in
             DoctorReportExportSheet(export: export)
+        }
+        .confirmationDialog(
+            pendingConfirmation?.title ?? "",
+            isPresented: Binding(
+                get: { pendingConfirmation != nil },
+                set: { if !$0 { pendingConfirmation = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingConfirmation {
+                Button(pendingConfirmation.confirmationTitle, role: .destructive) {
+                    perform(pendingConfirmation)
+                    self.pendingConfirmation = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingConfirmation = nil
+            }
+        } message: {
+            Text(pendingConfirmation?.message ?? "")
+        }
+    }
+
+    private func perform(_ confirmation: ProfileConfirmation) {
+        switch confirmation {
+        case .clearAIHistory:
+            appState.clearAIHistory()
+        case .deleteDataAccount:
+            appState.requestAccountDeletionScaffold()
+        }
+    }
+}
+
+private enum ProfileConfirmation {
+    case clearAIHistory
+    case deleteDataAccount
+
+    var title: String {
+        switch self {
+        case .clearAIHistory:
+            return "Delete AI history?"
+        case .deleteDataAccount:
+            return "Request data/account deletion?"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .clearAIHistory:
+            return "This clears saved Care messages on this device. Cloud deletion still requires backend setup."
+        case .deleteDataAccount:
+            return "This records a deletion request locally. Final account and cloud data deletion requires production backend credentials."
+        }
+    }
+
+    var confirmationTitle: String {
+        switch self {
+        case .clearAIHistory:
+            return "Delete AI history"
+        case .deleteDataAccount:
+            return "Request deletion"
         }
     }
 }

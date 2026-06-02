@@ -14,7 +14,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer OK | Safety copy visible | Needs work |
-| Profile | Partial | Unverified | Likely acceptable | Rows OK | Destructive actions have labels but need confirmation dialogs | Needs work |
+| Profile | Partial | Unverified | Likely acceptable | Rows OK | Destructive actions now use confirmation dialogs | Needs UI test |
 
 ## Required Fixes
 
@@ -24,7 +24,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Verify largest Dynamic Type sizes do not overlap.
 - Ensure red-flag safety cards are announced clearly.
 - Avoid color-only risk/trigger communication.
-- Add confirmation dialogs for destructive Profile actions.
+- Add UI tests or manual VoiceOver notes for destructive Profile confirmation dialogs.
 - Add UI tests or manual VoiceOver notes for check-in, voice confirmation, and privacy toggles.
 - Add labels/hints for auth mode selection and onboarding pill selections.
 

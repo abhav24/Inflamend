@@ -16,7 +16,7 @@ Not ready for App Store submission.
 | Privacy manifest | Added scaffold | Must be reviewed before release |
 | Permission strings | Missing for future voice/HealthKit | Add when features land |
 | Medical claims | Risk | Copy must remain cautious |
-| Account deletion | UI scaffolded | Required backend deletion still blocked until production auth/Supabase are live |
+| Account deletion | Partial | Confirmation and local deletion request exist; required backend deletion still blocked until production auth/Supabase are live |
 | Data export | Partial | Doctor report creates a local shareable text file; full user-data export, CSV/PDF, and backend export jobs are pending |
 | Sign in with Apple | Not applicable yet | Local email scaffold exists; Sign in with Apple required if third-party/social login is added |
 | Subscriptions | Not implemented | No fake gates |
@@ -32,4 +32,4 @@ Not ready for App Store submission.
 - Medical disclaimer in relevant UI.
 - Production app icon and screenshots.
 - Build/test pass on supported devices.
-- Confirmation dialogs for destructive privacy/account actions.
+- Backend-backed account deletion and full data deletion.

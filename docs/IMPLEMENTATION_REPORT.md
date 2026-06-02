@@ -278,8 +278,31 @@ What remains:
 - Wire the Care tab to live Supabase Edge Function calls once credentials and provider keys are available.
 - Add UI tests for red-flag and medication-change prompts in the Care tab.
 
-What will be committed:
+What was committed:
 - Commit message: `Add local Care safety responses`
+
+## Current Checkpoint: Destructive Privacy Confirmations
+
+What changed:
+- Added confirmation dialogs before clearing local AI history or requesting data/account deletion from Profile.
+- Kept export and sync rows one-tap because they are non-destructive scaffolds.
+- Added unit coverage for local AI history clearing and account-deletion request queue/log behavior.
+- Updated App Store, accessibility, and test docs to reflect the partial local account-deletion state.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 22 tests, including `testClearAIHistoryLeavesLocalConfirmationMessage` and `testAccountDeletionRequestQueuesAndLogsScaffold`.
+
+What remains:
+- Add UI tests or manual VoiceOver notes for the confirmation dialogs.
+- Replace account-deletion scaffold with real Supabase account/data deletion once production credentials exist.
+
+What was committed:
+- Commit message: `Add privacy action confirmations`
 
 ## Command Log
 
@@ -345,6 +368,12 @@ Result after Care safety pass: TEST SUCCEEDED with 20 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after Care safety pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after privacy-confirmation pass: TEST SUCCEEDED with 22 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after privacy-confirmation pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -352,7 +381,7 @@ Result after Care safety pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local Care safety responses, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local Care safety responses, destructive-action confirmations, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -383,8 +412,8 @@ Result after Care safety pass: BUILD SUCCEEDED.
 | Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
-| Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles | Enforce preferences in live backend/AI behavior |
-| Data export/delete | Scaffolded and locally logged | Export/delete rows show setup states and local audit notes | Implement Supabase-backed export/delete |
+| Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles, destructive confirmations | Enforce preferences in live backend/AI behavior |
+| Data export/delete | Scaffolded and locally logged | Export/delete rows show setup states; destructive delete request is confirmed first | Implement Supabase-backed export/delete |
 
 ## Blockers and External Dependencies
 
@@ -428,12 +457,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 20 unit tests through `InflamendTests`.
+- Tests: passing with 22 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local Care safety responses, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, and report export checkpoints exist; Care safety checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, and privacy confirmation checkpoints exist.
 
 Continue working.
 

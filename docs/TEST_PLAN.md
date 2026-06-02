@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 20 unit tests in HealthLogicTests.
+Coverage: 22 unit tests in HealthLogicTests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,7 +19,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 20 tests.
+Result: TEST SUCCEEDED with 22 tests.
 ```
 
 ## Unit Test Priorities
@@ -109,6 +109,13 @@ Status: started. Empty and local-log summary behavior is covered.
 
 Status: started. Local Care response safety behavior is covered.
 
+10. Privacy and destructive actions:
+- Local AI history clearing leaves a confirmation message.
+- Account deletion requests create a local audit log and pending backend mutation.
+- Destructive Profile actions require confirmation before running.
+
+Status: started. Underlying AppState effects are covered; UI confirmation needs UI tests.
+
 ## UI Test Priorities
 
 - Fresh install shows welcome/auth or Today depending on session scaffold.
@@ -157,7 +164,8 @@ When Supabase CLI and credentials are available:
 | Insights | No data | Empty state, no fake claims | Implemented in logic; needs UI test |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path exists | Scaffolded |
-| Privacy | Delete data/account | User-visible scaffold explains requirements | Scaffolded |
+| Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally; needs UI test |
+| Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally; backend deletion pending |
 | Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; backend replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
@@ -180,6 +188,8 @@ When Supabase CLI and credentials are available:
 - `testValidationHelpers`
 - `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
 - `testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend`
+- `testClearAIHistoryLeavesLocalConfirmationMessage`
+- `testAccountDeletionRequestQueuesAndLogsScaffold`
 - `testCorruptSnapshotFallsBackToCleanState`
 - `testLegacySnapshotWithoutQueueStillDecodes`
 - `testInsightSummaryReturnsEmptyStateForNoLogs`
