@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 15 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 16 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 39 tests.
+Result: TEST SUCCEEDED with 40 tests.
 ```
 
 ## Unit Test Priorities
@@ -127,7 +127,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Bowel movement log with blood shows safety guidance. Status: covered by UI smoke test.
 - Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test.
 - Medication taken/skipped changes adherence state. Status: dose-taken path covered by UI smoke test.
-- Voice permission denied state is understandable. Status: scaffolded as manual transcript fallback; native Speech/microphone permission-denied UI remains pending Apple setup.
+- Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
@@ -161,7 +161,7 @@ When Supabase CLI and credentials are available:
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
 | Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented locally and covered by UI smoke test |
 | Medications | Dose taken | Adherence state updates | Implemented locally and covered by UI smoke test |
-| Voice | Permission denied | Manual fallback shown | Scaffolded as manual transcript path; native permission-denied state pending Apple Speech/microphone setup |
+| Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and covered by UI smoke test |
@@ -219,6 +219,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testProfilePrivacyTogglesUpdateVisibleStateSmoke`
 - `InflamendUITests.testProfileSignOutReturnsToAuthGateSmoke`
 - `InflamendUITests.testTodayCheckInSavesToTimelineSmoke`
+- `InflamendUITests.testVoicePermissionDeniedKeepsManualFallbackSmoke`
 - `InflamendUITests.testVoiceTranscriptCanBeEditedBeforeSavingSmoke`
 
 ## Device Targets

@@ -298,6 +298,26 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testVoicePermissionDeniedKeepsManualFallbackSmoke() {
+        let app = openSeededHome(extraLaunchArguments: ["--inflamend-simulate-voice-permission-denied"])
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-voice"], in: app)
+
+        let status = app.staticTexts["voice-permission-status"]
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.label.contains("Voice access denied"))
+
+        let detail = app.staticTexts["voice-permission-detail"]
+        waitForElement(detail, in: app)
+        XCTAssertTrue(detail.label.contains("Settings"))
+        XCTAssertTrue(detail.label.contains("Manual transcript entry remains available"))
+
+        XCTAssertTrue(app.buttons["voice-use-manual-transcript-button"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["voice-transcript-field"].exists)
+    }
+
+    @MainActor
     private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--inflamend-reset-state"]
@@ -325,12 +345,12 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
-    private func openSeededHome() -> XCUIApplication {
+    private func openSeededHome(extraLaunchArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--inflamend-reset-state",
             "--inflamend-seed-complete-state"
-        ]
+        ] + extraLaunchArguments
         app.launch()
 
         XCTAssertTrue(app.staticTexts["How are you feeling?"].waitForExistence(timeout: 8))
@@ -350,21 +370,35 @@ final class InflamendUITests: XCTestCase {
 
     @MainActor
     private func dismissKeyboard(in app: XCUIApplication) {
-        let authDoneButton = app.buttons["auth-keyboard-done-button"]
+        let authDoneButton = app.buttons["auth-keyboard-done-button"].firstMatch
         if authDoneButton.waitForExistence(timeout: 1) {
             authDoneButton.tap()
             return
         }
 
-        if app.buttons["Done"].waitForExistence(timeout: 1) {
-            app.buttons["Done"].tap()
+        let voiceTranscriptDoneButton = app.buttons["voice-transcript-keyboard-done-button"].firstMatch
+        if voiceTranscriptDoneButton.waitForExistence(timeout: 1) {
+            voiceTranscriptDoneButton.tap()
+            return
+        }
+
+        let voiceFieldDoneButton = app.buttons["voice-field-keyboard-done-button"].firstMatch
+        if voiceFieldDoneButton.waitForExistence(timeout: 1) {
+            voiceFieldDoneButton.tap()
+            return
+        }
+
+        let doneButton = app.buttons["Done"].firstMatch
+        if doneButton.waitForExistence(timeout: 1) {
+            doneButton.tap()
             if app.keyboards.firstMatch.waitForNonExistence(timeout: 1) {
                 return
             }
         }
 
-        if app.buttons["Return"].waitForExistence(timeout: 1) {
-            app.buttons["Return"].tap()
+        let returnButton = app.buttons["Return"].firstMatch
+        if returnButton.waitForExistence(timeout: 1) {
+            returnButton.tap()
             if app.keyboards.firstMatch.waitForNonExistence(timeout: 1) {
                 return
             }

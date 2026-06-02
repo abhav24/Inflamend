@@ -603,34 +603,73 @@ struct LogVoiceForm: View {
     var appState: AppState
     @State private var transcript = ""
     @State private var draft: VoiceLogDraft? = nil
+    @State private var captureStatus = VoiceCaptureStatus.initial
     @FocusState private var isTranscriptFocused: Bool
 
     var body: some View {
-        FormCard(title: "Voice transcript", label: "SCAFFOLD") {
-            Text("Microphone and Speech permissions still need Apple setup. Paste or type a transcript here to test parsing.")
-                .font(DS.sans(12))
-                .foregroundColor(.fgDim)
-                .lineSpacing(2)
+        Group {
+            if draft == nil {
+                FormCard(title: "Native voice capture", label: "PERMISSION") {
+                    HStack(alignment: .top, spacing: 10) {
+                        IconBadge(name: captureStatus.icon, size: 34, iconSize: 15, color: captureStatus.color)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(captureStatus.title)
+                                .font(DS.sans(15, weight: .medium))
+                                .foregroundColor(.fgPrimary)
+                                .accessibilityIdentifier("voice-permission-status")
+                            Text(captureStatus.detail)
+                                .font(DS.sans(12))
+                                .foregroundColor(.fgDim)
+                                .lineSpacing(2)
+                                .accessibilityIdentifier("voice-permission-detail")
+                        }
+                    }
 
-            TextField("Example: I had three bowel movements, Bristol six, no blood.", text: $transcript, axis: .vertical)
-                .lineLimit(4...8)
-                .font(DS.sans(15))
-                .foregroundColor(.fgPrimary)
-                .padding(12)
-                .background(Color.bgInset)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .accessibilityIdentifier("voice-transcript-field")
-                .focused($isTranscriptFocused)
-
-            GhostButton(title: "Parse transcript") {
-                let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else {
-                    appState.showToast("Add a transcript first")
-                    return
+                    GhostButton(title: "Use manual transcript") {
+                        isTranscriptFocused = true
+                    }
+                    .accessibilityIdentifier("voice-use-manual-transcript-button")
                 }
-                draft = VoiceLogParser.parse(trimmed)
+
+                FormCard(title: "Voice transcript", label: "SCAFFOLD") {
+                    Text("Microphone and Speech permissions still need Apple setup. Paste or type a transcript here to test parsing.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(2)
+
+                    TextField("Example: I had three bowel movements, Bristol six, no blood.", text: $transcript, axis: .vertical)
+                        .lineLimit(4...8)
+                        .font(DS.sans(15))
+                        .foregroundColor(.fgPrimary)
+                        .padding(12)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("voice-transcript-field")
+                        .focused($isTranscriptFocused)
+
+                    GhostButton(title: "Parse transcript") {
+                        let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else {
+                            appState.showToast("Add a transcript first")
+                            return
+                        }
+                        isTranscriptFocused = false
+                        draft = VoiceLogParser.parse(trimmed)
+                    }
+                    .accessibilityIdentifier("voice-parse-button")
+                }
             }
-            .accessibilityIdentifier("voice-parse-button")
+
+            if let draft {
+                VoiceDraftConfirmation(draft: draft) { confirmedDraft in
+                    appState.recordVoiceDraft(confirmedDraft)
+                    transcript = ""
+                    isTranscriptFocused = false
+                    self.draft = nil
+                } discard: {
+                    self.draft = nil
+                }
+            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -643,16 +682,55 @@ struct LogVoiceForm: View {
                 }
             }
         }
+    }
+}
 
-        if let draft {
-            VoiceDraftConfirmation(draft: draft) { confirmedDraft in
-                appState.recordVoiceDraft(confirmedDraft)
-                transcript = ""
-                isTranscriptFocused = false
-                self.draft = nil
-            } discard: {
-                self.draft = nil
-            }
+private enum VoiceCaptureStatus {
+    case notConfigured
+    case permissionDenied
+
+    static var initial: VoiceCaptureStatus {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--inflamend-simulate-voice-permission-denied") {
+            return .permissionDenied
+        }
+        #endif
+        return .notConfigured
+    }
+
+    var title: String {
+        switch self {
+        case .notConfigured:
+            return "Voice capture not connected"
+        case .permissionDenied:
+            return "Voice access denied"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .notConfigured:
+            return "Microphone and Speech capture are not active in this build yet. Manual transcript entry stays available below."
+        case .permissionDenied:
+            return "Enable microphone and speech recognition in Settings to dictate logs later. Manual transcript entry remains available below."
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .notConfigured:
+            return "mic"
+        case .permissionDenied:
+            return "shield"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .notConfigured:
+            return .sage
+        case .permissionDenied:
+            return .clay
         }
     }
 }

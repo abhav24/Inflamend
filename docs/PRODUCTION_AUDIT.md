@@ -973,3 +973,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with native voice-permission scaffolding and backend enforcement.
+
+## Native Voice Permission Fallback Audit
+
+### Feature Audit: Voice Permission-Denied Scaffold and Manual Fallback
+
+Product Simplicity Reviewer:
+- Findings: The Voice form now presents an explicit native-capture status and keeps manual transcript entry available when capture is unavailable or denied.
+- Required fixes: Add live dictation only after the manual transcript and confirmation path remain stable.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The app bundle now contains microphone and speech-recognition usage strings, and the denied state has stable identifiers for deterministic UI coverage.
+- Required fixes: Implement and manually verify the real OS permission prompt, denied state, Settings path, Dynamic Type, and VoiceOver behavior.
+- Status: Accept scaffold.
+
+Backend and Data Integrity Reviewer:
+- Findings: This checkpoint does not capture or upload audio; it only adds local UI state, manual transcript fallback, and deterministic test coverage.
+- Required fixes: Add structured voice records, backend parser parity, replay behavior, and transcript preference enforcement before live capture.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No native audio or transcript upload was introduced. The UI keeps voice-derived health data behind manual transcript entry and explicit confirmation before save.
+- Required fixes: Enforce the voice transcript storage preference in local retention, backend upload, export, deletion, and audit paths before any live Speech integration.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Project plist lint passed, the built Info.plist contains both usage descriptions, the focused voice confirmation plus permission fallback tests pass, `xcodebuild test` passes with 40 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add real OS-permission automation or manual QA once native Speech/microphone authorization is implemented.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Speech/microphone integration and backend retention enforcement.

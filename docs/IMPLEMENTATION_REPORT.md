@@ -783,6 +783,51 @@ What remains:
 What was committed:
 - Commit message: `Add privacy toggle UI smoke test`
 
+## Current Checkpoint: Native Voice Permission Fallback Scaffold
+
+What changed:
+- Added generated Info.plist microphone and speech-recognition usage descriptions to the app target.
+- Added a native voice-capture permission status card in the Log Voice form with deterministic unavailable and denied states.
+- Added the `--inflamend-simulate-voice-permission-denied` debug launch argument so UI tests can exercise the denied state without relying on OS prompts.
+- Kept manual transcript entry available when native capture is unavailable or denied.
+- Switched the voice form to confirmation-only mode after parsing so editable confirmation fields remain reachable on iPhone-sized screens.
+- Hardened UI-test keyboard dismissal to prefer stable app-provided Done buttons and first-match queries.
+- Added `testVoicePermissionDeniedKeepsManualFallbackSmoke`.
+
+What was tested:
+- `plutil -lint Inflamend.xcodeproj/project.pbxproj`
+- `/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' .../Inflamend.app/Info.plist`
+- `/usr/libexec/PlistBuddy -c 'Print :NSSpeechRecognitionUsageDescription' .../Inflamend.app/Info.plist`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testVoiceTranscriptCanBeEditedBeforeSavingSmoke -only-testing:InflamendUITests/InflamendUITests/testVoicePermissionDeniedKeepsManualFallbackSmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Project file plist lint passed.
+- Built Info.plist contains the microphone and speech-recognition usage descriptions.
+- Focused voice confirmation plus permission-denied fallback UI smoke tests passed.
+- Full test run passed with 40 tests: 24 unit tests and 16 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- The first full-suite run failed because the new permission card pushed editable voice confirmation fields too low for the existing smoke test.
+- A focused rerun failed to compile when `.toolbar` was attached to only one conditional branch.
+- A focused rerun failed when a generic `Done` button query matched duplicate SwiftUI toolbar nodes.
+
+Fixes made:
+- Show the transcript-entry cards only before parsing and switch to the confirmation card after parsing.
+- Wrapped the voice form branches in a `Group` so shared toolbar modifiers apply cleanly.
+- Updated keyboard dismissal helpers to use stable voice-specific Done identifiers and `firstMatch`.
+
+What remains:
+- Add real `Speech`/microphone authorization requests and capture.
+- Add a useful Settings/deep-link path for live denied OS permissions if Apple review supports it.
+- Enforce voice transcript retention preferences in the backend and local upload paths.
+- Add backend parser parity, structured voice-derived records, and manual VoiceOver/Dynamic Type review.
+
+What was committed:
+- Commit message: `Add voice permission fallback scaffold`
+
 ## Command Log
 
 ```text
@@ -1015,6 +1060,33 @@ Result after Profile privacy-toggle UI pass: TEST SUCCEEDED with 39 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after Profile privacy-toggle UI pass: BUILD SUCCEEDED.
+
+plutil -lint Inflamend.xcodeproj/project.pbxproj
+Result after voice permission fallback pass: OK.
+
+/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' .../Inflamend.app/Info.plist
+Result after voice permission fallback pass: usage string present.
+
+/usr/libexec/PlistBuddy -c 'Print :NSSpeechRecognitionUsageDescription' .../Inflamend.app/Info.plist
+Result after voice permission fallback pass: usage string present.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result before voice fallback layout fix: TEST FAILED because the new permission card pushed the editable confirmation fields below the reachable area for the existing voice confirmation smoke test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testVoiceTranscriptCanBeEditedBeforeSavingSmoke -only-testing:InflamendUITests/InflamendUITests/testVoicePermissionDeniedKeepsManualFallbackSmoke
+Result before toolbar grouping fix: BUILD FAILED because a shared toolbar modifier was attached to one conditional branch.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testVoiceTranscriptCanBeEditedBeforeSavingSmoke -only-testing:InflamendUITests/InflamendUITests/testVoicePermissionDeniedKeepsManualFallbackSmoke
+Result before keyboard helper fix: TEST FAILED because a generic Done query matched duplicate SwiftUI toolbar nodes.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testVoiceTranscriptCanBeEditedBeforeSavingSmoke -only-testing:InflamendUITests/InflamendUITests/testVoicePermissionDeniedKeepsManualFallbackSmoke
+Result after voice permission fallback pass: TEST SUCCEEDED with 2 UI tests.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after voice permission fallback pass: TEST SUCCEEDED with 40 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after voice permission fallback pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -1022,7 +1094,7 @@ Result after Profile privacy-toggle UI pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in, bowel red-flag, food, medication dose, and editable voice confirmation UI smoke coverage, data-backed Insights with empty-state UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, and Profile sign-out/export/destructive UI smoke tests wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in, bowel red-flag, food, medication dose, editable voice confirmation, and native voice permission fallback UI smoke coverage, data-backed Insights with empty-state UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, and Profile sign-out/export/destructive UI smoke tests wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -1047,6 +1119,7 @@ Result after Profile privacy-toggle UI pass: BUILD SUCCEEDED.
 | Offline sync queue | Implemented locally | `PendingSyncMutation`, Profile sync row, queue persistence tests | Add Supabase replay worker, server IDs, conflicts, backoff |
 | Voice logging parser | Logic implemented/tested and surfaced with UI smoke coverage | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add native speech capture and backend parity |
 | Voice logging confirmation | Implemented locally with editable confirmation and UI smoke coverage | `LogVoiceForm`, `VoiceDraftConfirmation`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add microphone/Speech integration, structured record save paths, backend sync, retention enforcement, edit/delete, and field validation |
+| Voice permission fallback | Scaffolded with UI smoke coverage | Generated microphone/speech usage descriptions, deterministic denied state, manual transcript fallback, `testVoicePermissionDeniedKeepsManualFallbackSmoke` | Add real Speech/microphone authorization and capture, Settings path, backend retention enforcement, and parser parity |
 | Insights | Implemented locally with empty-state UI smoke coverage | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, and empty states; `testInsightsEmptyStateAvoidsDemoClaimsSmoke` | Add structured dated records, populated UI tests, chart accessibility summaries, and export/share integration |
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded, with local safety mirror and UI smoke coverage | `supabase/functions/ai-chat`, `CareResponseService`, `ChatView`, `testCareRedFlagPromptShowsSafetyGuidanceSmoke`, `testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke` | Wire live provider setup and Supabase iOS service |
@@ -1098,12 +1171,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests` and 15 UI smoke tests through `InflamendUITests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 16 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty-state UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, voice permission fallback with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty-state UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Profile privacy-toggle UI smoke coverage, Today check-in UI smoke coverage, Insights empty-state UI smoke coverage, Log bowel red-flag UI smoke coverage, Log food UI smoke coverage, Log medication dose UI smoke coverage, Log voice confirmation UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, and privacy toggle UI checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, generated microphone/speech usage strings, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Profile privacy-toggle UI smoke coverage, Today check-in UI smoke coverage, Insights empty-state UI smoke coverage, Log bowel red-flag UI smoke coverage, Log food UI smoke coverage, Log medication dose UI smoke coverage, Log voice confirmation UI smoke coverage, Log voice permission fallback UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, privacy toggle UI, and voice permission fallback checkpoints exist.
 
 Continue working.
 
