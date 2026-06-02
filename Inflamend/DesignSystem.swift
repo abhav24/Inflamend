@@ -4,38 +4,38 @@ import SwiftUI
 
 extension Color {
     // Backgrounds
-    static let bgPrimary     = Color(hex: "#141210")
-    static let bgElevated    = Color(hex: "#1C1A17")
-    static let bgCard        = Color(hex: "#221F1B")
-    static let bgInset       = Color(hex: "#2B2824")
+    static let bgPrimary     = Color(hex: "#0F1112")
+    static let bgElevated    = Color(hex: "#191B1D")
+    static let bgCard        = Color(hex: "#202326")
+    static let bgInset       = Color(hex: "#2A2D30")
 
     // Foregrounds
-    static let fgPrimary     = Color(hex: "#F6F1E4")
-    static let fgDim         = Color(hex: "#F6F1E4").opacity(0.62)
-    static let fgFaint       = Color(hex: "#F6F1E4").opacity(0.38)
-    static let fgGhost       = Color(hex: "#F6F1E4").opacity(0.18)
+    static let fgPrimary     = Color(hex: "#F4F8F7")
+    static let fgDim         = Color(hex: "#F4F8F7").opacity(0.66)
+    static let fgFaint       = Color(hex: "#F4F8F7").opacity(0.40)
+    static let fgGhost       = Color(hex: "#F4F8F7").opacity(0.18)
 
     // Strokes
-    static let strokeDefault = Color(hex: "#F6F1E4").opacity(0.08)
-    static let strokeStrong  = Color(hex: "#F6F1E4").opacity(0.14)
+    static let strokeDefault = Color(hex: "#F4F8F7").opacity(0.08)
+    static let strokeStrong  = Color(hex: "#F4F8F7").opacity(0.14)
 
     // Accents
-    static let sage          = Color(hex: "#A8B89A")
-    static let sageDim       = Color(hex: "#A8B89A").opacity(0.18)
-    static let amber         = Color(hex: "#E3A963")
-    static let amberDim      = Color(hex: "#E3A963").opacity(0.18)
-    static let clay          = Color(hex: "#D98466")
-    static let clayDim       = Color(hex: "#D98466").opacity(0.18)
-    static let ink           = Color(hex: "#8A94A2")
-    static let inkDim        = Color(hex: "#8A94A2").opacity(0.18)
+    static let sage          = Color(hex: "#BCE7B5")
+    static let sageDim       = Color(hex: "#A7D7A2").opacity(0.18)
+    static let amber         = Color(hex: "#73D5FF")
+    static let amberDim      = Color(hex: "#64C7F2").opacity(0.18)
+    static let clay          = Color(hex: "#55E4C4")
+    static let clayDim       = Color(hex: "#37D4B0").opacity(0.18)
+    static let ink           = Color(hex: "#9FCEEE")
+    static let inkDim        = Color(hex: "#8FB7D8").opacity(0.18)
 
     // Risk
-    static let riskLow       = Color(hex: "#A8B89A")
-    static let riskMed       = Color(hex: "#E3A963")
-    static let riskHigh      = Color(hex: "#D96A52")
+    static let riskLow       = Color(hex: "#BCE7B5")
+    static let riskMed       = Color(hex: "#73D5FF")
+    static let riskHigh      = Color(hex: "#55E4C4")
 
     // Dark text on light bg (for sage buttons etc.)
-    static let darkText      = Color(hex: "#1A1612")
+    static let darkText      = Color(hex: "#061317")
 
     init(hex: String) {
         let h = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

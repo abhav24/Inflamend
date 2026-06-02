@@ -102,38 +102,40 @@ struct ContentView: View {
 
 struct CustomTabBar: View {
     @Binding var selectedTab: Tab
+    private let leadingTabs: [Tab] = [.home, .insights]
+    private let trailingTabs: [Tab] = [.chat, .profile]
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Tab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
-                        selectedTab = tab
-                    }
-                } label: {
-                    VStack(spacing: 3) {
-                        AppIcon(
-                            name: tab.icon,
-                            size: 22,
-                            color: selectedTab == tab ? .fgPrimary : .fgFaint
-                        )
-                        .scaleEffect(selectedTab == tab ? 1.14 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.58), value: selectedTab)
-                        Text(tab.label)
-                            .font(DS.mono(10))
-                            .tracking(0.4)
-                            .textCase(.uppercase)
-                            .foregroundColor(selectedTab == tab ? .fgPrimary : .fgFaint)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
-                            .animation(.easeInOut(duration: 0.18), value: selectedTab)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
+        HStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 0) {
+                ForEach(leadingTabs, id: \.self) { tab in
+                    tabButton(tab)
                 }
-                .buttonStyle(PressableButtonStyle(scale: 0.88))
             }
+            .frame(maxWidth: .infinity, minHeight: 68)
+
+            Button {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
+                    selectedTab = .log
+                }
+            } label: {
+                AppIcon(name: "plus", size: 34, color: .darkText)
+                    .frame(width: 72, height: 72)
+                    .background(Color.sage)
+                    .clipShape(Circle())
+                    .shadow(color: Color.sage.opacity(0.24), radius: 16, x: 0, y: 8)
+                    .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 10)
+            }
+            .buttonStyle(PressableButtonStyle(scale: 0.9))
+            .accessibilityLabel("Log")
+            .zIndex(2)
+
+            HStack(spacing: 0) {
+                ForEach(trailingTabs, id: \.self) { tab in
+                    tabButton(tab)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 68)
         }
         .frame(maxWidth: .infinity, minHeight: 68)
         .padding(.horizontal, 10)
@@ -145,8 +147,38 @@ struct CustomTabBar: View {
                 )
                 .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 8)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 18)
         .padding(.bottom, 14)
+    }
+
+    private func tabButton(_ tab: Tab) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.7)) {
+                selectedTab = tab
+            }
+        } label: {
+            VStack(spacing: 3) {
+                AppIcon(
+                    name: tab.icon,
+                    size: 22,
+                    color: selectedTab == tab ? .fgPrimary : .fgFaint
+                )
+                .scaleEffect(selectedTab == tab ? 1.14 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.58), value: selectedTab)
+                Text(tab.label)
+                    .font(DS.mono(10))
+                    .tracking(0.4)
+                    .textCase(.uppercase)
+                    .foregroundColor(selectedTab == tab ? .fgPrimary : .fgFaint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .animation(.easeInOut(duration: 0.18), value: selectedTab)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PressableButtonStyle(scale: 0.88))
     }
 }
 
