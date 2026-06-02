@@ -286,8 +286,8 @@ struct HomeView: View {
         }
         .background(Color.bgPrimary)
         .sheet(item: $editingEntry) { entry in
-            TimelineEditSheet(entry: entry) { title, sub in
-                appState.updateLog(id: entry.id, title: title, sub: sub, preservePayload: true)
+            TimelineEditSheet(entry: entry) { title, sub, payload in
+                appState.updateLog(id: entry.id, title: title, sub: sub, preservePayload: true, payload: payload)
             }
         }
     }
@@ -532,23 +532,25 @@ struct TimelineRow: View {
 
 private struct TimelineEditSheet: View {
     let entry: LogEntry
-    let onSave: (String, String) -> Bool
+    let onSave: (String, String, HealthLogPayload?) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
     @State private var title: String
     @State private var detail: String
+    @State private var payload: HealthLogPayload?
 
     private enum Field {
         case title
         case detail
     }
 
-    init(entry: LogEntry, onSave: @escaping (String, String) -> Bool) {
+    init(entry: LogEntry, onSave: @escaping (String, String, HealthLogPayload?) -> Bool) {
         self.entry = entry
         self.onSave = onSave
         _title = State(initialValue: entry.title)
         _detail = State(initialValue: entry.sub)
+        _payload = State(initialValue: entry.payload)
     }
 
     var body: some View {
@@ -598,8 +600,12 @@ private struct TimelineEditSheet: View {
                         .accessibilityIdentifier("timeline-edit-detail-field")
                 }
 
+                if let payloadBinding {
+                    TimelineFoodPayloadFields(payload: payloadBinding)
+                }
+
                 PrimaryButton(title: "Save changes") {
-                    if onSave(title, detail) {
+                    if onSave(title, detailForSave, payload) {
                         dismiss()
                     }
                 }
@@ -624,6 +630,98 @@ private struct TimelineEditSheet: View {
                 .accessibilityIdentifier("timeline-edit-keyboard-done-button")
             }
         }
+    }
+
+    private var payloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .food else { return nil }
+        return Binding(
+            get: { payload ?? entry.payload ?? HealthLogPayload.food(mealTime: "lunch", description: entry.title, tags: []) },
+            set: { payload = $0 }
+        )
+    }
+
+    private var detailForSave: String {
+        guard payload?.kind == .food else { return detail }
+        let tags = payload?.foodTags ?? []
+        return tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
+    }
+}
+
+private struct TimelineFoodPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    private let mealTimes = ["breakfast", "lunch", "dinner", "snack"]
+    private let triggerTags = ["Dairy", "Spicy", "Gluten", "Raw veg", "Caffeine", "Alcohol"]
+    private let safeTags = ["Bone broth", "Bananas", "Rice", "Oatmeal"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Meal")
+                    .dsLabel()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(mealTimes, id: \.self) { meal in
+                            LogPill(title: meal.capitalized, isActive: payload.mealTime == meal) {
+                                payload.mealTime = meal
+                            }
+                            .accessibilityIdentifier("timeline-edit-food-meal-\(meal)")
+                        }
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Known triggers")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach(triggerTags, id: \.self) { tag in
+                        PillToggle(label: tag, isActive: tagIsActive(tag), color: .clay) {
+                            toggleTag(tag)
+                        }
+                        .accessibilityIdentifier("timeline-edit-food-tag-\(slug(for: tag))")
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Gut-friendly foods")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach(safeTags, id: \.self) { tag in
+                        PillToggle(label: tag, isActive: tagIsActive(tag), color: .sage) {
+                            toggleTag(tag)
+                        }
+                        .accessibilityIdentifier("timeline-edit-food-tag-\(slug(for: tag))")
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func tagIsActive(_ tag: String) -> Bool {
+        Set(payload.foodTags ?? []).contains(tag)
+    }
+
+    private func toggleTag(_ tag: String) {
+        var tags = Set(payload.foodTags ?? [])
+        if tags.contains(tag) {
+            tags.remove(tag)
+        } else {
+            tags.insert(tag)
+        }
+        payload.foodTags = tags.sorted()
+    }
+
+    private func slug(for text: String) -> String {
+        text
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
     }
 }
 

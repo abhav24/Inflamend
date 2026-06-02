@@ -728,10 +728,32 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Breakfast edited")
         XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.foodTags, ["Dairy", "Coffee"])
 
+        var editedFoodPayload = try XCTUnwrap(appState.logs[0].payload)
+        editedFoodPayload.mealTime = "dinner"
+        editedFoodPayload.foodTags = ["Rice"]
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: "Breakfast retagged",
+            sub: "Rice",
+            preservePayload: true,
+            payload: editedFoodPayload
+        ))
+        XCTAssertEqual(appState.logs[0].payload?.mealTime, "dinner")
+        XCTAssertEqual(appState.logs[0].payload?.foodDescription, "Breakfast retagged")
+        XCTAssertEqual(appState.logs[0].payload?.foodTags, ["Rice"])
+
+        let retaggedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(retaggedCreate.payload?.healthLog?.title, "Breakfast retagged")
+        XCTAssertEqual(retaggedCreate.payload?.healthLog?.details, "Rice")
+        XCTAssertEqual(retaggedCreate.payload?.healthLog?.typedPayload?.mealTime, "dinner")
+        XCTAssertEqual(retaggedCreate.payload?.healthLog?.typedPayload?.foodTags, ["Rice"])
+
         let restored = AppState(store: store)
         XCTAssertEqual(restored.logs.first?.payload?.kind, .food)
-        XCTAssertEqual(restored.logs.first?.payload?.foodDescription, "Breakfast edited")
-        XCTAssertEqual(restored.logs.first?.payload?.foodTags, ["Dairy", "Coffee"])
+        XCTAssertEqual(restored.logs.first?.payload?.foodDescription, "Breakfast retagged")
+        XCTAssertEqual(restored.logs.first?.payload?.foodTags, ["Rice"])
 
         let existingEntry = LogEntry(
             type: .note,

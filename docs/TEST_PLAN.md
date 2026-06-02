@@ -97,7 +97,7 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Legacy queued mutations without replay payload snapshots decode safely.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
 - Typed local log payloads persist and legacy timeline logs without `payload` decode safely.
-- Home timeline text edits preserve existing typed payloads for display-only changes, while generic model edits can still clear stale typed payloads until type-specific edit forms exist.
+- Home timeline text edits preserve existing typed payloads for display-only changes, food timeline edits can replace typed meal/tag payloads, while generic model edits can still clear stale typed payloads until broader type-specific edit forms exist.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
@@ -140,9 +140,9 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Today check-in can be saved in under 30 seconds. Status: covered by UI smoke test.
 - Timeline log deletion requires confirmation. Status: covered by UI smoke test.
 - Timeline log deletion can be undone before the toast expires. Status: covered by UI smoke test.
-- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test.
+- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test, including structured food retagging through the timeline edit sheet.
 - Bowel movement log with blood shows safety guidance. Status: covered by UI smoke test.
-- Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test.
+- Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test, including timeline retagging from Dairy to Rice.
 - Medication taken/skipped changes adherence state. Status: dose-taken path covered by UI smoke test.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
@@ -178,11 +178,11 @@ When Supabase CLI and credentials are available:
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
-| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; Home timeline edits preserve typed payloads and replay snapshots for display-only changes, while generic model edits can still clear payloads; type-specific edit forms and backend update replay are pending |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; Home timeline edits preserve typed payloads and replay snapshots for display-only changes; food timeline edits can update meal/tags; generic model edits can still clear payloads; broader type-specific edit forms and backend update replay are pending |
 | Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay planned but not connected |
 | Logging | Undo timeline deletion | Recently deleted local row is restored and pending sync mutations are restored/coalesced safely | Implemented locally and covered by unit plus UI smoke tests; backend delete/update replay still pending |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
-| Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented locally and covered by UI smoke test |
+| Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented locally and covered by UI smoke test, including timeline food tag editing |
 | Medications | Dose taken | Adherence state updates | Implemented locally and covered by UI smoke test |
 | Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |

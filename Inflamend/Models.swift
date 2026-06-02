@@ -673,7 +673,13 @@ class AppState {
     }
 
     @discardableResult
-    func updateLog(id: LogEntry.ID, title: String, sub: String, preservePayload: Bool = false) -> Bool {
+    func updateLog(
+        id: LogEntry.ID,
+        title: String,
+        sub: String,
+        preservePayload: Bool = false,
+        payload editedPayload: HealthLogPayload? = nil
+    ) -> Bool {
         guard let index = logs.firstIndex(where: { $0.id == id }) else { return false }
 
         let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -683,7 +689,12 @@ class AppState {
             return false
         }
 
-        let payload = preservePayload ? logs[index].payload?.preservingDisplayEdits(title: cleanedTitle) : nil
+        let payload: HealthLogPayload?
+        if let editedPayload {
+            payload = editedPayload.preservingDisplayEdits(title: cleanedTitle)
+        } else {
+            payload = preservePayload ? logs[index].payload?.preservingDisplayEdits(title: cleanedTitle) : nil
+        }
         logs[index].title = cleanedTitle
         logs[index].sub = cleanedSub
         logs[index].payload = payload

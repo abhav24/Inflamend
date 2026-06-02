@@ -1453,3 +1453,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with type-specific structured edit controls, live backend update replay, conflict handling, and manual accessibility QA.
+
+## Food Timeline Structured Edit Audit
+
+### Feature Audit: Meal Tag Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Food logs now have the first type-specific timeline edit case: meal time and tags can be changed without leaving Home. This directly affects the food-frequency insights users already see.
+- Required fixes: Keep adding structured edit controls only for fields users naturally need to correct after saving.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The new controls reuse the existing meal pills and tag chips, so the edit sheet remains consistent with the Log food form.
+- Required fixes: Manually verify the expanded sheet at large Dynamic Type and with VoiceOver order.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppState.updateLog` can now accept a replacement `HealthLogPayload`; food timeline edits update typed meal/tag values and rebuild pending replay snapshots from the edited row.
+- Required fixes: Add live backend update replay, conflict handling, and backend mapping tests for payload-bearing edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category was added. Food tags remain local health-pattern metadata and can enter pending replay snapshots, which are already documented as protected health data.
+- Required fixes: Preserve frequency-only language in Insights/reports and avoid food trigger-causation claims as editability improves.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement payload persistence and replay snapshots. Focused food UI smoke coverage passed after creating a food log, changing its timeline tags from Dairy to Rice, and verifying the updated row. Full unit tests pass with 37 tests, full scheme tests pass with 58 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add structured edit coverage for bowel, symptom, sleep, weight, medication, and check-in payloads as those controls land.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.

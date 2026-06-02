@@ -398,6 +398,16 @@ final class InflamendUITests: XCTestCase {
         XCTAssertTrue(foodEntry.label.contains("Greek yogurt and rice"))
         XCTAssertTrue(foodEntry.label.contains("Dairy"))
         XCTAssertFalse(foodEntry.label.localizedCaseInsensitiveContains("calorie"))
+
+        tapWhenVisible(app.buttons["timeline-edit-food"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        tapWhenVisible(app.buttons["timeline-edit-food-tag-rice"], in: app)
+        tapWhenVisible(app.buttons["timeline-edit-food-tag-dairy"], in: app)
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedFoodEntry = app.descendants(matching: .any)["timeline-entry-food"]
+        waitForLabel(editedFoodEntry, contains: "Rice")
+        XCTAssertFalse(editedFoodEntry.label.contains("Dairy"), editedFoodEntry.label)
     }
 
     @MainActor
