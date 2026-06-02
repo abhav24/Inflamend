@@ -120,6 +120,25 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfilePrivacyTogglesUpdateVisibleStateSmoke() {
+        let app = openSeededProfile()
+
+        let aiMemoryToggle = app.buttons["profile-ai-memory-toggle"]
+        tapWhenVisible(aiMemoryToggle, in: app)
+        waitForLabel(aiMemoryToggle, contains: "On")
+
+        tapWhenVisible(aiMemoryToggle, in: app)
+        waitForLabel(aiMemoryToggle, contains: "Off")
+
+        let voiceStorageToggle = app.buttons["profile-voice-transcript-storage-toggle"]
+        tapWhenVisible(voiceStorageToggle, in: app)
+        waitForLabel(voiceStorageToggle, contains: "On")
+
+        tapWhenVisible(voiceStorageToggle, in: app)
+        waitForLabel(voiceStorageToggle, contains: "Off")
+    }
+
+    @MainActor
     func testProfileSignOutReturnsToAuthGateSmoke() {
         let app = openSeededProfile()
 
@@ -374,6 +393,27 @@ final class InflamendUITests: XCTestCase {
         }
 
         XCTFail("Element did not exist: \(element)", file: file, line: line)
+    }
+
+    @MainActor
+    private func waitForLabel(
+        _ element: XCUIElement,
+        contains expectedText: String,
+        timeout: TimeInterval = 5,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if element.exists && element.label.contains(expectedText) {
+                return
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+
+        XCTFail("Element label did not contain \(expectedText): \(element)", file: file, line: line)
     }
 
     @MainActor

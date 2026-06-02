@@ -128,14 +128,16 @@ struct ProfileView: View {
                     ProfileRow(
                         icon: "sparkle",
                         label: "AI memory",
-                        sub: appState.aiMemoryEnabled ? "On · saved only with consent" : "Off"
+                        sub: appState.aiMemoryEnabled ? "On · saved only with consent" : "Off",
+                        accessibilityID: "profile-ai-memory-toggle"
                     ) {
                         appState.setAIMemoryEnabled(!appState.aiMemoryEnabled)
                     }
                     ProfileRow(
                         icon: "mic",
                         label: "Voice transcript storage",
-                        sub: appState.voiceTranscriptStorageEnabled ? "On · transcripts may be stored" : "Off · drafts only"
+                        sub: appState.voiceTranscriptStorageEnabled ? "On · transcripts may be stored" : "Off · drafts only",
+                        accessibilityID: "profile-voice-transcript-storage-toggle"
                     ) {
                         appState.setVoiceTranscriptStorageEnabled(!appState.voiceTranscriptStorageEnabled)
                     }

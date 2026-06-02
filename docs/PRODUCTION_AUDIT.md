@@ -941,3 +941,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with privacy-toggle coverage and native voice-permission scaffolding.
+
+## Profile Privacy Toggle UI Coverage Audit
+
+### Feature Audit: AI Memory and Voice Transcript Preference Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: Users can now see and toggle the consent-related AI memory and voice transcript storage preferences through Profile, and visible Off/On state changes are covered by UI automation.
+- Required fixes: Keep the preference rows plain and enforce the choices in real AI and voice pipelines before release.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The privacy rows have stable identifiers and update their visible state without adding new modal complexity.
+- Required fixes: Run manual VoiceOver and Dynamic Type checks for the Profile privacy rows.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The toggles are locally persisted and tested, but backend AI memory behavior and voice transcript retention enforcement remain pending until Supabase/live service setup is available.
+- Required fixes: Enforce preferences in server request construction, transcript upload/storage, retention, and deletion paths.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Consent choices are visible and test-backed before any native transcript upload or live AI memory path is added.
+- Required fixes: Add backend deletion/retention lifecycle tests and verify export/delete parity once cloud storage exists.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Profile privacy-toggle UI test passes. `xcodebuild test` now passes with 39 tests: 24 unit tests and 15 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding coverage to native permission states, populated Insights, and edit/delete flows.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with native voice-permission scaffolding and backend enforcement.

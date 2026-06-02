@@ -14,7 +14,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save, food save, medication dose row, and voice confirmation paths verified | Voice confirmation, blood choices, food tags, and medication rows use text | In progress |
 | Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty states identifier-backed and smoke-tested | Empty states use explanatory text; charts need summaries | In progress |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
-| Profile | Partial | Unverified | Likely acceptable | Rows OK; report export, data export, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
+| Profile | Partial | Unverified | Likely acceptable | Rows OK; report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
 
 ## Latest Improvements
 
@@ -35,6 +35,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Replaced tiny medication dose toggles with full-row buttons and added UI smoke coverage for Log medication dose tracking, Home meds summary, and timeline feedback.
 - Added stable identifiers and UI smoke coverage for Log food description, food trigger tags, food save action, and Home timeline feedback.
 - Added stable identifiers, keyboard Done controls, and UI smoke coverage for Log voice transcript parsing, editable confirmation fields, save/discard actions, and Home timeline feedback.
+- Added stable identifiers and UI smoke coverage for Profile AI memory and voice transcript storage privacy toggles.
 
 ## Required Fixes
 
@@ -45,9 +46,9 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Ensure red-flag safety cards are announced clearly.
 - Avoid color-only risk/trigger communication.
 - Add manual VoiceOver notes for destructive Profile confirmation dialogs.
-- Add UI tests or manual VoiceOver notes for privacy toggles.
+- Add manual VoiceOver notes for privacy toggles.
 - Add labels/hints for auth mode selection and onboarding pill selections.
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Insights empty state, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Care red-flag, Care medication-refusal, Profile sign-out, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Insights empty state, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Care red-flag, Care medication-refusal, Profile sign-out, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
