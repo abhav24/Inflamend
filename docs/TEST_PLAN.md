@@ -253,6 +253,7 @@ When Supabase CLI and credentials are available:
 | Area | Scenario | Expected Result | Status |
 |---|---|---|---|
 | Install | Fresh install | Starts without crash | Pending |
+| Install | App icon | SpringBoard/home screen icon is visible, opaque, and legible at small sizes | App icon asset exists and clean build accepts it; manual device/simulator visual QA pending |
 | Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh auth UI smoke tests |
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
