@@ -4,6 +4,7 @@
 |---|---:|---:|---:|---:|---:|---:|---|---|
 | Account email/auth identity | Planned | Session only | Yes | No | Yes | No | Account lifetime | Delete account |
 | Health symptoms | UI scaffolded | Protected local snapshot | Yes when backend configured | Only with explicit AI context consent | Yes when signed in | No | Until deleted/export retention policy | Delete logs/account |
+| Timeline log timestamps | Implemented locally | Protected local snapshot | Yes when backend configured | Only with explicit AI context consent if included in context | Yes when signed in | No | Until logs/account deleted | Delete logs/account |
 | Bowel movement data | UI scaffolded | Protected local snapshot | Yes when backend configured | Only with explicit AI context consent | Yes when signed in | No | Until deleted/export retention policy | Delete logs/account |
 | Medication records | UI scaffolded | Protected local snapshot | Yes when backend configured | Only with explicit AI context consent | Yes when signed in | No | Until deleted/export retention policy | Delete logs/account |
 | Food and trigger logs | UI scaffolded | Protected local snapshot | Yes when backend configured | Only with explicit AI context consent | Yes when signed in | No | Until deleted/export retention policy | Delete logs/account |
@@ -30,5 +31,6 @@
 - Voice transcript storage defaults off in the current UI.
 - Local auth scaffold stores an email/display name session but never stores the password field.
 - The local snapshot is a production scaffold, not a substitute for final encrypted storage and Keychain-backed live auth tokens.
+- Timeline logs include a structured `loggedAt` event timestamp plus a display `time`; both are included in local snapshots and local user-data exports.
 - Sync idempotency keys are generated from mutation type and local IDs, not health text; queued mutation summaries still need sanitization before any production diagnostics or telemetry.
 - Profile can create a local user-data JSON export from the current protected snapshot. Cloud export receipts and backend export jobs still require production Supabase credentials.

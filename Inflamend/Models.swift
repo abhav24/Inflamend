@@ -561,7 +561,7 @@ class AppState {
     }
 
     func addLog(type: LogType, title: String, sub: String = "", date: Date = Date()) {
-        let entry = LogEntry(type: type, title: title, sub: sub, time: Self.timeString(from: date))
+        let entry = LogEntry(type: type, title: title, sub: sub, loggedAt: date)
         logs.insert(entry, at: 0)
         enqueueSync(kind: .healthLog, localRecordId: entry.id.uuidString, summary: "\(type.rawValue): \(title)")
         persist()
@@ -1026,6 +1026,58 @@ struct LogEntry: Identifiable, Codable, Equatable {
     var title: String
     var sub: String
     var time: String
+    var loggedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        type: LogType,
+        title: String,
+        sub: String,
+        time: String? = nil,
+        loggedAt: Date = Date()
+    ) {
+        self.id = id
+        self.type = type
+        self.title = title
+        self.sub = sub
+        self.loggedAt = loggedAt
+        self.time = time ?? Self.displayTime(from: loggedAt)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case type
+        case title
+        case sub
+        case time
+        case loggedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        type = try container.decode(LogType.self, forKey: .type)
+        title = try container.decode(String.self, forKey: .title)
+        sub = try container.decodeIfPresent(String.self, forKey: .sub) ?? ""
+        loggedAt = try container.decodeIfPresent(Date.self, forKey: .loggedAt) ?? Date()
+        time = try container.decodeIfPresent(String.self, forKey: .time) ?? Self.displayTime(from: loggedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(type, forKey: .type)
+        try container.encode(title, forKey: .title)
+        try container.encode(sub, forKey: .sub)
+        try container.encode(time, forKey: .time)
+        try container.encode(loggedAt, forKey: .loggedAt)
+    }
+
+    private static func displayTime(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mma"
+        return formatter.string(from: date).lowercased()
+    }
 }
 
 enum LogType: String, Codable, Equatable {

@@ -307,6 +307,32 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testAppStatePersistsStructuredLogTimestamp() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-log-timestamp-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let loggedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2, hour: 13, minute: 15)))
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "timestamp@example.com", displayName: "Timestamp")
+        appState.addLog(type: .note, title: "Timestamped note", sub: "Structured", date: loggedAt)
+
+        XCTAssertEqual(appState.logs.first?.loggedAt, loggedAt)
+        XCTAssertFalse(appState.logs.first?.time.isEmpty ?? true)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.title, "Timestamped note")
+        XCTAssertEqual(restored.logs.first?.loggedAt, loggedAt)
+        XCTAssertEqual(restored.logs.first?.time, appState.logs.first?.time)
+
+        store.delete()
+    }
+
+    @MainActor
     func testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-test-\(UUID().uuidString).json")
@@ -671,7 +697,15 @@ final class HealthLogicTests: XCTestCase {
           "aiMemoryEnabled": true,
           "chatMessages": [],
           "lastSyncStatus": "Legacy saved",
-          "logs": [],
+          "logs": [
+            {
+              "id": "33333333-3333-3333-3333-333333333333",
+              "type": "note",
+              "title": "Legacy note",
+              "sub": "No loggedAt field",
+              "time": "8:00am"
+            }
+          ],
           "medsTaken": 1,
           "medsTotal": 2,
           "riskScore": 55,
@@ -685,6 +719,9 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(appState.riskScore, 55)
         XCTAssertEqual(appState.medsTaken, 1)
         XCTAssertEqual(appState.medsTotal, 2)
+        XCTAssertEqual(appState.logs.first?.title, "Legacy note")
+        XCTAssertEqual(appState.logs.first?.time, "8:00am")
+        XCTAssertLessThan(abs(appState.logs.first?.loggedAt.timeIntervalSinceNow ?? -100), 60)
         XCTAssertTrue(appState.pendingSyncMutations.isEmpty)
         XCTAssertEqual(appState.lastSyncStatus, "Legacy saved")
 

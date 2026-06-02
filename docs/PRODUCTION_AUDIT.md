@@ -1293,3 +1293,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live Supabase replay wiring, structured records, and manual accessibility QA.
+
+## Structured Log Timestamp Audit
+
+### Feature Audit: Backward-Compatible Dated Timeline Records
+
+Product Simplicity Reviewer:
+- Findings: Timeline rows now keep the familiar display time while carrying a real `loggedAt` date for future summaries and date-range work.
+- Required fixes: Use the date for report ranges and Insights filtering before adding more visible analytics controls.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visible layout changed, so timeline density and row controls are unaffected.
+- Required fixes: Manually verify future date-range controls with Dynamic Type and VoiceOver when they are added.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `LogEntry` now persists a structured timestamp and decodes legacy snapshot rows without `loggedAt`, preserving old display `time` strings.
+- Required fixes: Add typed per-log payloads, server IDs, backend date fields, and migration handling before production analytics depend on these records.
+- Status: Accept local model improvement.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Precise event timestamps are health metadata and are included in local snapshot/export behavior; the privacy inventory now calls this out.
+- Required fixes: Re-check AI context, backend sync payloads, and export wording before sending dated health logs to live services.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused structured timestamp and legacy snapshot tests pass. Full unit, full app test, and clean build checks pass.
+- Required fixes: Add date-range report/Insights tests once those flows consume `loggedAt`.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with typed per-log payloads, date-range filtering, live Supabase replay wiring, and manual accessibility QA.
