@@ -5,6 +5,7 @@ struct HomeView: View {
     @Binding var selectedTab: Tab
     @Binding var showFoodSheet: Bool
     @Binding var showBristolSheet: Bool
+    @Binding var showCheckInSheet: Bool
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -21,7 +22,7 @@ struct HomeView: View {
                 HStack(alignment: .bottom) {
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("THURSDAY · APR 17")
+                        Text(todayLabel)
                             .dsLabel()
                         (Text("\(greeting), ")
                             .font(DS.serif(36))
@@ -101,6 +102,15 @@ struct HomeView: View {
                 .padding(.bottom, 14)
                 .appearAnimation(delay: 0.07)
 
+                if let safety = appState.latestSafetyMessage {
+                    SafetyCard(message: safety) {
+                        appState.clearSafetyMessage()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+                    .appearAnimation(delay: 0.10)
+                }
+
                 // Check-in card
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .lastTextBaseline) {
@@ -117,6 +127,11 @@ struct HomeView: View {
                         }
                     }
                     .padding(.bottom, 14)
+
+                    PrimaryButton(title: "Start check-in") {
+                        showCheckInSheet = true
+                    }
+                    .padding(.bottom, 12)
 
                     HStack(spacing: 8) {
                         ForEach(MoodOption.allCases, id: \.self) { option in
@@ -171,7 +186,7 @@ struct HomeView: View {
                     HStack(spacing: 8) {
                         RapidButton(icon: "droplet", label: "Water",  color: .ink)   { appState.showToast("Logged water · 250ml") }
                         RapidButton(icon: "fork",    label: "Meal",   color: .sage)  { showFoodSheet = true }
-                        RapidButton(icon: "pill",    label: "Meds",   color: .amber) { appState.showToast("Mesalamine · taken") }
+                        RapidButton(icon: "pill",    label: "Meds",   color: .amber) { appState.recordMedicationTaken(name: "Mesalamine") }
                         RapidButton(icon: "activity",label: "BM",     color: .clay)  { showBristolSheet = true }
                     }
                 }
@@ -261,6 +276,48 @@ struct HomeView: View {
         let f = DateFormatter()
         f.timeStyle = .short
         return f.string(from: Date()).lowercased()
+    }
+
+    private var todayLabel: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE · MMM d"
+        return formatter.string(from: Date()).uppercased()
+    }
+}
+
+// MARK: - Safety Card
+
+struct SafetyCard: View {
+    let message: String
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            IconBadge(name: "shield", size: 38, iconSize: 18, color: .clay)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("SAFETY CHECK")
+                    .font(DS.mono(10, weight: .medium))
+                    .tracking(1.4)
+                    .textCase(.uppercase)
+                    .foregroundColor(.clay)
+                Text(message)
+                    .font(DS.sans(14))
+                    .foregroundColor(.fgPrimary)
+                    .lineSpacing(3)
+                Button("DISMISS", action: dismiss)
+                    .font(DS.mono(11))
+                    .foregroundColor(.fgDim)
+                    .padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .background(Color.clayDim)
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.clay.opacity(0.45), lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Safety check. \(message)")
     }
 }
 
@@ -378,7 +435,8 @@ struct TimelineRow: View {
         appState: AppState(),
         selectedTab: .constant(.home),
         showFoodSheet: .constant(false),
-        showBristolSheet: .constant(false)
+        showBristolSheet: .constant(false),
+        showCheckInSheet: .constant(false)
     )
     .background(Color.bgPrimary)
     .preferredColorScheme(.dark)

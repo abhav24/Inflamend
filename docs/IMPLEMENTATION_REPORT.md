@@ -103,6 +103,42 @@ What remains:
 What was committed:
 - Commit message: `Add health logic unit tests`
 
+## Current Checkpoint: Core Product UX, Safety, and Privacy Scaffold
+
+What changed:
+- Wired the Today dashboard to a full check-in sheet with status, pain, fatigue, urgency, stool count, blood, medication, and notes.
+- Made quick actions and Log forms create in-memory timeline entries instead of toast-only success states.
+- Expanded bowel logging with Bristol type, urgency, blood amount, mucus, pain, nighttime flag, and red-flag safety handling.
+- Added note logging.
+- Added a voice transcript parser surface and confirmation screen. Voice-derived health data is not auto-saved.
+- Reframed Ask as Care and added visible medical safety copy plus red-flag responses before canned assistant replies.
+- Added Profile privacy controls for AI memory, voice transcript storage, local AI history clearing, data export scaffold, and account deletion scaffold.
+- Added a doctor report scaffold that uses the deterministic report generator and records the export event locally.
+
+What was tested:
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 10 health logic tests.
+
+What failed during the loop:
+- The first build/test attempt failed because `Inflamend/Views/ProfileView.swift` had a stray top-level `push to git` text line after the preview.
+
+Fixes made:
+- Removed the stray top-level text line and reran build/test successfully.
+
+What remains:
+- Persist logs to local storage and sync to Supabase once credentials exist.
+- Add auth, signup, signin, session restore, sign out, and onboarding screens/services.
+- Add UI tests after the auth/onboarding/logging flows stabilize.
+- Add real export/share output for the report scaffold.
+- Add microphone and Speech framework permission plumbing when Apple setup is available.
+
+What was committed:
+- Commit message: `Add core logging and privacy scaffolds`
+
 ## Command Log
 
 ```text
@@ -131,14 +167,20 @@ Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: failed because scheme is not currently configured for the test action.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after core UX pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after core UX pass: TEST SUCCEEDED with 10 tests.
 ```
 
 ## Pass Progress
 
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
-| Pass 1 | Baseline audit, build stabilization, documentation, architecture review | In progress | Baseline docs; build succeeded on iPhone 17; backend/privacy docs added |
-| Pass 2 | Core product/backend/UX implementation | Started | Supabase schema/RLS/functions scaffolded |
+| Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; core logging, safety, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -149,27 +191,27 @@ Result: failed because scheme is not currently configured for the test action.
 | Sign up | Missing | No auth views/services | Add signup flow and profile creation scaffold |
 | Sign in | Missing | No auth views/services | Add signin flow and session restore scaffold |
 | Session restore | Missing | No persistence/auth service | Add session abstraction |
-| Sign out | Toast-only | Profile row shows toast | Implement real session clearing scaffold |
+| Sign out | Scaffolded | Profile row clears only local state/toast | Connect to auth session service |
 | Onboarding | Missing | No onboarding models/views | Add skippable health profile flow |
-| Today dashboard | Demo | `HomeView.swift` | Bind to real app data and risk score |
-| Today check-in | Partial | Mood buttons only | Add full check-in fields and persistence |
-| Bowel movement logging | Partial | `LogBowelForm` and quick Bristol sheet | Add full fields, validation, safety handling, persistence |
-| Food/meal logging | Partial | `LogFoodForm` and quick food sheet | Add real entry creation, recent/favorite foods, cautious pattern language |
-| Medication tracking | Partial | Static med schedule in view | Add medication models/services and taken/skipped events |
-| Symptom logging | Partial | Sliders and placeholder body map | Add validation, notes, entry creation |
-| Sleep logging | Partial | Static times and quality | Add editable times/duration and entry creation |
-| Weight logging | Partial | Text field only | Add validation, units, persistence |
-| Notes logging | Missing | No note flow | Add note model/flow |
-| Voice logging parser | Logic implemented/tested | `VoiceLogParser`, `HealthLogicTests` | Add speech/confirmation UI |
-| Voice logging confirmation | Missing | No voice UI | Add confirmation flow with manual edit |
+| Today dashboard | Partial | Dynamic date, safety card, check-in CTA, risk updates | Replace demo profile/data with persisted user records |
+| Today check-in | Implemented in-memory | `CheckInSheet`, `AppState.recordCheckIn` | Persist/sync, add edit/delete and UI tests |
+| Bowel movement logging | Implemented in-memory | Quick Bristol and detailed bowel form call `recordBowel` | Persist/sync, add edit/delete and stricter validation |
+| Food/meal logging | Implemented in-memory | Quick food and food form insert timeline logs | Persist/sync, add recent/favorite foods |
+| Medication tracking | Implemented in-memory | Quick meds and meds form update dose count/logs | Persist/sync, add schedules and missed-dose states |
+| Symptom logging | Implemented in-memory | Sliders save symptom timeline entry | Persist/sync, add notes and red-flag linkage |
+| Sleep logging | Implemented in-memory | Sleep form saves quality/wake entry | Add editable times/duration and persistence |
+| Weight logging | Implemented in-memory | Weight form saves manual entry | Add units/validation and persistence |
+| Notes logging | Implemented in-memory | `LogNoteForm` | Persist/sync, add edit/delete |
+| Voice logging parser | Logic implemented/tested and surfaced | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm` | Add speech capture and editable parsed fields |
+| Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
 | Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
-| Risk score | Logic implemented/tested | `RiskScoreService`, `HealthLogicTests` | Wire into Today dashboard and persistence |
+| Risk score | Wired in-memory | `RiskScoreService`, `recordCheckIn`, `recordBowel` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
-| Red-flag safety handling | Logic scaffolded/tested | Edge functions plus `RedFlagDetector` | Add UI safety card |
-| Doctor report/export | Logic/backend scaffolded | `ReportSummaryGenerator`; `supabase/functions/export-report`; Profile export row still toast-only | Add iOS report UI/export service |
-| Profile/settings | Demo | `ProfileView.swift` | Add privacy controls, export/delete scaffolds |
-| Privacy controls | Missing | No controls/docs/manifest | Add controls and docs |
-| Data export/delete | Missing/toast-only | Export toast only | Add service scaffold and UI states |
+| Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
+| Doctor report/export | Scaffolded in UI | Profile report row calls `ReportSummaryGenerator` | Add real share sheet/PDF/text file export |
+| Profile/settings | Partial | Profile rows now perform local/scaffold actions | Connect to auth, notifications, backend profile |
+| Privacy controls | Scaffolded in UI | AI memory and voice transcript storage toggles | Persist preferences and enforce backend/AI behavior |
+| Data export/delete | Scaffolded in UI | Export/delete rows show setup states | Implement Supabase-backed export/delete |
 
 ## Blockers and External Dependencies
 
@@ -214,11 +256,11 @@ Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
 - Tests: passing with 10 unit tests through `InflamendTests`.
-- Improvement passes completed: baseline audit plus backend/testability checkpoints; pass 1 still in progress.
-- Core flows: many missing or demo-only.
+- Improvement passes completed: pass 1 is complete; pass 2 is in progress.
+- Core flows: logging, safety, privacy, voice confirmation, and report scaffolds improved; auth, onboarding, session restore, durable persistence, and live backend integration remain incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs and privacy manifest added; iOS UI implementation still pending.
-- Git checkpoints: baseline, backend scaffold, and health logic test commits exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, and health logic test commits exist; core UX checkpoint pending commit.
 
 Continue working.
 
@@ -281,3 +323,33 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now.
+
+## Feature Audit: Core Product UX, Safety, and Privacy Scaffold
+
+Product Simplicity Reviewer:
+- Findings: The product now has direct daily utility: check-in, quick logs, detailed BM logging, note logging, voice transcript confirmation, medication marking, and report preparation all do visible work.
+- Required fixes: Add durable local persistence so the utility survives app restart; add auth/onboarding without making daily logging slower.
+- Status: Accept checkpoint with persistence gap.
+
+Apple UI Quality Reviewer:
+- Findings: The new flows stay inside the existing design language and add a single clear Today check-in CTA. Safety text is visible without overtaking the main task.
+- Required fixes: Add UI tests/snapshots and verify largest Dynamic Type sizes; consider reducing dense Log tabs later.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: UI actions are still in-memory but now map cleanly to the Supabase schema and deterministic services.
+- Required fixes: Add a local repository layer, offline queue, and Supabase client once credentials exist.
+- Status: Accept as scaffold, not production persistence.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: AI memory and transcript storage are opt-in controls, voice logs require confirmation, and red-flag text is surfaced in Today and Care.
+- Required fixes: Persist privacy preferences and enforce them in backend/AI request construction before any live release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Build and 10 deterministic unit tests pass after the UI wiring. The initial compile failure was fixed and documented.
+- Required fixes: Add tests for AppState logging behavior and UI smoke coverage.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship this checkpoint, then continue with auth/onboarding and persistence.

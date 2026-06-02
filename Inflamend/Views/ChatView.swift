@@ -25,9 +25,9 @@ struct ChatView: View {
             // Header
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("ALWAYS HERE · PRIVATE").dsLabel()
-                    (Text("Ask ").font(DS.serif(36)).foregroundColor(.fgPrimary)
-                    + Text("Inflamend").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
+                    Text("CARE · SAFETY").dsLabel()
+                    (Text("Care ").font(DS.serif(36)).foregroundColor(.fgPrimary)
+                    + Text("guide").font(DS.serif(36, italic: true)).foregroundColor(.fgPrimary))
                 }
                 Spacer()
                 // AI avatar
@@ -41,6 +41,28 @@ struct ChatView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 18)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    IconBadge(name: "shield", size: 34, iconSize: 15, color: .sage)
+                    Text("Inflamend can explain general IBD topics and help prepare questions. It does not diagnose, treat, prescribe, or replace urgent care.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(2)
+                }
+                if let safety = appState.latestSafetyMessage {
+                    Text(safety)
+                        .font(DS.sans(12, weight: .medium))
+                        .foregroundColor(.clay)
+                        .lineSpacing(2)
+                }
+            }
+            .padding(14)
+            .background(Color.bgCard)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.strokeDefault, lineWidth: 0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .padding(.horizontal, 20)
+            .padding(.bottom, 10)
 
             // Messages
             ScrollViewReader { proxy in
@@ -161,7 +183,13 @@ struct ChatView: View {
             isTyping = true
         }
 
-        let response = responses[t] ?? "That's a great question, Priya. Based on your recent logs, things look manageable — but I'd recommend chatting with your GI doctor about this one for proper guidance."
+        let safety = RedFlagDetector.assess(text: t)
+        if safety.hasRedFlags {
+            appState.latestSafetyMessage = safety.safetyCopy
+        }
+        let response = safety.hasRedFlags
+            ? safety.safetyCopy
+            : responses[t] ?? "That's a thoughtful question. Inflamend can help you track context and prepare questions, but medication or care decisions should be reviewed with your GI clinician or pharmacist."
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
             withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {

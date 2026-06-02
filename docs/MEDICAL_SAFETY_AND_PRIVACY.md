@@ -24,7 +24,11 @@ The app should show calm urgent-care guidance for:
 
 - Edge Function scaffolds include red-flag checks for AI and voice parsing.
 - The database stores `safety_flags` on bowel logs and voice drafts.
-- UI red-flag presentation is not implemented yet.
+- Swift `RedFlagDetector` is tested and wired into check-ins, BM logs, voice draft save, and Care messages.
+- Today can show a dismissible safety card when concerning symptoms are detected.
+- Care shows persistent non-diagnostic safety copy and red-flag guidance before assistant-style replies.
+- Voice-derived logs require user confirmation before save.
+- Profile exposes opt-in AI memory and opt-in voice transcript storage controls.
 
 ## Copy Rules
 
@@ -57,7 +61,7 @@ Avoid:
 
 ## Required UI Work
 
-- Add safety card component.
-- Add red-flag detector in Swift with tests.
-- Add disclaimer copy to AI/Care and report export flows.
-- Add privacy controls for AI memory, transcript storage, export, and delete.
+- Persist safety events and user acknowledgements.
+- Add UI tests for safety card visibility and voice confirmation.
+- Persist privacy preferences and enforce them before live AI/backend calls.
+- Add real export/delete backend flows when credentials are available.

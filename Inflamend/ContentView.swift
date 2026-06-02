@@ -12,7 +12,7 @@ enum Tab: String, CaseIterable {
         case .home:     return "Home"
         case .log:      return "Log"
         case .insights: return "Insights"
-        case .chat:     return "Ask"
+        case .chat:     return "Care"
         case .profile:  return "You"
         }
     }
@@ -21,7 +21,7 @@ enum Tab: String, CaseIterable {
         case .home:     return "home"
         case .log:      return "plus"
         case .insights: return "chart"
-        case .chat:     return "chat"
+        case .chat:     return "shield"
         case .profile:  return "user"
         }
     }
@@ -32,6 +32,7 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .home
     @State private var showFoodSheet = false
     @State private var showBristolSheet = false
+    @State private var showCheckInSheet = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -45,7 +46,8 @@ struct ContentView: View {
                         appState: appState,
                         selectedTab: $selectedTab,
                         showFoodSheet: $showFoodSheet,
-                        showBristolSheet: $showBristolSheet
+                        showBristolSheet: $showBristolSheet,
+                        showCheckInSheet: $showCheckInSheet
                     )
                 case .log:
                     LogView(appState: appState)
@@ -91,6 +93,12 @@ struct ContentView: View {
         .sheet(isPresented: $showBristolSheet) {
             QuickBristolSheet(appState: appState, isPresented: $showBristolSheet)
                 .presentationDetents([.medium])
+                .presentationBackground(Color.bgElevated)
+                .presentationCornerRadius(32)
+        }
+        .sheet(isPresented: $showCheckInSheet) {
+            CheckInSheet(appState: appState, isPresented: $showCheckInSheet)
+                .presentationDetents([.large])
                 .presentationBackground(Color.bgElevated)
                 .presentationCornerRadius(32)
         }
@@ -227,6 +235,8 @@ struct QuickFoodSheet: View {
             .padding(.bottom, 16)
 
             PrimaryButton(title: "Save meal") {
+                let title = mealName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Meal logged" : mealName
+                appState.addLog(type: .food, title: title, sub: selectedTag ?? "Food pattern tracking")
                 appState.showToast("Meal logged")
                 isPresented = false
             }
@@ -286,7 +296,7 @@ struct QuickBristolSheet: View {
                 .padding(.bottom, 16)
 
             PrimaryButton(title: "Save") {
-                appState.showToast("Bristol type \(selected) · saved")
+                appState.recordBowel(bristol: selected, urgency: 3, blood: .none, mucus: false, pain: 0, nighttime: false)
                 isPresented = false
             }
             .padding(.horizontal, 20)
@@ -294,6 +304,101 @@ struct QuickBristolSheet: View {
             Spacer()
         }
         .background(Color.bgElevated)
+    }
+}
+
+// MARK: - Check-In Sheet
+
+struct CheckInSheet: View {
+    var appState: AppState
+    @Binding var isPresented: Bool
+    @State private var status: MoodOption? = .ok
+    @State private var pain = 3.0
+    @State private var fatigue = 5.0
+    @State private var urgency = 3.0
+    @State private var stoolCount = 2.0
+    @State private var bloodPresent = false
+    @State private var medicationTaken = true
+    @State private var notes = ""
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 14) {
+                SheetHandle()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TODAY CHECK-IN").dsLabel()
+                    Text("Thirty-second gut check")
+                        .font(DS.serif(24))
+                        .foregroundColor(.fgPrimary)
+                    Text("Skip anything you do not want to answer.")
+                        .font(DS.sans(13))
+                        .foregroundColor(.fgDim)
+                }
+
+                FormCard(title: "Overall", label: status?.label.uppercased()) {
+                    HStack(spacing: 8) {
+                        ForEach(MoodOption.allCases, id: \.self) { option in
+                            LogPill(title: option.label, isActive: status == option) {
+                                status = status == option ? nil : option
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+
+                sliderCard("Pain", value: $pain, color: .clay)
+                sliderCard("Fatigue", value: $fatigue, color: .amber)
+                sliderCard("Urgency", value: $urgency, color: .sage)
+                sliderCard("Stool count today", value: $stoolCount, range: 0...20, color: .ink)
+
+                FormCard(title: "Flags", label: "OPTIONAL") {
+                    FlowLayout(spacing: 6) {
+                        PillToggle(label: "Blood present", isActive: bloodPresent, color: .clay) { bloodPresent.toggle() }
+                        PillToggle(label: "Medication taken", isActive: medicationTaken, color: .sage) { medicationTaken.toggle() }
+                    }
+                }
+
+                FormCard(title: "Note", label: "OPTIONAL") {
+                    TextField("Anything your doctor should know?", text: $notes, axis: .vertical)
+                        .lineLimit(3...5)
+                        .font(DS.sans(15))
+                        .foregroundColor(.fgPrimary)
+                        .padding(12)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                PrimaryButton(title: "Save check-in") {
+                    appState.recordCheckIn(
+                        status: status,
+                        pain: Int(pain),
+                        fatigue: Int(fatigue),
+                        urgency: Int(urgency),
+                        stoolCount: Int(stoolCount),
+                        bloodPresent: bloodPresent,
+                        medicationTaken: medicationTaken,
+                        notes: notes
+                    )
+                    isPresented = false
+                }
+
+                GhostButton(title: "Skip for now") {
+                    isPresented = false
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(Color.bgElevated)
+    }
+
+    private func sliderCard(_ title: String, value: Binding<Double>, range: ClosedRange<Double> = 0...10, color: Color) -> some View {
+        FormCard(title: title, label: "\(Int(value.wrappedValue))") {
+            Slider(value: value, in: range, step: 1).tint(color)
+        }
     }
 }
 

@@ -316,6 +316,8 @@ struct AppIcon: View {
         case "book":     return "book"
         case "download": return "arrow.down.circle"
         case "logout":   return "rectangle.portrait.and.arrow.right"
+        case "note":     return "note.text"
+        case "shield":   return "checkmark.shield"
         default:         return "circle"
         }
     }

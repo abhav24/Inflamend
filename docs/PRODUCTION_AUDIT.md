@@ -237,3 +237,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now.
+
+## Core Product UX, Safety, and Privacy Audit
+
+### Feature Audit: Today, Log, Care, Profile
+
+Product Simplicity Reviewer:
+- Findings: Today now has a single check-in CTA and safety card. Log entries create visible timeline records across rapid, food, BM, symptom, meds, sleep, weight, note, and voice-confirmed flows.
+- Required fixes: Durable local persistence is the next highest-impact gap because current entries reset on app restart.
+- Status: Accept checkpoint with persistence gap.
+
+Apple UI Quality Reviewer:
+- Findings: The pass keeps the existing visual system and avoids adding a new navigation layer. Voice confirmation and privacy controls use familiar form/card patterns.
+- Required fixes: Audit largest Dynamic Type, VoiceOver order, and Log tab density in the polish pass.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: UI events now map to domain concepts that can be written to `health_logs`, `bowel_logs`, `medication_logs`, `voice_logs`, and report tables later.
+- Required fixes: Add repository/service boundaries before wiring Supabase so UI code does not own sync behavior.
+- Status: Accept scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Care safety copy is visible, red-flag detections can surface in Today/Care, AI memory defaults off, and transcript storage defaults off.
+- Required fixes: Persist privacy settings and ensure live AI requests never include health context unless memory/context consent is enabled.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Build and test passed on `iPhone 17`; the first compile failure from stray top-level text was fixed and documented.
+- Required fixes: Add AppState unit tests and UI smoke tests for check-in, voice confirmation, and privacy toggles.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with auth/onboarding and persistence.

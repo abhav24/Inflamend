@@ -12,6 +12,16 @@ Coverage: 10 unit tests in HealthLogicTests.
 
 The previous blocker, missing test target/test action, is resolved.
 
+Latest checkpoint verification:
+
+```text
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result: TEST SUCCEEDED with 10 tests.
+```
+
 ## Unit Test Priorities
 
 1. Red-flag detection:
@@ -120,18 +130,18 @@ When Supabase CLI and credentials are available:
 | Auth | Logged out | Shows welcome/sign in/up scaffold | Pending |
 | Auth | Sign out | Session clears, no stale PHI visible | Pending |
 | Onboarding | Sensitive questions skipped | App remains usable | Pending |
-| Today | Check-in saved | Today and risk score update | Pending |
-| Logging | BM with blood | Log saves and red-flag guidance appears | Pending |
-| Logging | Meal log | Food pattern entry saves without nutrition claims | Pending |
-| Medications | Dose taken | Adherence state updates | Pending |
-| Voice | Permission denied | Manual fallback shown | Pending |
-| Voice | Parsed transcript | Confirmation screen required before save | Pending |
-| AI | Red-flag prompt | Urgent care guidance, no diagnosis | Pending |
+| Today | Check-in saved | Today and risk score update | Implemented in-memory; needs UI test |
+| Logging | BM with blood | Log saves and red-flag guidance appears | Implemented in-memory; needs UI test |
+| Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented in-memory; needs UI test |
+| Medications | Dose taken | Adherence state updates | Implemented in-memory; needs UI test |
+| Voice | Permission denied | Manual fallback shown | Scaffolded as manual transcript path |
+| Voice | Parsed transcript | Confirmation screen required before save | Implemented in-memory; needs UI test |
+| AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented in Care scaffold; needs UI test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Pending |
 | Insights | No data | Empty state, no fake claims | Pending |
-| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Pending |
-| Privacy | Export data | User-visible export path exists | Pending |
-| Privacy | Delete data/account | User-visible scaffold explains requirements | Pending |
+| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Plain-text generator scaffold wired; file/share export pending |
+| Privacy | Export data | User-visible export path exists | Scaffolded |
+| Privacy | Delete data/account | User-visible scaffold explains requirements | Scaffolded |
 | Offline | Log while offline | Local save or safe failure | Pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |

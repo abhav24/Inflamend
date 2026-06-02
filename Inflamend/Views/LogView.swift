@@ -8,6 +8,8 @@ enum LogTab: String, CaseIterable {
     case meds    = "Meds"
     case sleep   = "Sleep"
     case weight  = "Weight"
+    case note    = "Note"
+    case voice   = "Voice"
 }
 
 struct LogView: View {
@@ -43,6 +45,8 @@ struct LogView: View {
                     case .meds:    LogMedsForm(appState: appState)
                     case .sleep:   LogSleepForm(appState: appState)
                     case .weight:  LogWeightForm(appState: appState)
+                    case .note:    LogNoteForm(appState: appState)
+                    case .voice:   LogVoiceForm(appState: appState)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -110,19 +114,38 @@ struct PillToggle: View {
 struct LogRapidForm: View {
     var appState: AppState
     let items: [(k: String, label: String, icon: String, color: Color, msg: String)] = [
-        ("well",  "Feeling well",    "check",    .sage,  "Logged · feeling well"),
-        ("flare", "In a flare",      "flame",    .clay,  "Logged · flare marker"),
-        ("water", "Water · 250ml",   "droplet",  .ink,   "Logged · 250ml water"),
-        ("meds",  "Meds taken",      "pill",     .amber, "Logged · meds taken"),
-        ("bm",    "Bowel movement",  "activity", .clay,  "Use Bowel tab for detail"),
-        ("meal",  "Safe meal",       "fork",     .sage,  "Logged · safe meal"),
+        ("well",  "Feeling well",    "check",    .sage,  "Feeling well"),
+        ("flare", "In a flare",      "flame",    .clay,  "Flare marker"),
+        ("water", "Water · 250ml",   "droplet",  .ink,   "Water · 250ml"),
+        ("meds",  "Meds taken",      "pill",     .amber, "Medication taken"),
+        ("bm",    "Bowel movement",  "activity", .clay,  "Bowel movement"),
+        ("meal",  "Safe meal",       "fork",     .sage,  "Safe meal"),
     ]
 
     var body: some View {
         let cols = [GridItem(.flexible()), GridItem(.flexible())]
         LazyVGrid(columns: cols, spacing: 10) {
             ForEach(items, id: \.k) { item in
-                Button { appState.showToast(item.msg) } label: {
+                Button {
+                    switch item.k {
+                    case "well":
+                        appState.recordCheckIn(status: .great, pain: 0, fatigue: 1, urgency: 0, stoolCount: 1, bloodPresent: false, medicationTaken: true, notes: "")
+                    case "flare":
+                        appState.recordCheckIn(status: .flare, pain: 7, fatigue: 8, urgency: 7, stoolCount: 5, bloodPresent: false, medicationTaken: true, notes: "Rapid flare marker")
+                    case "water":
+                        appState.addLog(type: .water, title: "Water · 250ml", sub: "Saved on this device")
+                        appState.showToast("Water logged")
+                    case "meds":
+                        appState.recordMedicationTaken()
+                    case "bm":
+                        appState.recordBowel(bristol: 4, urgency: 3, blood: .none, mucus: false, pain: 0, nighttime: false)
+                    case "meal":
+                        appState.addLog(type: .food, title: "Safe meal", sub: "Food pattern tracking")
+                        appState.showToast("Meal logged")
+                    default:
+                        appState.showToast(item.msg)
+                    }
+                } label: {
                     VStack(spacing: 8) {
                         ZStack {
                             Circle().fill(item.color.opacity(0.13)).frame(width: 44, height: 44)
@@ -209,6 +232,9 @@ struct LogFoodForm: View {
         }
 
         PrimaryButton(title: "Save entry") {
+            let title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Meal · \(meal)" : name
+            let sub = tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
+            appState.addLog(type: .food, title: title, sub: sub)
             appState.showToast("Meal logged")
             name = ""; tags = []
         }
@@ -221,9 +247,10 @@ struct LogBowelForm: View {
     var appState: AppState
     @State private var bristol = 4
     @State private var urgency = 3.0
-    @State private var blood = false
+    @State private var blood: BloodAmount = .none
     @State private var mucus = false
-    @State private var pain  = false
+    @State private var pain  = 2.0
+    @State private var nighttime = false
     let bristolLabels = ["Hard lumps", "Lumpy sausage", "Cracked sausage", "Smooth sausage", "Soft blobs", "Mushy", "Watery"]
 
     var body: some View {
@@ -264,16 +291,37 @@ struct LogBowelForm: View {
                 .tint(.amber)
         }
 
+        FormCard(title: "Blood", label: blood.rawValue.uppercased()) {
+            FlowLayout(spacing: 6) {
+                ForEach([BloodAmount.none, .trace, .visible, .significant], id: \.rawValue) { option in
+                    PillToggle(label: option.rawValue.capitalized, isActive: blood == option, color: option == .none ? .sage : .clay) {
+                        blood = option
+                    }
+                }
+            }
+        }
+
+        FormCard(title: "Pain", label: "LEVEL \(Int(pain))/10") {
+            Slider(value: $pain, in: 0...10, step: 1)
+                .tint(.clay)
+        }
+
         FormCard(title: "Other", label: "TAG IF PRESENT") {
             FlowLayout(spacing: 6) {
-                PillToggle(label: "Blood", isActive: blood, color: .clay) { blood.toggle() }
                 PillToggle(label: "Mucus", isActive: mucus, color: .amber) { mucus.toggle() }
-                PillToggle(label: "Pain",  isActive: pain,  color: .clay)  { pain.toggle() }
+                PillToggle(label: "Nighttime", isActive: nighttime, color: .clay) { nighttime.toggle() }
             }
         }
 
         PrimaryButton(title: "Save entry") {
-            appState.showToast("Type \(bristol) · urgency \(Int(urgency))/10 · saved")
+            appState.recordBowel(
+                bristol: bristol,
+                urgency: Int(urgency),
+                blood: blood,
+                mucus: mucus,
+                pain: Int(pain),
+                nighttime: nighttime
+            )
         }
     }
 }
@@ -309,6 +357,7 @@ struct LogSymptomForm: View {
             }
         }
         PrimaryButton(title: "Save entry") {
+            appState.addLog(type: .symptom, title: "Pain \(Int(painVal))/10 · fatigue \(Int(fatigueVal))/10", sub: "Mood \(Int(moodVal))/10")
             appState.showToast("Symptoms saved")
         }
     }
@@ -333,6 +382,9 @@ struct LogMedsForm: View {
                         Button {
                             meds[idx].taken.toggle()
                             let verb = meds[idx].taken ? "taken" : "marked missed"
+                            if meds[idx].taken {
+                                appState.recordMedicationTaken(name: med.name)
+                            }
                             appState.showToast("\(med.name) · \(verb)")
                         } label: {
                             ZStack {
@@ -422,6 +474,7 @@ struct LogSleepForm: View {
         }
 
         PrimaryButton(title: "Save entry") {
+            appState.addLog(type: .sleep, title: "Sleep quality \(Int(quality))/10", sub: "\(wake) bathroom wakes")
             appState.showToast("Sleep logged")
         }
     }
@@ -460,9 +513,140 @@ struct LogWeightForm: View {
             .padding(.top, 2)
 
             PrimaryButton(title: "Save entry") {
+                appState.addLog(type: .weight, title: "Weight · \(weight) kg", sub: "Manual entry")
                 appState.showToast("Weight · \(weight) kg")
             }
             .padding(.top, 14)
+        }
+    }
+}
+
+// MARK: - Note form
+
+struct LogNoteForm: View {
+    var appState: AppState
+    @State private var note = ""
+
+    var body: some View {
+        FormCard(title: "Note", label: "PRIVATE") {
+            TextField("What changed or what should your doctor know?", text: $note, axis: .vertical)
+                .lineLimit(5...8)
+                .font(DS.sans(15))
+                .foregroundColor(.fgPrimary)
+                .padding(12)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Text("Notes stay in your log. Do not use notes for urgent care needs.")
+                .font(DS.sans(12))
+                .foregroundColor(.fgDim)
+        }
+
+        PrimaryButton(title: "Save note") {
+            let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                appState.showToast("Add a note first")
+                return
+            }
+            appState.addLog(type: .note, title: trimmed, sub: "Manual note")
+            appState.showToast("Note saved")
+            note = ""
+        }
+    }
+}
+
+// MARK: - Voice form
+
+struct LogVoiceForm: View {
+    var appState: AppState
+    @State private var transcript = ""
+    @State private var draft: VoiceLogDraft? = nil
+
+    var body: some View {
+        FormCard(title: "Voice transcript", label: "SCAFFOLD") {
+            Text("Microphone and Speech permissions still need Apple setup. Paste or type a transcript here to test parsing.")
+                .font(DS.sans(12))
+                .foregroundColor(.fgDim)
+                .lineSpacing(2)
+
+            TextField("Example: I had three bowel movements, Bristol six, no blood.", text: $transcript, axis: .vertical)
+                .lineLimit(4...8)
+                .font(DS.sans(15))
+                .foregroundColor(.fgPrimary)
+                .padding(12)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            GhostButton(title: "Parse transcript") {
+                let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    appState.showToast("Add a transcript first")
+                    return
+                }
+                draft = VoiceLogParser.parse(trimmed)
+            }
+        }
+
+        if let draft {
+            VoiceDraftConfirmation(draft: draft) {
+                appState.recordVoiceDraft(draft)
+                transcript = ""
+                self.draft = nil
+            } discard: {
+                self.draft = nil
+            }
+        }
+    }
+}
+
+struct VoiceDraftConfirmation: View {
+    let draft: VoiceLogDraft
+    let save: () -> Void
+    let discard: () -> Void
+
+    var body: some View {
+        FormCard(title: "Confirm before saving", label: draft.confidence.rawValue.uppercased()) {
+            HStack(spacing: 10) {
+                IconBadge(name: "mic", size: 34, iconSize: 15, color: .sage)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(draft.type.rawValue.capitalized)
+                        .font(DS.sans(15, weight: .medium))
+                        .foregroundColor(.fgPrimary)
+                    Text("Voice-derived health data is never auto-saved.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                }
+            }
+
+            if !draft.fields.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(draft.fields.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
+                        HStack {
+                            Text(key.replacingOccurrences(of: "_", with: " ").capitalized)
+                                .font(DS.sans(13))
+                                .foregroundColor(.fgDim)
+                            Spacer()
+                            Text(value)
+                                .font(DS.mono(12))
+                                .foregroundColor(.fgPrimary)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            if !draft.safetyFlags.isEmpty {
+                Text("Safety flags detected. Review this entry and seek medical help if symptoms feel serious or rapidly worsening.")
+                    .font(DS.sans(12))
+                    .foregroundColor(.clay)
+                    .lineSpacing(2)
+            }
+
+            PrimaryButton(title: "Save confirmed log", action: save)
+            GhostButton(title: "Discard draft", action: discard)
         }
     }
 }

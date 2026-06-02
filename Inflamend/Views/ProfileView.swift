@@ -30,7 +30,7 @@ struct ProfileView: View {
                             .foregroundColor(.fgDim)
                     }
                     Spacer()
-                    Button { } label: {
+                    Button { appState.showToast("Profile editing scaffolded") } label: {
                         Text("Edit")
                             .font(DS.sans(13, weight: .medium))
                             .foregroundColor(.fgPrimary)
@@ -68,10 +68,30 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "download", label: "Export 30-day PDF report", sub: "Share with your GI")     { appState.showToast("Preparing report…") }
-                    ProfileRow(icon: "bell",     label: "Medication reminders",     sub: "4 active")
-                    ProfileRow(icon: "calendar", label: "Menstrual tracking",       sub: "On")
-                    ProfileRow(icon: "heart",    label: "Flare history",            sub: "2 flares recorded", isLast: true)
+                    ProfileRow(icon: "download", label: "Export 30-day report", sub: "Plain text scaffold") {
+                        let report = ReportSummaryGenerator.plainText(
+                            ReportSummaryInput(
+                                daysLogged: 7,
+                                bowelMovementCount: appState.logs.filter { $0.type == .bowel }.count,
+                                bloodEventCount: 0,
+                                medicationDosesTaken: appState.medsTaken,
+                                medicationDosesScheduled: appState.medsTotal,
+                                possiblePatterns: ["Keep logging to improve confidence"],
+                                notes: ["Export requested from Profile"]
+                            )
+                        )
+                        appState.addLog(type: .note, title: "Doctor report prepared", sub: "\(report.count) characters")
+                        appState.showToast("Report scaffold prepared")
+                    }
+                    ProfileRow(icon: "bell", label: "Medication reminders", sub: "Requires notification setup") {
+                        appState.showToast("Notification setup required")
+                    }
+                    ProfileRow(icon: "calendar", label: "Flare history", sub: "Scaffolded") {
+                        appState.showToast("Flare history scaffolded")
+                    }
+                    ProfileRow(icon: "heart", label: "Care plan", sub: "Questions for your GI", isLast: true) {
+                        appState.showToast("Care plan scaffolded")
+                    }
                 }
                 .background(Color.bgCard)
                 .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.strokeDefault, lineWidth: 0.5))
@@ -86,9 +106,12 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "sparkle",  label: "AI memory",    sub: "Your chat context")
-                    ProfileRow(icon: "settings", label: "Preferences")
-                    ProfileRow(icon: "book",     label: "IBD library",  sub: "Guided articles")
+                    ProfileRow(icon: "settings", label: "Preferences", sub: "Units, timezone, reminders") {
+                        appState.showToast("Preferences scaffolded")
+                    }
+                    ProfileRow(icon: "book", label: "IBD library", sub: "Guided articles") {
+                        appState.showToast("Education library scaffolded")
+                    }
                     ProfileRow(icon: "logout",   label: "Sign out",     isDanger: true, isLast: true) {
                         appState.showToast("Signed out")
                     }
@@ -99,6 +122,45 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
                 .appearAnimation(delay: 0.28)
+
+                SectionLabel("PRIVACY")
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+
+                VStack(spacing: 0) {
+                    ProfileRow(
+                        icon: "sparkle",
+                        label: "AI memory",
+                        sub: appState.aiMemoryEnabled ? "On · saved only with consent" : "Off"
+                    ) {
+                        appState.aiMemoryEnabled.toggle()
+                        appState.showToast("AI memory \(appState.aiMemoryEnabled ? "on" : "off")")
+                    }
+                    ProfileRow(
+                        icon: "mic",
+                        label: "Voice transcript storage",
+                        sub: appState.voiceTranscriptStorageEnabled ? "On · transcripts may be stored" : "Off · drafts only"
+                    ) {
+                        appState.voiceTranscriptStorageEnabled.toggle()
+                        appState.showToast("Transcript storage \(appState.voiceTranscriptStorageEnabled ? "on" : "off")")
+                    }
+                    ProfileRow(icon: "download", label: "Export my data", sub: "Requires backend credentials") {
+                        appState.showToast("Data export scaffolded")
+                    }
+                    ProfileRow(icon: "close", label: "Delete AI history", sub: "\(appState.chatMessages.count) messages", isDanger: true) {
+                        appState.chatMessages = [ChatMessage(role: .assistant, content: "AI history cleared on this device. Cloud deletion requires backend setup.")]
+                        appState.showToast("AI history cleared locally")
+                    }
+                    ProfileRow(icon: "close", label: "Delete data/account", sub: "Requires signed-in backend account", isDanger: true, isLast: true) {
+                        appState.showToast("Account deletion scaffolded")
+                    }
+                }
+                .background(Color.bgCard)
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.strokeDefault, lineWidth: 0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
+                .appearAnimation(delay: 0.35)
 
                 Text("INFLAMEND v2.4.0 · BUILD 184")
                     .font(DS.mono(11))
