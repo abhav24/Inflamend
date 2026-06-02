@@ -139,7 +139,7 @@ struct ProfileView: View {
                     ) {
                         appState.setVoiceTranscriptStorageEnabled(!appState.voiceTranscriptStorageEnabled)
                     }
-                    ProfileRow(icon: "download", label: "Export my data", sub: "Local JSON file") {
+                    ProfileRow(icon: "download", label: "Export my data", sub: "Local JSON file", accessibilityID: "profile-export-data-row") {
                         do {
                             preparedExport = .userData(try appState.prepareUserDataExport())
                         } catch {
@@ -322,6 +322,7 @@ struct UserDataExportSheet: View {
                     Text("Data export ready")
                         .font(DS.sans(18, weight: .semibold))
                         .foregroundColor(.fgPrimary)
+                        .accessibilityIdentifier("user-data-export-title")
                     Text(export.fileName)
                         .font(DS.mono(11))
                         .foregroundColor(.fgFaint)
@@ -360,6 +361,7 @@ struct UserDataExportSheet: View {
                 .clipShape(Capsule())
             }
             .buttonStyle(PressableButtonStyle(scale: 0.97))
+            .accessibilityIdentifier("user-data-export-share-button")
         }
         .padding(20)
         .background(Color.bgPrimary)
@@ -402,47 +404,57 @@ struct ProfileRow: View {
     var sub: String? = nil
     var isDanger: Bool = false
     var isLast: Bool = false
+    var accessibilityID: String? = nil
     var action: (() -> Void)? = nil
 
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isDanger ? Color.clayDim : Color.bgInset)
-                        .frame(width: 32, height: 32)
-                    AppIcon(name: icon, size: 15, color: isDanger ? .clay : .fgDim)
-                }
+        if let action {
+            Button(action: action) {
+                rowContent
+            }
+            .buttonStyle(PressableButtonStyle(scale: 0.97))
+            .accessibilityIdentifier(accessibilityID ?? label)
+        } else {
+            rowContent
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(accessibilityID ?? label)
+        }
+    }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
-                        .font(DS.sans(14))
-                        .foregroundColor(isDanger ? .clay : .fgPrimary)
-                        .tracking(-0.1)
-                    if let s = sub {
-                        Text(s)
-                            .font(DS.sans(12))
-                            .foregroundColor(.fgFaint)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var rowContent: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isDanger ? Color.clayDim : Color.bgInset)
+                    .frame(width: 32, height: 32)
+                AppIcon(name: icon, size: 15, color: isDanger ? .clay : .fgDim)
+            }
 
-                if !isDanger {
-                    AppIcon(name: "chevron", size: 14, color: .fgFaint)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(DS.sans(14))
+                    .foregroundColor(isDanger ? .clay : .fgPrimary)
+                    .tracking(-0.1)
+                if let s = sub {
+                    Text(s)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgFaint)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .overlay(alignment: .bottom) {
-                if !isLast {
-                    Rectangle().fill(Color.strokeDefault).frame(height: 0.5).padding(.leading, 60)
-                }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !isDanger {
+                AppIcon(name: "chevron", size: 14, color: .fgFaint)
             }
         }
-        .buttonStyle(PressableButtonStyle(scale: 0.97))
-        .disabled(action == nil)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle().fill(Color.strokeDefault).frame(height: 0.5).padding(.leading, 60)
+            }
+        }
     }
 }
 

@@ -40,6 +40,16 @@
                ReferencedContainer = "container:Inflamend.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E0E1E2E3E4E5E6E7E8E9E030"
+               BuildableName = "InflamendUITests.xctest"
+               BlueprintName = "InflamendUITests"
+               ReferencedContainer = "container:Inflamend.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

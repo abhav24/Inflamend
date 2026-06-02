@@ -156,8 +156,10 @@ struct AuthGateView: View {
 
                     if mode == .signUp {
                         authTextField("Name", text: $displayName, contentType: .name)
+                            .accessibilityIdentifier("auth-name-field")
                     }
                     authTextField("Email", text: $email, contentType: .emailAddress)
+                        .accessibilityIdentifier("auth-email-field")
                     SecureField("Password scaffold", text: $password)
                         .textContentType(mode == .signUp ? .newPassword : .password)
                         .font(DS.sans(15))
@@ -165,6 +167,7 @@ struct AuthGateView: View {
                         .padding(14)
                         .background(Color.bgInset)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .accessibilityIdentifier("auth-password-field")
 
                     Text("Password is accepted for flow testing only and is not stored in this local scaffold.")
                         .font(DS.sans(12))
@@ -185,6 +188,7 @@ struct AuthGateView: View {
                         appState.signIn(email: email)
                     }
                 }
+                .accessibilityIdentifier("auth-primary-button")
 
                 VStack(alignment: .leading, spacing: 8) {
                     AuthValueRow(icon: "shield", title: "Safety-first", detail: "Red flags show cautious guidance, never diagnosis.")
@@ -324,6 +328,7 @@ struct OnboardingGateView: View {
                         hasFlarePlan: hasFlarePlan
                     )
                 }
+                .accessibilityIdentifier("onboarding-finish-button")
 
                 GhostButton(title: "Skip sensitive questions") {
                     appState.skipOnboarding()
@@ -366,6 +371,7 @@ struct CustomTabBar: View {
             }
             .buttonStyle(PressableButtonStyle(scale: 0.9))
             .accessibilityLabel("Log")
+            .accessibilityIdentifier("tab-log")
             .zIndex(2)
 
             HStack(spacing: 0) {
@@ -417,6 +423,8 @@ struct CustomTabBar: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(PressableButtonStyle(scale: 0.88))
+        .accessibilityLabel(tab.label)
+        .accessibilityIdentifier("tab-\(tab.rawValue)")
     }
 }
 

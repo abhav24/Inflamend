@@ -329,6 +329,44 @@ What remains:
 What was committed:
 - Commit message: `Add local user data export`
 
+## Current Checkpoint: UI Smoke Test Target
+
+What changed:
+- Added an `InflamendUITests` UI test target and wired it into the shared `Inflamend` scheme.
+- Added debug launch arguments to reset and seed a complete local app state for deterministic UI runs.
+- Added stable accessibility identifiers for auth fields/actions, onboarding completion, tab buttons, the Profile data export row, and the user-data export sheet controls.
+- Refactored Profile rows so actionable rows use a concrete `Button(action:)` with a rectangular hit target. This fixed a UI automation and product tap-path issue where the export row could be tapped without firing.
+- Added a UI smoke test that launches seeded state, navigates to Profile, taps "Export my data", and verifies the local export sheet title and share action.
+
+What was tested:
+- `xcodebuild -list`
+- `plutil -lint Inflamend.xcodeproj/project.pbxproj`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileUserDataExportSheetSmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Xcode lists `Inflamend`, `InflamendTests`, and `InflamendUITests`.
+- Project file plist lint passed.
+- Focused Profile user-data export UI smoke test passed.
+- Full test run passed with 25 tests: 24 unit tests and 1 UI test.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- Initial UI runs found the row but did not present the sheet. The accessibility hierarchy showed no log-count change, no toast, and no modal, which confirmed the row action was not firing.
+
+Fixes made:
+- Rebuilt `ProfileRow` to use a concrete non-optional button action for actionable rows.
+- Added explicit row `contentShape(Rectangle())`.
+- Replaced brittle toast/container assertions with stable sheet title and share-button identifiers.
+
+What remains:
+- Add UI tests for auth, onboarding, destructive Profile confirmations, Care red-flag prompts, and key logging flows.
+- Add Dynamic Type and VoiceOver verification for the new Profile sheet and confirmation dialogs.
+
+What was committed:
+- Commit message: `Add UI smoke test target`
+
 ## Command Log
 
 ```text
@@ -405,6 +443,21 @@ Result after user-data-export pass: TEST SUCCEEDED with 24 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after user-data-export pass: BUILD SUCCEEDED.
+
+xcodebuild -list
+Result after UI smoke target pass: targets include Inflamend, InflamendTests, and InflamendUITests.
+
+plutil -lint Inflamend.xcodeproj/project.pbxproj
+Result after UI smoke target pass: OK.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileUserDataExportSheetSmoke
+Result after UI smoke target pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after UI smoke target pass: TEST SUCCEEDED with 25 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after UI smoke target pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -412,7 +465,7 @@ Result after user-data-export pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, privacy controls, and first UI smoke test wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -444,7 +497,7 @@ Result after user-data-export pass: BUILD SUCCEEDED.
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
 | Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles, destructive confirmations | Enforce preferences in live backend/AI behavior |
-| Data export/delete | Partial local implementation | Export my data writes protected local JSON; destructive delete request is confirmed first | Implement Supabase-backed export/delete and CSV/PDF |
+| Data export/delete | Partial local implementation | Export my data writes protected local JSON and has Profile UI smoke coverage; destructive delete request is confirmed first | Implement Supabase-backed export/delete, CSV/PDF, and confirmation UI tests |
 
 ## Blockers and External Dependencies
 
@@ -488,12 +541,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 1 UI smoke test through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, and user-data export checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, and first Profile UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, and UI smoke target checkpoints exist.
 
 Continue working.
 

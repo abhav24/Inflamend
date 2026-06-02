@@ -237,6 +237,16 @@ class AppState {
 
     init(store: AppSnapshotStore = .live) {
         self.store = store
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--inflamend-reset-state") {
+            store.delete()
+        }
+        if ProcessInfo.processInfo.arguments.contains("--inflamend-seed-complete-state") {
+            seedCompleteState()
+            persist()
+            return
+        }
+        #endif
         if let snapshot = store.load() {
             apply(snapshot)
         } else if store.fileExists {
@@ -591,6 +601,31 @@ class AppState {
             lastSyncStatus = "Local save failed"
         }
     }
+
+    #if DEBUG
+    private func seedCompleteState() {
+        authSession = .local(email: "ui-test@example.com", displayName: "UI Test")
+        onboardingProfile = OnboardingProfile(
+            diagnosis: "Ulcerative colitis",
+            primaryGoal: "Prepare doctor reports",
+            baselineStoolCount: 2,
+            hasFlarePlan: false,
+            skippedSensitiveQuestions: false,
+            completedAt: Date()
+        )
+        riskScore = 24
+        medsTaken = 1
+        medsTotal = 2
+        logs = [
+            LogEntry(type: .note, title: "UI test export note", sub: "Seeded local log", time: Self.timeString(from: Date()))
+        ]
+        chatMessages = [
+            ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage)
+        ]
+        pendingSyncMutations = []
+        lastSyncStatus = "Seeded for UI testing"
+    }
+    #endif
 
     nonisolated static func defaultDisplayName(for email: String) -> String {
         let localPart = email.split(separator: "@").first.map(String.init) ?? "there"

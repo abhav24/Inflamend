@@ -493,3 +493,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with UI tests, CSV/PDF output, and backend export jobs.
+
+## UI Smoke Test Target Audit
+
+### Feature Audit: Profile Export UI Smoke Coverage
+
+Product Simplicity Reviewer:
+- Findings: The UI test starts from deterministic seeded state and covers a real user path: Profile navigation, local data export, preview sheet, and share action availability.
+- Required fixes: Expand coverage to auth/onboarding and the highest-frequency logging flows before release.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The Profile row hit target is now explicit, and the test caught a real tap-path defect before commit.
+- Required fixes: Add Dynamic Type and VoiceOver verification for export sheets and destructive confirmation dialogs.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The smoke test confirms the UI path reaches the same local JSON export and audit-log flow covered by unit tests.
+- Required fixes: Add UI coverage for backend-blocked sync/retry states once Supabase integration starts.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The tested export path surfaces the local sensitive-data preview before sharing and uses protected local export files.
+- Required fixes: Add cloud export receipts, retention language, and backend deletion parity before release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` now passes with 25 tests: 24 unit tests and 1 UI smoke test. `xcodebuild clean build` also passes.
+- Required fixes: Add UI tests for destructive confirmations, Care red flags, auth/onboarding, and logging.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue expanding UI coverage and backend export readiness.

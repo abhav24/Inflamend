@@ -14,7 +14,13 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer OK | Safety copy visible | Needs work |
-| Profile | Partial | Unverified | Likely acceptable | Rows OK | Destructive actions now use confirmation dialogs | Needs UI test |
+| Profile | Partial | Unverified | Likely acceptable | Rows OK; export row hit target verified by UI smoke test | Destructive actions now use confirmation dialogs | In progress |
+
+## Latest Improvements
+
+- Added stable accessibility identifiers for auth fields, auth primary action, onboarding completion, tab buttons, Profile data export row, and user-data export sheet actions.
+- Refactored Profile rows so actionable rows use a concrete `Button(action:)` and an explicit rectangular hit target.
+- Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 
 ## Required Fixes
 
@@ -30,4 +36,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists. Accessibility polish and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the Profile data export path now has smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
