@@ -1037,3 +1037,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with sync-worker implementation, populated Insights coverage, and edit/delete flows.
+
+## Project Asset Catalog Cleanup Audit
+
+### Feature Audit: Preview Asset Resource Packaging
+
+Product Simplicity Reviewer:
+- Findings: No user-facing flow changed; the pass removes confusing build-resource noise that could hide real asset packaging issues later.
+- Required fixes: Add production app icon artwork and screenshots before release.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Preview assets now remain under the development asset path instead of being compiled as app resources. Clean build output confirms `actool` receives only `Inflamend/Assets.xcassets`.
+- Required fixes: Perform visual QA after replacing placeholder app icon and launch assets.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: No backend or data-model behavior changed.
+- Required fixes: None for this checkpoint.
+- Status: Accept.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Removing preview assets from app resources reduces accidental packaging of development-only files.
+- Required fixes: Continue checking release archives for debug/development resources before App Store submission.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Project plist lint passed, clean build passed, `actool` no longer references the nonexistent top-level preview asset catalog, and `InflamendTests` passed with 24 unit tests.
+- Required fixes: Run full UI regression after production artwork or asset-catalog structure changes.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with production artwork, populated Insights coverage, and sync-worker implementation.

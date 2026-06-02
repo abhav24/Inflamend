@@ -12,9 +12,10 @@ Not ready for App Store submission.
 | Bundle ID | Present | `com.inflamend.app`; ownership must be verified |
 | Version/build | Present | `1.0` / `1` in project and UI footer |
 | App icon | Incomplete | Catalog exists without artwork |
+| Build resources | Improved | Preview asset catalog remains under development assets and is no longer packaged as an app resource |
 | Launch screen | Generated | Needs visual QA |
 | Privacy manifest | Added scaffold | Must be reviewed before release |
-| Permission strings | Missing for future voice/HealthKit | Add when features land |
+| Permission strings | Partial | Microphone and speech-recognition usage strings are present for the voice scaffold; HealthKit and notifications remain pending |
 | Medical claims | Risk | Copy must remain cautious |
 | Account deletion | Partial | Confirmation and local deletion request exist; required backend deletion still blocked until production auth/Supabase are live |
 | Data export | Partial | Doctor report creates a local shareable text file and full local user-data export creates shareable JSON; CSV/PDF and backend export jobs are pending |
