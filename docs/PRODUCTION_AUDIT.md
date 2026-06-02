@@ -1214,7 +1214,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: `LocalSyncReplayWorker` maps pending auth, onboarding, health log create/update/delete, privacy, chat, safety, export, and deletion mutations to explicit future Supabase targets/actions. Retry records `lastAttemptedAt` and `lastError` per mutation, repeated updates coalesce, and edit-then-delete removes redundant update replay.
-- Required fixes: Connect the planner to a real Supabase client, server IDs, idempotency keys, receipts, retry backoff, reachability, and conflict handling once credentials exist.
+- Required fixes: Connect the planner to a real Supabase client, returned server IDs, receipts, retry backoff, reachability, and conflict handling once credentials exist.
 - Status: Accept local contract.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1246,7 +1246,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: `restoreDeletedLog` reinserts the row at its original index, removes a staged `healthLogDeletion`, and restores pending create/update mutations that were removed during delete. This preserves future replay intent for both unreplayed local creates and existing-like edited records.
-- Required fixes: Replace local-only mutation restoration with server IDs, idempotency keys, live delete/update replay, conflict handling, and receipts once Supabase is connected.
+- Required fixes: Replace local-only mutation restoration with returned server IDs, live delete/update replay, conflict handling, and receipts once Supabase is connected.
 - Status: Accept local implementation.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1261,3 +1261,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live Supabase replay wiring, server IDs, structured records, and manual accessibility QA.
+
+## Sync Replay Metadata Audit
+
+### Feature Audit: Idempotency, Server IDs, and Receipts Scaffold
+
+Product Simplicity Reviewer:
+- Findings: The checkpoint does not add new user-facing sync complexity. It improves the invisible queue contract while keeping Profile sync copy plain and blocked when Supabase is unavailable.
+- Required fixes: Add per-record sync detail only when a failed record needs user action.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visible UI changed, so there is no new layout or interaction risk. Existing Profile sync blocked-state smoke coverage remains the visible contract.
+- Required fixes: Manually verify longer sync summaries once per-record detail exists.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Pending mutations now carry stable idempotency keys, optional server record IDs, and optional receipt metadata. Replay plans propagate those fields, and legacy queued mutations decode with generated keys.
+- Required fixes: Connect live Supabase replay, persist returned server IDs/receipts, add retry backoff, reachability, and conflict resolution.
+- Status: Accept local replay contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The generated idempotency keys are based on mutation kind, local record ID, and mutation ID rather than health text. The queued summaries still need review before production telemetry or backend logs.
+- Required fixes: Keep mutation summaries out of production diagnostics or sanitize them before live logging.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused sync metadata tests pass, including persistence, plan propagation, and legacy mutation decode. Full unit, full app test, and clean build checks pass.
+- Required fixes: Add live replay success/failure, network retry, conflict, and receipt-persistence tests once Supabase credentials are available.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay wiring, structured records, and manual accessibility QA.

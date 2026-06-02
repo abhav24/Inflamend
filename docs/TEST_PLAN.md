@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 28 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
+Coverage: 29 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 49 tests.
+Result: TEST SUCCEEDED with 50 tests.
 ```
 
 ## Unit Test Priorities
@@ -90,12 +90,14 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Timeline deletion undo restores the local row, restores pending create/update mutations, and removes staged delete mutations.
 - Local edits coalesce into unreplayed health-log creates or queue update mutations for existing records.
 - Replay plan routes each pending mutation to a future Supabase table/function action.
+- Replay metadata carries stable idempotency keys plus optional server record and receipt IDs.
 - Backend-blocked retries store per-record attempt timestamps and error details.
+- Legacy queued mutations decode with generated idempotency metadata.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning, per-record backend-blocked errors, Profile sync blocked-state UI, legacy decode, and corrupt snapshot fallback are covered. Network replay, server IDs, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -186,7 +188,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, pending queue, replay planning, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, pending queue, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -220,6 +222,7 @@ When Supabase CLI and credentials are available:
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
 - `testUndoDeleteRestoresLogAndPendingMutations`
+- `testLegacyPendingSyncMutationDecodesWithReplayMetadata`
 
 ## Current UI Test List
 

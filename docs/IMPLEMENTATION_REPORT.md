@@ -1419,12 +1419,42 @@ What remains:
 - Add manual VoiceOver and Dynamic Type notes for the toast action and row action order.
 - Add structured type-specific edit/undo semantics once health-log records are no longer timeline-text based.
 
+## Current Checkpoint: Sync Replay Metadata
+
+What changed:
+- Added stable, non-PHI idempotency keys to every pending sync mutation so future replay can retry without duplicating backend writes.
+- Added optional server record ID and receipt metadata fields to queued mutations so a live Supabase worker can preserve returned identifiers and proof-of-completion receipts later.
+- Made `PendingSyncMutation` decoding backward-compatible for older queued records that do not contain the new metadata.
+- Propagated idempotency, server ID, and receipt fields into `SyncReplayPlanItem` so planning has the same contract a network replay client will need.
+- Added unit coverage for metadata persistence through retry/restore, replay-plan propagation, and legacy mutation decode.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend -only-testing:InflamendTests/HealthLogicTests/testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors -only-testing:InflamendTests/HealthLogicTests/testLegacyPendingSyncMutationDecodesWithReplayMetadata`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused sync metadata tests passed.
+- Full unit target passed with 29 tests.
+- Full test suite passed with 50 tests: 29 unit tests and 21 UI smoke tests.
+- Clean build passed.
+
+What failed during the loop:
+- No implementation failures in this checkpoint.
+
+What remains:
+- Connect the replay planner to a real Supabase client once credentials exist.
+- Store returned server IDs and receipt IDs from live replay attempts.
+- Add backoff, reachability, conflict resolution, and user-visible per-record sync details.
+- Review mutation summaries before any production telemetry so PHI does not leak into logs.
+
 ## Pass Progress
 
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue with replay planning, per-record blocked error metadata, and Profile blocked-retry UI smoke coverage, core logging with Today check-in, bowel red-flag, food, medication dose, editable voice confirmation, native voice permission fallback, and timeline edit/delete/undo UI smoke coverage, data-backed Insights with empty-state, populated local-log, and chart accessibility-summary UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, Profile sign-out/export/destructive UI smoke tests wired, and preview asset catalog packaging cleaned up |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue with replay planning, idempotency metadata, per-record blocked error metadata, and Profile blocked-retry UI smoke coverage, core logging with Today check-in, bowel red-flag, food, medication dose, editable voice confirmation, native voice permission fallback, and timeline edit/delete/undo UI smoke coverage, data-backed Insights with empty-state, populated local-log, and chart accessibility-summary UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, privacy controls with toggle UI smoke coverage, Profile sign-out/export/destructive UI smoke tests wired, and preview asset catalog packaging cleaned up |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -1447,7 +1477,7 @@ What remains:
 | Weight logging | Implemented with local persistence | Weight form saves manual entry | Add units/validation and backend sync |
 | Notes logging | Implemented with local persistence and edit/delete/undo UI coverage | `LogNoteForm`; `testTimelineEntryEditUpdatesLocalRowSmoke`; `testTimelineEntryDeleteUndoRestoresLocalRowSmoke`; timeline deletion can remove and restore note entries locally | Add backend sync and structured note history |
 | Timeline log edit/delete/undo | Implemented locally with edit sheet, destructive confirmation, undo toast, and UI smoke coverage | `AppState.updateLog`, `AppState.deleteLog`, `AppState.performToastAction`, `healthLogUpdate`, `healthLogDeletion`, `testUpdateLogPersistsAndCoalescesPendingCreate`, `testDeleteLogRemovesEntryAndCoalescesPendingCreate`, `testUndoDeleteRestoresLogAndPendingMutations`, `testTimelineEntryEditUpdatesLocalRowSmoke`, `testTimelineEntryDeleteRequiresConfirmationSmoke`, `testTimelineEntryDeleteUndoRestoresLocalRowSmoke` | Add backend update/delete replay, conflict handling, receipts, and structured type-specific edit forms |
-| Offline sync queue | Implemented locally with replay planning and UI smoke coverage | `PendingSyncMutation`, `SyncReplayPlanItem`, `LocalSyncReplayWorker`, `healthLogUpdate`, `healthLogDeletion`, Profile sync row, queue persistence/edit/delete/replay-plan tests, `testProfileSyncRetryShowsBackendBlockedSmoke` | Connect Supabase replay client, server IDs, receipts, conflicts, backoff, reachability, and user-visible per-record detail |
+| Offline sync queue | Implemented locally with replay planning and UI smoke coverage | `PendingSyncMutation`, `SyncReplayPlanItem`, `LocalSyncReplayWorker`, idempotency/server/receipt metadata, `healthLogUpdate`, `healthLogDeletion`, Profile sync row, queue persistence/edit/delete/replay-plan/legacy-mutation tests, `testProfileSyncRetryShowsBackendBlockedSmoke` | Connect Supabase replay client, returned server IDs/receipts, conflicts, backoff, reachability, and user-visible per-record detail |
 | Voice logging parser | Logic implemented/tested and surfaced with UI smoke coverage | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add native speech capture and backend parity |
 | Voice logging confirmation | Implemented locally with editable confirmation and UI smoke coverage | `LogVoiceForm`, `VoiceDraftConfirmation`, `testVoiceTranscriptCanBeEditedBeforeSavingSmoke` | Add microphone/Speech integration, structured record save paths, backend sync, retention enforcement, edit/delete, and field validation |
 | Voice permission fallback | Scaffolded with UI smoke coverage | Generated microphone/speech usage descriptions, deterministic denied state, manual transcript fallback, `testVoicePermissionDeniedKeepsManualFallbackSmoke` | Add real Speech/microphone authorization and capture, Settings path, backend retention enforcement, and parser parity |
@@ -1502,12 +1532,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 28 unit tests through `InflamendTests` and 21 UI smoke tests through `InflamendUITests`.
+- Tests: passing with 29 unit tests through `InflamendTests` and 21 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile sync status with replay planning and blocked-retry UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, timeline log edit/delete/undo with UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, voice permission fallback with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty, populated, and chart accessibility-summary UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Profile sync status with replay planning/idempotency metadata and blocked-retry UI smoke coverage, Profile privacy toggles with UI smoke coverage, Today check-in with UI smoke coverage, timeline log edit/delete/undo with UI smoke coverage, bowel red-flag logging with UI smoke coverage, food logging with UI smoke coverage, medication dose tracking with UI smoke coverage, voice transcript confirmation with editable-field UI smoke coverage, voice permission fallback with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty, populated, and chart accessibility-summary UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, generated microphone/speech usage strings, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Profile sync blocked-state UI smoke coverage, Profile privacy-toggle UI smoke coverage, Today check-in UI smoke coverage, timeline edit/delete/undo UI smoke coverage, Insights empty-state, populated local-log, and chart-summary UI smoke coverage, Log bowel red-flag UI smoke coverage, Log food UI smoke coverage, Log medication dose UI smoke coverage, Log voice confirmation UI smoke coverage, Log voice permission fallback UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, destructive confirmation UI smoke coverage, and preview asset resource cleanup now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, privacy toggle UI, voice permission fallback, Profile sync status UI, asset catalog cleanup, populated Insights UI, timeline log delete, Insights chart accessibility, timeline log edit, sync replay planner, and timeline delete undo checkpoints exist.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, medication dose UI, food log UI, voice confirmation UI, privacy toggle UI, voice permission fallback, Profile sync status UI, asset catalog cleanup, populated Insights UI, timeline log delete, Insights chart accessibility, timeline log edit, sync replay planner, timeline delete undo, and sync replay metadata checkpoints exist.
 
 Continue working.
 

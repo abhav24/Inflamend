@@ -330,6 +330,9 @@ final class HealthLogicTests: XCTestCase {
         appState.setAIMemoryEnabled(true)
         appState.addChatMessage(role: .user, content: "Syncable with memory on")
         XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .chatMessage })
+        let idempotencyKeys = appState.pendingSyncMutations.map(\.idempotencyKey)
+        XCTAssertEqual(Set(idempotencyKeys).count, idempotencyKeys.count)
+        XCTAssertTrue(idempotencyKeys.allSatisfy { !$0.isEmpty && $0.hasPrefix("inflamend.") })
 
         appState.retryPendingSyncScaffold()
         XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
@@ -339,6 +342,10 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(restored.pendingSyncCount, appState.pendingSyncCount)
         XCTAssertTrue(restored.pendingSyncMutations.contains { $0.kind == .healthLog })
         XCTAssertTrue(restored.pendingSyncMutations.contains { $0.kind == .onboardingProfile })
+        XCTAssertEqual(
+            Set(restored.pendingSyncMutations.map(\.idempotencyKey)),
+            Set(appState.pendingSyncMutations.map(\.idempotencyKey))
+        )
 
         store.delete()
     }
@@ -523,6 +530,12 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(plan.contains { $0.kind == .healthLogDeletion && $0.action == .softDelete && $0.requiresReceipt })
         XCTAssertTrue(plan.contains { $0.kind == .privacyPreference && $0.action == .upsert && $0.target == "public.user_settings" })
         XCTAssertTrue(plan.contains { $0.kind == .chatMessage && $0.action == .insert && $0.target == "public.chat_messages" })
+        for mutation in appState.pendingSyncMutations {
+            let planItem = plan.first { $0.mutationId == mutation.id }
+            XCTAssertEqual(planItem?.idempotencyKey, mutation.idempotencyKey)
+            XCTAssertEqual(planItem?.serverRecordId, mutation.serverRecordId)
+            XCTAssertEqual(planItem?.receiptId, mutation.receiptId)
+        }
 
         appState.retryPendingSyncScaffold()
         XCTAssertTrue(appState.syncSummary.contains("blocked"))
@@ -543,6 +556,31 @@ final class HealthLogicTests: XCTestCase {
         })
 
         store.delete()
+    }
+
+    func testLegacyPendingSyncMutationDecodesWithReplayMetadata() throws {
+        let legacyMutation = """
+        {
+          "attemptCount": 0,
+          "createdAt": "2026-06-02T09:00:00Z",
+          "id": "11111111-1111-1111-1111-111111111111",
+          "kind": "healthLog",
+          "lastError": null,
+          "localRecordId": "22222222-2222-2222-2222-222222222222",
+          "status": "pending",
+          "summary": "Note: legacy"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let mutation = try decoder.decode(PendingSyncMutation.self, from: Data(legacyMutation.utf8))
+
+        XCTAssertEqual(mutation.kind, .healthLog)
+        XCTAssertEqual(mutation.localRecordId, "22222222-2222-2222-2222-222222222222")
+        XCTAssertTrue(mutation.idempotencyKey.hasPrefix("inflamend.healthLog.22222222-2222-2222-2222-222222222222."))
+        XCTAssertNil(mutation.serverRecordId)
+        XCTAssertNil(mutation.receiptId)
+        XCTAssertNil(mutation.receiptRecordedAt)
     }
 
     @MainActor

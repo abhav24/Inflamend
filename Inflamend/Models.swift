@@ -117,10 +117,99 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
     var localRecordId: String
     var summary: String
     var createdAt = Date()
+    var idempotencyKey: String
+    var serverRecordId: String? = nil
+    var receiptId: String? = nil
+    var receiptRecordedAt: Date? = nil
     var attemptCount = 0
     var status: SyncMutationStatus = .pending
     var lastAttemptedAt: Date? = nil
     var lastError: String? = nil
+
+    init(
+        id: UUID = UUID(),
+        kind: SyncMutationKind,
+        localRecordId: String,
+        summary: String,
+        createdAt: Date = Date(),
+        idempotencyKey: String? = nil,
+        serverRecordId: String? = nil,
+        receiptId: String? = nil,
+        receiptRecordedAt: Date? = nil,
+        attemptCount: Int = 0,
+        status: SyncMutationStatus = .pending,
+        lastAttemptedAt: Date? = nil,
+        lastError: String? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.localRecordId = localRecordId
+        self.summary = summary
+        self.createdAt = createdAt
+        self.idempotencyKey = idempotencyKey ?? Self.makeIdempotencyKey(kind: kind, localRecordId: localRecordId, mutationId: id)
+        self.serverRecordId = serverRecordId
+        self.receiptId = receiptId
+        self.receiptRecordedAt = receiptRecordedAt
+        self.attemptCount = attemptCount
+        self.status = status
+        self.lastAttemptedAt = lastAttemptedAt
+        self.lastError = lastError
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case localRecordId
+        case summary
+        case createdAt
+        case idempotencyKey
+        case serverRecordId
+        case receiptId
+        case receiptRecordedAt
+        case attemptCount
+        case status
+        case lastAttemptedAt
+        case lastError
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        kind = try container.decode(SyncMutationKind.self, forKey: .kind)
+        localRecordId = try container.decode(String.self, forKey: .localRecordId)
+        summary = try container.decode(String.self, forKey: .summary)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        idempotencyKey = try container.decodeIfPresent(String.self, forKey: .idempotencyKey)
+            ?? Self.makeIdempotencyKey(kind: kind, localRecordId: localRecordId, mutationId: id)
+        serverRecordId = try container.decodeIfPresent(String.self, forKey: .serverRecordId)
+        receiptId = try container.decodeIfPresent(String.self, forKey: .receiptId)
+        receiptRecordedAt = try container.decodeIfPresent(Date.self, forKey: .receiptRecordedAt)
+        attemptCount = try container.decodeIfPresent(Int.self, forKey: .attemptCount) ?? 0
+        status = try container.decodeIfPresent(SyncMutationStatus.self, forKey: .status) ?? .pending
+        lastAttemptedAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptedAt)
+        lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(localRecordId, forKey: .localRecordId)
+        try container.encode(summary, forKey: .summary)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(idempotencyKey, forKey: .idempotencyKey)
+        try container.encodeIfPresent(serverRecordId, forKey: .serverRecordId)
+        try container.encodeIfPresent(receiptId, forKey: .receiptId)
+        try container.encodeIfPresent(receiptRecordedAt, forKey: .receiptRecordedAt)
+        try container.encode(attemptCount, forKey: .attemptCount)
+        try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(lastAttemptedAt, forKey: .lastAttemptedAt)
+        try container.encodeIfPresent(lastError, forKey: .lastError)
+    }
+
+    private static func makeIdempotencyKey(kind: SyncMutationKind, localRecordId: String, mutationId: UUID) -> String {
+        "inflamend.\(kind.rawValue).\(localRecordId).\(mutationId.uuidString)"
+    }
 }
 
 enum SyncReplayAction: String, Codable, Equatable {
@@ -136,10 +225,13 @@ struct SyncReplayPlanItem: Identifiable, Codable, Equatable {
     var mutationId: UUID
     var kind: SyncMutationKind
     var localRecordId: String
+    var idempotencyKey: String
+    var serverRecordId: String?
     var action: SyncReplayAction
     var target: String
     var summary: String
     var requiresReceipt: Bool
+    var receiptId: String?
 
     var id: UUID { mutationId }
 }
@@ -215,10 +307,13 @@ struct LocalSyncReplayWorker: Equatable {
             mutationId: mutation.id,
             kind: mutation.kind,
             localRecordId: mutation.localRecordId,
+            idempotencyKey: mutation.idempotencyKey,
+            serverRecordId: mutation.serverRecordId,
             action: route.action,
             target: route.target,
             summary: mutation.summary,
-            requiresReceipt: route.requiresReceipt
+            requiresReceipt: route.requiresReceipt,
+            receiptId: mutation.receiptId
         )
     }
 
