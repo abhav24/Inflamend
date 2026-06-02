@@ -367,6 +367,39 @@ What remains:
 What was committed:
 - Commit message: `Add UI smoke test target`
 
+## Current Checkpoint: Profile Destructive Confirmation UI Coverage
+
+What changed:
+- Added stable Profile row identifiers for local AI history deletion and data/account deletion request actions.
+- Added stable identifiers for the native destructive confirmation actions exposed by the confirmation dialogs.
+- Seeded UI test state with two Care messages so the AI history clearing path has a visible pre/post state change.
+- Added a UI smoke test that verifies "Delete AI history" prompts before mutation, leaves the message count unchanged while the prompt is open, confirms deletion, and verifies the local message count updates.
+- Extended the same smoke test to verify the data/account deletion request confirmation prompt and destructive action availability.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileDestructiveActionsRequireConfirmation`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused destructive confirmation UI smoke test passed.
+- Full test run passed with 26 tests: 24 unit tests and 2 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- The first confirmation UI test attempted to tap a cancel action by accessibility identifier, but iOS did not expose the native cancel action with that identifier.
+
+Fixes made:
+- Removed the unused cancel identifier.
+- Reframed the smoke test around the destructive confirmation gate: assert unchanged state while the prompt is visible, then tap the exposed destructive confirmation action and assert mutation.
+
+What remains:
+- Add UI tests for auth, onboarding, Care red-flag prompts, and key logging flows.
+- Add manual VoiceOver and Dynamic Type verification for native confirmation dialogs.
+
+What was committed:
+- Commit message: `Add destructive confirmation UI test`
+
 ## Command Log
 
 ```text
@@ -458,6 +491,15 @@ Result after UI smoke target pass: TEST SUCCEEDED with 25 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after UI smoke target pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileDestructiveActionsRequireConfirmation
+Result after destructive-confirmation UI pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after destructive-confirmation UI pass: TEST SUCCEEDED with 26 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after destructive-confirmation UI pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -465,7 +507,7 @@ Result after UI smoke target pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, privacy controls, and first UI smoke test wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, privacy controls, and Profile UI smoke tests wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -497,7 +539,7 @@ Result after UI smoke target pass: BUILD SUCCEEDED.
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
 | Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles, destructive confirmations | Enforce preferences in live backend/AI behavior |
-| Data export/delete | Partial local implementation | Export my data writes protected local JSON and has Profile UI smoke coverage; destructive delete request is confirmed first | Implement Supabase-backed export/delete, CSV/PDF, and confirmation UI tests |
+| Data export/delete | Partial local implementation | Export my data writes protected local JSON; destructive Profile actions require confirmation and have UI smoke coverage | Implement Supabase-backed export/delete, CSV/PDF, and broader deletion lifecycle tests |
 
 ## Blockers and External Dependencies
 
@@ -541,12 +583,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests` and 1 UI smoke test through `InflamendUITests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 2 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, and first Profile UI smoke coverage now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, and UI smoke target checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, Profile export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, and destructive confirmation UI checkpoints exist.
 
 Continue working.
 

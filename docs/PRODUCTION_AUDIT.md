@@ -525,3 +525,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue expanding UI coverage and backend export readiness.
+
+## Destructive Confirmation UI Coverage Audit
+
+### Feature Audit: Profile Destructive Confirmation Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The test covers the key product contract: destructive Profile actions pause at a confirmation prompt before changing local state.
+- Required fixes: Keep future backend deletion receipts clear so users can tell local request, cloud deletion, and final account closure apart.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Native confirmation dialogs are preserved, and destructive actions now expose stable automation identifiers for regression coverage.
+- Required fixes: Add manual VoiceOver and Dynamic Type review for the native dialogs.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The AI history confirmation test verifies local state remains unchanged while the prompt is visible and changes only after the destructive confirmation action.
+- Required fixes: Add backend-backed deletion tests once Supabase Auth and deletion jobs exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Local AI history clearing and account deletion request entry points are now guarded by UI-level confirmation coverage.
+- Required fixes: Add retention copy, cloud deletion receipts, and server-side delete/export parity before release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` now passes with 26 tests: 24 unit tests and 2 UI smoke tests. The focused destructive confirmation UI test also passes.
+- Required fixes: Continue expanding UI coverage to auth/onboarding, Care safety prompts, and high-frequency logging.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with broader UI smoke coverage and backend deletion readiness.

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 1 UI smoke test in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 2 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 25 tests.
+Result: TEST SUCCEEDED with 26 tests.
 ```
 
 ## Unit Test Priorities
@@ -116,7 +116,7 @@ Status: started. Local Care response safety behavior is covered.
 - Account deletion requests create a local audit log and pending backend mutation.
 - Destructive Profile actions require confirmation before running.
 
-Status: started. Underlying AppState effects are covered; UI confirmation needs UI tests.
+Status: started. Underlying AppState effects are covered; Profile destructive confirmation UI smoke coverage exists.
 
 ## UI Test Priorities
 
@@ -131,7 +131,7 @@ Status: started. Underlying AppState effects are covered; UI confirmation needs 
 - Voice transcript confirmation can be edited before saving.
 - Insights empty state avoids fake claims.
 - Report export scaffold explains missing setup or creates local export.
-- Privacy controls expose export/delete/AI memory/transcript toggles. Status: started; Profile user-data export sheet smoke coverage exists.
+- Privacy controls expose export/delete/AI memory/transcript toggles. Status: started; Profile user-data export and destructive confirmation smoke coverage exists.
 - Dark mode, Dynamic Type, and VoiceOver labels for major screens.
 
 ## Backend Verification Plan
@@ -166,7 +166,7 @@ When Supabase CLI and credentials are available:
 | Insights | No data | Empty state, no fake claims | Implemented in logic; needs UI test |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
-| Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally; needs UI test |
+| Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally; backend deletion pending |
 | Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; backend replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
@@ -202,6 +202,7 @@ When Supabase CLI and credentials are available:
 ## Current UI Test List
 
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
+- `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
 
 ## Device Targets
 

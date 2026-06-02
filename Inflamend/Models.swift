@@ -620,7 +620,8 @@ class AppState {
             LogEntry(type: .note, title: "UI test export note", sub: "Seeded local log", time: Self.timeString(from: Date()))
         ]
         chatMessages = [
-            ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage)
+            ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage),
+            ChatMessage(role: .user, content: "UI test saved Care note")
         ]
         pendingSyncMutations = []
         lastSyncStatus = "Seeded for UI testing"

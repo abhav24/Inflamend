@@ -146,10 +146,23 @@ struct ProfileView: View {
                             appState.showToast("Data export failed")
                         }
                     }
-                    ProfileRow(icon: "close", label: "Delete AI history", sub: "\(appState.chatMessages.count) messages", isDanger: true) {
+                    ProfileRow(
+                        icon: "close",
+                        label: "Delete AI history",
+                        sub: "\(appState.chatMessages.count) messages",
+                        isDanger: true,
+                        accessibilityID: "profile-delete-ai-history-row"
+                    ) {
                         pendingConfirmation = .clearAIHistory
                     }
-                    ProfileRow(icon: "close", label: "Delete data/account", sub: "Requires signed-in backend account", isDanger: true, isLast: true) {
+                    ProfileRow(
+                        icon: "close",
+                        label: "Delete data/account",
+                        sub: "Requires signed-in backend account",
+                        isDanger: true,
+                        isLast: true,
+                        accessibilityID: "profile-delete-data-account-row"
+                    ) {
                         pendingConfirmation = .deleteDataAccount
                     }
                 }
@@ -190,6 +203,7 @@ struct ProfileView: View {
                     perform(pendingConfirmation)
                     self.pendingConfirmation = nil
                 }
+                .accessibilityIdentifier(pendingConfirmation.confirmationAccessibilityID)
             }
             Button("Cancel", role: .cancel) {
                 pendingConfirmation = nil
@@ -251,6 +265,15 @@ private enum ProfileConfirmation {
             return "Delete AI history"
         case .deleteDataAccount:
             return "Request deletion"
+        }
+    }
+
+    var confirmationAccessibilityID: String {
+        switch self {
+        case .clearAIHistory:
+            return "profile-confirm-delete-ai-history-button"
+        case .deleteDataAccount:
+            return "profile-confirm-delete-data-account-button"
         }
     }
 }
