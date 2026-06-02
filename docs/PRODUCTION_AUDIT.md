@@ -653,3 +653,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with logging UI coverage and backend sync readiness.
+
+## Profile Sign-Out UI Coverage Audit
+
+### Feature Audit: Local Sign-Out Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: Profile sign-out now has UI coverage that verifies the health dashboard exits back to the auth gate, protecting a basic account-session expectation.
+- Required fixes: Add sign-in UI coverage so both directions of the local auth scaffold are regression-tested.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sign-out row uses the existing Profile row style and is reachable through the same scroll/tap path users will take. The smoke test validates the transition back to the auth view.
+- Required fixes: Add Dynamic Type and VoiceOver review for Profile rows and auth-gate transition announcements.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises the local `AppState.signOut` path. Production Supabase Auth logout, Keychain token clearing, and backend session invalidation remain pending.
+- Required fixes: Replace the local auth scaffold with Supabase Auth and add token/session-clear tests.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The tested flow verifies users can leave the health dashboard and return to the auth gate after clearing the local session.
+- Required fixes: Ensure production sign-out clears tokens, cancels sensitive sync work, and leaves no stale PHI visible.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Profile sign-out UI test passes. `xcodebuild test` now passes with 30 tests: 24 unit tests and 6 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to sign-in, bowel movement red flags, Care medication-change refusal, report/share flows, and Insights empty states.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with sign-in coverage and high-risk logging UI coverage.

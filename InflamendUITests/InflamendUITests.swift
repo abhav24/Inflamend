@@ -59,6 +59,16 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileSignOutReturnsToAuthGateSmoke() {
+        let app = openSeededProfile()
+
+        tapWhenVisible(app.buttons["profile-sign-out-row"], in: app)
+
+        XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["auth-primary-button"].exists)
+    }
+
+    @MainActor
     func testCareRedFlagPromptShowsSafetyGuidanceSmoke() {
         let app = openSeededHome()
 

@@ -106,7 +106,7 @@ struct ProfileView: View {
                     ProfileRow(icon: "book", label: "IBD library", sub: "Guided articles") {
                         appState.showToast("Education library scaffolded")
                     }
-                    ProfileRow(icon: "logout",   label: "Sign out",     isDanger: true, isLast: true) {
+                    ProfileRow(icon: "logout", label: "Sign out", isDanger: true, isLast: true, accessibilityID: "profile-sign-out-row") {
                         appState.signOut()
                     }
                 }
