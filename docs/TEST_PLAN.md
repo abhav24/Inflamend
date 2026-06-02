@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 2 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 3 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 26 tests.
+Result: TEST SUCCEEDED with 27 tests.
 ```
 
 ## Unit Test Priorities
@@ -120,9 +120,9 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 
 ## UI Test Priorities
 
-- Fresh install shows welcome/auth or Today depending on session scaffold.
-- Sign up/sign in with mock service.
-- Onboarding can be completed or skipped for sensitive fields.
+- Fresh install shows welcome/auth or Today depending on session scaffold. Status: started; fresh local sign-up UI smoke coverage exists.
+- Sign up/sign in with mock service. Status: started; local sign-up UI smoke coverage exists, sign-in still needs UI coverage.
+- Onboarding can be completed or skipped for sensitive fields. Status: started; default onboarding completion UI smoke coverage exists.
 - Today check-in can be saved in under 30 seconds.
 - Bowel movement log with blood shows safety guidance.
 - Food log saves as pattern tracking, not nutrition claims.
@@ -152,9 +152,9 @@ When Supabase CLI and credentials are available:
 | Area | Scenario | Expected Result | Status |
 |---|---|---|---|
 | Install | Fresh install | Starts without crash | Pending |
-| Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented; needs UI test |
+| Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh sign-up UI smoke test |
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally; needs UI test |
-| Onboarding | Sensitive questions skipped | App remains usable | Implemented; needs UI test |
+| Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented in-memory; needs UI test |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented in-memory; needs UI test |
 | Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented in-memory; needs UI test |
@@ -167,7 +167,7 @@ When Supabase CLI and credentials are available:
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
-| Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally; backend deletion pending |
+| Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
 | Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; backend replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
@@ -201,6 +201,7 @@ When Supabase CLI and credentials are available:
 
 ## Current UI Test List
 
+- `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
 

@@ -8,8 +8,8 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 | Screen | VoiceOver | Dynamic Type | Contrast | Tap Targets | Non-color Cues | Status |
 |---|---|---|---|---|---|---|
-| Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt | Text labels on mode buttons | Needs work |
-| Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt | Text labels on pill choices | Needs work |
+| Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt; keyboard Done path verified | Text labels on mode buttons | In progress |
+| Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt | Safety card uses text | Needs work |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
@@ -19,6 +19,8 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 ## Latest Improvements
 
 - Added stable accessibility identifiers for auth fields, auth primary action, onboarding completion, tab buttons, Profile data export row, and user-data export sheet actions.
+- Added auth keyboard focus management and a keyboard toolbar Done action so the primary local sign-up button is not trapped behind the software keyboard.
+- Added UI smoke coverage for fresh local sign-up, auth keyboard dismissal, default onboarding completion, and arrival on the Home tab.
 - Refactored Profile rows so actionable rows use a concrete `Button(action:)` and an explicit rectangular hit target.
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
@@ -37,4 +39,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the Profile data export plus destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth/onboarding, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

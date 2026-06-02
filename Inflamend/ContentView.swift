@@ -130,6 +130,13 @@ struct AuthGateView: View {
     @State private var email = ""
     @State private var displayName = ""
     @State private var password = ""
+    @FocusState private var focusedField: AuthField?
+
+    private enum AuthField: Hashable {
+        case displayName
+        case email
+        case password
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -157,9 +164,19 @@ struct AuthGateView: View {
                     if mode == .signUp {
                         authTextField("Name", text: $displayName, contentType: .name)
                             .accessibilityIdentifier("auth-name-field")
+                            .focused($focusedField, equals: .displayName)
+                            .submitLabel(.next)
+                            .onSubmit {
+                                focusedField = .email
+                            }
                     }
                     authTextField("Email", text: $email, contentType: .emailAddress)
                         .accessibilityIdentifier("auth-email-field")
+                        .focused($focusedField, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit {
+                            focusedField = .password
+                        }
                     SecureField("Password scaffold", text: $password)
                         .textContentType(mode == .signUp ? .newPassword : .password)
                         .font(DS.sans(15))
@@ -168,6 +185,9 @@ struct AuthGateView: View {
                         .background(Color.bgInset)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .accessibilityIdentifier("auth-password-field")
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.done)
+                        .onSubmit(submitAuth)
 
                     Text("Password is accepted for flow testing only and is not stored in this local scaffold.")
                         .font(DS.sans(12))
@@ -180,14 +200,7 @@ struct AuthGateView: View {
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.strokeDefault, lineWidth: 0.5))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
 
-                PrimaryButton(title: mode == .signUp ? "Create local account" : "Sign in") {
-                    switch mode {
-                    case .signUp:
-                        appState.signUp(email: email, displayName: displayName)
-                    case .signIn:
-                        appState.signIn(email: email)
-                    }
-                }
+                PrimaryButton(title: mode == .signUp ? "Create local account" : "Sign in", action: submitAuth)
                 .accessibilityIdentifier("auth-primary-button")
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -200,12 +213,33 @@ struct AuthGateView: View {
             .padding(.bottom, 110)
         }
         .background(Color.bgPrimary)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                }
+                .accessibilityIdentifier("auth-keyboard-done-button")
+            }
+        }
+    }
+
+    private func submitAuth() {
+        focusedField = nil
+
+        switch mode {
+        case .signUp:
+            appState.signUp(email: email, displayName: displayName)
+        case .signIn:
+            appState.signIn(email: email)
+        }
     }
 
     private func authModeButton(_ title: String, mode target: AuthMode) -> some View {
         Button {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
                 mode = target
+                focusedField = nil
             }
         } label: {
             Text(title)

@@ -557,3 +557,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with broader UI smoke coverage and backend deletion readiness.
+
+## Fresh Auth and Onboarding UI Coverage Audit
+
+### Feature Audit: Local Auth Keyboard UX and Onboarding Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: Fresh users now have automated coverage from first launch through local account creation, default onboarding completion, and Home arrival.
+- Required fixes: Add sign-in and sign-out UI coverage, then replace the local password scaffold with Supabase Auth once credentials are available.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The UI test exposed a real keyboard ergonomics issue: the software keyboard covered the primary auth action. The new keyboard toolbar Done action gives users an explicit, native way to dismiss the keyboard.
+- Required fixes: Add Dynamic Type and VoiceOver review for auth fields, auth mode buttons, onboarding pills, and keyboard toolbar behavior.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The smoke test validates the local auth/onboarding state transition that feeds the protected snapshot store, but production auth and backend profile sync remain external-dependency work.
+- Required fixes: Add Supabase Auth token handling, Keychain session storage, backend profile writes, and sign-in error handling before production.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Fresh local signup still avoids storing the password scaffold, and onboarding can complete without forcing sensitive diagnosis/profile answers.
+- Required fixes: Replace local password flow with server-backed authentication, document retention clearly, and verify no PHI enters analytics or logs.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused fresh signup/onboarding UI test passes. `xcodebuild test` now passes with 27 tests: 24 unit tests and 3 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to sign-in, sign-out, Care safety prompts, first logs, and report/export share flows.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with broader UI coverage and production Supabase auth integration.

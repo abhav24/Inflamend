@@ -400,6 +400,40 @@ What remains:
 What was committed:
 - Commit message: `Add destructive confirmation UI test`
 
+## Current Checkpoint: Fresh Auth and Onboarding UI Coverage
+
+What changed:
+- Added keyboard focus management to the local auth gate for name, email, and password fields.
+- Added a keyboard toolbar Done action with a stable accessibility identifier so users and UI tests can dismiss the software keyboard before tapping the primary auth action.
+- Added submit behavior on the password field and routed the primary auth button through the same submit helper.
+- Added a UI smoke test that starts from reset local state, completes local sign-up, dismisses the keyboard, taps the auth primary button, finishes default onboarding, and verifies arrival on Home.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testFreshSignUpCompletesOnboardingSmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused fresh sign-up/onboarding UI smoke test passed.
+- Full test run passed with 27 tests: 24 unit tests and 3 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- Initial auth/onboarding UI attempts filled the form but could not tap the auth primary button because the software keyboard covered the button and the auth content was not scrollable enough to reveal it.
+- XCTest hierarchy inspection showed the primary auth button frame overlapped the software keyboard window.
+
+Fixes made:
+- Added an explicit keyboard toolbar Done action and focus clearing in the auth view.
+- Updated the UI-test keyboard helper to use the app-provided Done button before trying fallback keyboard dismissal.
+
+What remains:
+- Add UI coverage for sign-in, sign-out, Care red-flag prompts, and high-frequency logging flows.
+- Add manual VoiceOver and Dynamic Type verification for auth and onboarding.
+- Replace the local auth scaffold with Supabase Auth and Keychain-backed session storage once credentials are available.
+
+What was committed:
+- Commit message: `Add auth onboarding UI smoke test`
+
 ## Command Log
 
 ```text
@@ -500,6 +534,15 @@ Result after destructive-confirmation UI pass: TEST SUCCEEDED with 26 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after destructive-confirmation UI pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testFreshSignUpCompletesOnboardingSmoke
+Result after auth/onboarding UI pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after auth/onboarding UI pass: TEST SUCCEEDED with 27 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after auth/onboarding UI pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -507,19 +550,19 @@ Result after destructive-confirmation UI pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, privacy controls, and Profile UI smoke tests wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, privacy controls, Profile UI smoke tests, and fresh auth/onboarding UI smoke coverage wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
 
 | Flow | Status | Evidence | Remaining Issues |
 |---|---|---|---|
-| Welcome/auth | Scaffolded locally | `AuthGateView`, `AuthSession` | Replace with Supabase Auth and Keychain token storage |
-| Sign up | Scaffolded locally | Local account creation validates email and restores session | Replace password scaffold with Supabase Auth |
+| Welcome/auth | Scaffolded locally with UI smoke coverage | `AuthGateView`, `AuthSession`, `testFreshSignUpCompletesOnboardingSmoke` | Replace with Supabase Auth and Keychain token storage |
+| Sign up | Scaffolded locally with UI smoke coverage | Local account creation validates email and fresh UI smoke test reaches onboarding | Replace password scaffold with Supabase Auth |
 | Sign in | Scaffolded locally | Local sign-in validates email and restores session | Replace with Supabase Auth/errors |
 | Session restore | Implemented locally | `AppSnapshotStore` restores session from protected JSON snapshot | Replace with Supabase session/Keychain strategy |
 | Sign out | Implemented locally | Profile sign-out clears auth session and hides health dashboard | Connect to Supabase sign-out and clear tokens |
-| Onboarding | Scaffolded locally | `OnboardingGateView`, `OnboardingProfile` | Sync profile to backend and add edit flow |
+| Onboarding | Scaffolded locally with UI smoke coverage | `OnboardingGateView`, `OnboardingProfile`, default completion UI smoke test | Sync profile to backend and add edit flow |
 | Today dashboard | Partial | Dynamic date/name, safety card, check-in CTA, empty timeline, risk updates | Add persisted trend summaries and UI tests |
 | Today check-in | Implemented with local persistence | `CheckInSheet`, `AppState.recordCheckIn`, snapshot store | Add backend sync, edit/delete, and UI tests |
 | Bowel movement logging | Implemented with local persistence | Quick Bristol and detailed bowel form call `recordBowel` | Add backend sync, edit/delete, and stricter validation |
@@ -583,12 +626,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests` and 2 UI smoke tests through `InflamendUITests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 3 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth/onboarding with fresh UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, Profile export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, and destructive confirmation UI checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth/onboarding UI smoke coverage, Profile export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, and auth/onboarding UI checkpoints exist.
 
 Continue working.
 

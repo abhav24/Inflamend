@@ -6,6 +6,34 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testFreshSignUpCompletesOnboardingSmoke() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--inflamend-reset-state"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 8))
+
+        app.textFields["auth-name-field"].tap()
+        app.textFields["auth-name-field"].typeText("UI Onboarding")
+
+        app.textFields["auth-email-field"].tap()
+        app.textFields["auth-email-field"].typeText("ui-onboarding@example.com")
+
+        app.secureTextFields["auth-password-field"].tap()
+        app.secureTextFields["auth-password-field"].typeText("localpass")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["auth-primary-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["Make Inflamend fit your day"].waitForExistence(timeout: 5))
+
+        tapWhenVisible(app.buttons["onboarding-finish-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["How are you feeling?"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["tab-profile"].exists)
+    }
+
+    @MainActor
     func testProfileUserDataExportSheetSmoke() {
         let app = openSeededProfile()
 
@@ -48,6 +76,28 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    private func dismissKeyboard(in app: XCUIApplication) {
+        let authDoneButton = app.buttons["auth-keyboard-done-button"]
+        if authDoneButton.waitForExistence(timeout: 1) {
+            authDoneButton.tap()
+            return
+        }
+
+        if app.buttons["Done"].waitForExistence(timeout: 1) {
+            app.buttons["Done"].tap()
+            return
+        }
+
+        if app.buttons["Return"].waitForExistence(timeout: 1) {
+            app.buttons["Return"].tap()
+            return
+        }
+
+        guard app.keyboards.firstMatch.exists else { return }
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+    }
+
+    @MainActor
     private func tapWhenVisible(
         _ element: XCUIElement,
         in app: XCUIApplication,
@@ -59,7 +109,12 @@ final class InflamendUITests: XCTestCase {
                 element.tap()
                 return
             }
-            app.swipeUp()
+
+            if app.scrollViews.firstMatch.exists {
+                app.scrollViews.firstMatch.swipeUp()
+            } else {
+                app.swipeUp()
+            }
         }
 
         XCTFail("Element was not hittable: \(element)", file: file, line: line)
