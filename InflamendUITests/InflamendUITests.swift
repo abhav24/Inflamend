@@ -55,6 +55,33 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testInsightsEmptyStateAvoidsDemoClaimsSmoke() {
+        let app = openFreshOnboardedHome(
+            displayName: "UI Insights",
+            email: "ui-insights@example.com"
+        )
+
+        app.buttons["tab-insights"].tap()
+        XCTAssertTrue(app.staticTexts["No local logs yet"].waitForExistence(timeout: 5))
+
+        let trendEmptyState = app.descendants(matching: .any)["insights-empty-trend"]
+        XCTAssertTrue(trendEmptyState.waitForExistence(timeout: 5))
+        XCTAssertTrue(trendEmptyState.label.contains("Trend needs more logs"))
+
+        let bowelEmptyState = app.descendants(matching: .any)["insights-empty-bowel"]
+        waitForElement(bowelEmptyState, in: app)
+        XCTAssertTrue(bowelEmptyState.label.contains("No bowel pattern yet"))
+
+        let painEmptyState = app.descendants(matching: .any)["insights-empty-pain"]
+        waitForElement(painEmptyState, in: app)
+        XCTAssertTrue(painEmptyState.label.contains("No pain scores yet"))
+
+        let foodEmptyState = app.descendants(matching: .any)["insights-empty-food"]
+        waitForElement(foodEmptyState, in: app)
+        XCTAssertTrue(foodEmptyState.label.contains("No food patterns yet"))
+    }
+
+    @MainActor
     func testProfileUserDataExportSheetSmoke() {
         let app = openSeededProfile()
 
@@ -158,6 +185,33 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--inflamend-reset-state"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 8))
+
+        app.textFields["auth-name-field"].tap()
+        app.textFields["auth-name-field"].typeText(displayName)
+
+        app.textFields["auth-email-field"].tap()
+        app.textFields["auth-email-field"].typeText(email)
+
+        app.secureTextFields["auth-password-field"].tap()
+        app.secureTextFields["auth-password-field"].typeText("localpass")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["auth-primary-button"], in: app)
+        XCTAssertTrue(app.staticTexts["Make Inflamend fit your day"].waitForExistence(timeout: 5))
+
+        tapWhenVisible(app.buttons["onboarding-finish-button"], in: app)
+        XCTAssertTrue(app.staticTexts["How are you feeling?"].waitForExistence(timeout: 8))
+
+        return app
+    }
+
+    @MainActor
     private func openSeededHome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -201,6 +255,26 @@ final class InflamendUITests: XCTestCase {
 
         guard app.keyboards.firstMatch.exists else { return }
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+    }
+
+    @MainActor
+    private func waitForElement(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        for _ in 0..<6 {
+            if element.exists {
+                return
+            }
+
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
+
+        XCTFail("Element did not exist: \(element)", file: file, line: line)
     }
 
     @MainActor

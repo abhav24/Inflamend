@@ -781,3 +781,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with reporting, Insights, and medication logging coverage.
+
+## Insights Empty-State UI Coverage Audit
+
+### Feature Audit: No-Data Insights Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: A clean, onboarded user now sees honest no-data Insights copy instead of demo claims, and the UI smoke test verifies the trend, bowel, pain, and food empty states.
+- Required fixes: Add populated Insights coverage after more structured local health records exist.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Insights empty states now expose stable identifiers and combine their title/message for assistive technologies, while still using the existing visual design.
+- Required fixes: Add chart accessibility summaries, Dynamic Type review, and VoiceOver review for the full Insights scroll view.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The test reaches Insights through a fresh local auth/onboarding path without seeded health logs, confirming the no-data state is driven by local log state rather than demo fixtures.
+- Required fixes: Replace timeline-copy inference with structured dated health records and verify synced backend records produce the same summaries.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The no-data Insights path avoids implying patterns, triggers, or trends before the user has logged enough information.
+- Required fixes: Keep this no-claim behavior in report/export and backend-generated summaries.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Insights empty-state UI test passes. `xcodebuild test` now passes with 34 tests: 24 unit tests and 10 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to populated Insights, report/share flows, and medication logging.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with report/share and medication logging coverage.

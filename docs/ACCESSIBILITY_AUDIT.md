@@ -12,7 +12,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in action path verified | Safety card uses text | In progress |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save path verified | Voice confirmation and blood choices use text | In progress |
-| Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
+| Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty states identifier-backed and smoke-tested | Empty states use explanatory text; charts need summaries | In progress |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
 | Profile | Partial | Unverified | Likely acceptable | Rows OK; export, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
 
@@ -30,6 +30,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
 - Added stable identifiers and UI smoke coverage for Profile sign-out returning to the auth gate.
 - Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
+- Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 
 ## Required Fixes
 
@@ -45,4 +46,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Log bowel red-flag, Care red-flag, Care medication-refusal, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Insights empty state, Log bowel red-flag, Care red-flag, Care medication-refusal, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

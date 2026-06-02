@@ -95,7 +95,8 @@ struct InsightsView: View {
                     } else {
                         InsightEmptyState(
                             title: "Trend needs more logs",
-                            message: "Save at least two check-ins or symptom logs with pain or fatigue scores."
+                            message: "Save at least two check-ins or symptom logs with pain or fatigue scores.",
+                            identifier: "insights-empty-trend"
                         )
                     }
                 }
@@ -117,7 +118,8 @@ struct InsightsView: View {
                     } else {
                         InsightEmptyState(
                             title: "No bowel pattern yet",
-                            message: "Log bowel movements or check-ins to populate this chart."
+                            message: "Log bowel movements or check-ins to populate this chart.",
+                            identifier: "insights-empty-bowel"
                         )
                     }
                 }
@@ -156,7 +158,8 @@ struct InsightsView: View {
                     if summary.painHeatmapValues.isEmpty {
                         InsightEmptyState(
                             title: "No pain scores yet",
-                            message: "Pain scores from check-ins and symptom logs will appear here."
+                            message: "Pain scores from check-ins and symptom logs will appear here.",
+                            identifier: "insights-empty-pain"
                         )
                     } else {
                         HeatmapView(values: summary.painHeatmapValues)
@@ -184,7 +187,8 @@ struct InsightsView: View {
                     } else {
                         InsightEmptyState(
                             title: "No food patterns yet",
-                            message: "Meal logs will be summarized by frequency after you save them."
+                            message: "Meal logs will be summarized by frequency after you save them.",
+                            identifier: "insights-empty-food"
                         )
                     }
                 }
@@ -424,6 +428,7 @@ struct PatternRow: View {
 struct InsightEmptyState: View {
     let title: String
     let message: String
+    var identifier: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -439,6 +444,8 @@ struct InsightEmptyState: View {
         .padding(14)
         .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier ?? "insights-empty-state")
     }
 }
 
