@@ -1310,7 +1310,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: `NetworkReachabilityMonitor` uses `NWPathMonitor`, debug launch overrides keep tests deterministic, and `retryPendingSyncScaffold` preserves pending mutation status/attempt/error/retry metadata while offline.
-- Required fixes: Connect reachability to automatic replay scheduling, live Supabase retry, token refresh, server IDs/receipts, and conflict handling.
+- Required fixes: Connect reachability-aware replay to live Supabase retry, token refresh, server IDs/receipts, and conflict handling.
 - Status: Accept local reachability gate.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1320,11 +1320,43 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: Focused offline reachability unit coverage, focused Profile offline sync UI coverage, full unit target with 45 tests, and clean build pass. The first focused unit validation caught a Swift actor-isolation compile issue in `deinit`; removing that cleanup path resolved the build.
-- Required fixes: Add live automatic retry, online/offline transition, conflict, and manual accessibility regression tests once Supabase credentials exist.
+- Required fixes: Add live replay, online/offline transition, conflict, and manual accessibility regression tests once Supabase credentials exist.
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with live replay execution, automatic retry scheduling, server IDs/receipts, auth refresh, and manual accessibility QA.
+- Ship now, then continue with live replay execution, server IDs/receipts, auth refresh, and manual accessibility QA.
+
+## Automatic Sync Retry Scheduling Audit
+
+### Feature Audit: Due-Only Local Retry Scheduler
+
+Product Simplicity Reviewer:
+- Findings: Automatic retry state is exposed in the existing Profile sync detail sheet without adding a new settings surface. Fresh pending records are not auto-marked blocked until a retry attempt has actually created scheduled backoff metadata.
+- Required fixes: Keep future live retry notifications quiet and avoid interrupting daily logging.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The automatic retry copy sits inside the existing network status block, uses stable identifiers, and is covered by the blocked and offline Profile sync UI smokes.
+- Required fixes: Manually verify the combined network/automatic-retry block at large Dynamic Type and with VoiceOver order.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `PendingSyncMutation.isEligibleForAutomaticRetry(at:)` limits automatic retry to blocked or retryable records whose `nextRetryAt` is due. `AppState` schedules only while online, cancels while offline/unknown, and merges updated due records back without touching non-due queue entries.
+- Required fixes: Connect the scheduler to a live Supabase replay client, server IDs/receipts, auth refresh, and conflict handling once credentials exist.
+- Status: Accept local scheduler scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The scheduler adds no new data category and does not emit telemetry. Profile copy remains explicit that backend replay is not complete while Supabase is unconfigured.
+- Required fixes: Re-check diagnostics/support exports before including retry attempt timestamps, network state, or mutation summaries.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused automatic retry unit coverage passed, including due-only retry, non-due preservation, offline pause, and next-backoff scheduling. The two Profile sync UI smokes passed with automatic retry detail assertions, full unit target passed with 46 tests, and clean build passed.
+- Required fixes: Add live replay success/failure, auth refresh, conflict, and online/offline transition tests after Supabase credentials exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay wiring, returned server IDs/receipts, auth refresh, conflict handling, and manual accessibility QA.
 
 ## Timeline Delete Undo Audit
 

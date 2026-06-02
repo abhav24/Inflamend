@@ -272,6 +272,10 @@ private struct SyncStatusDetailSheet: View {
                         .font(DS.sans(12))
                         .foregroundColor(.fgFaint)
                         .accessibilityIdentifier("profile-sync-network-detail")
+                    Text(appState.automaticSyncRetrySummary)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgFaint)
+                        .accessibilityIdentifier("profile-sync-automatic-retry-detail")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)

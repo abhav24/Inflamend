@@ -308,6 +308,16 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
     private static func makeIdempotencyKey(kind: SyncMutationKind, localRecordId: String, mutationId: UUID) -> String {
         "inflamend.\(kind.rawValue).\(localRecordId).\(mutationId.uuidString)"
     }
+
+    func isEligibleForAutomaticRetry(at date: Date) -> Bool {
+        guard let nextRetryAt, nextRetryAt <= date else { return false }
+        switch status {
+        case .blockedNoBackend, .failedRetryable:
+            return true
+        case .pending, .syncing, .synced, .failedNeedsUser:
+            return false
+        }
+    }
 }
 
 enum SyncReplayAction: String, Codable, Equatable {
@@ -573,6 +583,7 @@ class AppState {
     @ObservationIgnored private var toastActionHandler: (() -> Void)? = nil
     @ObservationIgnored private var toastGeneration = 0
     private var toastTask: Task<Void, Never>? = nil
+    private var automaticSyncRetryTask: Task<Void, Never>? = nil
 
     init(
         store: AppSnapshotStore = .live,
@@ -655,8 +666,50 @@ class AppState {
         syncReplayWorker.plan(for: pendingSyncMutations)
     }
 
+    var nextAutomaticSyncRetryAt: Date? {
+        pendingSyncMutations.compactMap { mutation in
+            switch mutation.status {
+            case .blockedNoBackend, .failedRetryable:
+                return mutation.nextRetryAt
+            case .pending, .syncing, .synced, .failedNeedsUser:
+                return nil
+            }
+        }
+        .min()
+    }
+
+    var automaticSyncRetrySummary: String {
+        let now = Date()
+        let dueCount = automaticRetryEligibleMutationCount(at: now)
+        if syncNetworkStatus == .offline {
+            return nextAutomaticSyncRetryAt == nil
+                ? "Automatic retry waits for network and a scheduled backoff."
+                : "Automatic retry waits for network connectivity."
+        }
+        if syncNetworkStatus != .online {
+            return nextAutomaticSyncRetryAt == nil
+                ? "Automatic retry starts after a retry attempt sets backoff."
+                : "Automatic retry waits for network reachability confirmation."
+        }
+        if dueCount > 0 {
+            return dueCount == 1 ? "1 scheduled retry is due now." : "\(dueCount) scheduled retries are due now."
+        }
+        if let nextAutomaticSyncRetryAt {
+            return "Next automatic retry after \(nextAutomaticSyncRetryAt.formatted(date: .abbreviated, time: .shortened))."
+        }
+        return "Automatic retry starts after a retry attempt sets backoff."
+    }
+
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
         syncNetworkStatus = status
+        if status == .online {
+            if !runAutomaticSyncRetryIfEligible() {
+                scheduleAutomaticSyncRetry()
+            }
+        } else {
+            automaticSyncRetryTask?.cancel()
+            automaticSyncRetryTask = nil
+        }
     }
 
     private static func networkStatusOverride(from arguments: [String]) -> SyncNetworkStatus? {
@@ -1168,6 +1221,25 @@ class AppState {
         showToast(result.toastMessage)
     }
 
+    @discardableResult
+    func runAutomaticSyncRetryIfEligible(at date: Date = Date()) -> Bool {
+        guard syncNetworkStatus == .online else { return false }
+        let dueMutations = pendingSyncMutations.filter { $0.isEligibleForAutomaticRetry(at: date) }
+        guard !dueMutations.isEmpty else {
+            scheduleAutomaticSyncRetry(referenceDate: date)
+            return false
+        }
+
+        let result = syncReplayWorker.retry(dueMutations, attemptedAt: date)
+        let updatedById = Dictionary(uniqueKeysWithValues: result.pendingMutations.map { ($0.id, $0) })
+        pendingSyncMutations = pendingSyncMutations.map { updatedById[$0.id] ?? $0 }
+        lastSyncStatus = dueMutations.count == 1
+            ? "Automatic retry: \(result.statusMessage)"
+            : "Automatic retry: \(dueMutations.count) records · \(result.statusMessage)"
+        persist(updateSyncTimestamp: false)
+        return true
+    }
+
     private func publishSafety(_ assessment: RedFlagAssessment) {
         latestSafetyMessage = assessment.hasRedFlags ? assessment.safetyCopy : nil
         if assessment.hasRedFlags {
@@ -1262,6 +1334,27 @@ class AppState {
         )
     }
 
+    private func automaticRetryEligibleMutationCount(at date: Date) -> Int {
+        pendingSyncMutations.filter { $0.isEligibleForAutomaticRetry(at: date) }.count
+    }
+
+    private func scheduleAutomaticSyncRetry(referenceDate: Date = Date()) {
+        automaticSyncRetryTask?.cancel()
+        automaticSyncRetryTask = nil
+        guard syncNetworkStatus == .online, let nextAutomaticSyncRetryAt else { return }
+
+        let delay = max(0, nextAutomaticSyncRetryAt.timeIntervalSince(referenceDate))
+        automaticSyncRetryTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(delay))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            self?.runAutomaticSyncRetryIfEligible()
+        }
+    }
+
     private func persist(updateSyncTimestamp: Bool = true) {
         if updateSyncTimestamp {
             let localStatus = "Saved locally at \(Self.timeString(from: Date()))"
@@ -1272,6 +1365,7 @@ class AppState {
         } catch {
             lastSyncStatus = "Local save failed"
         }
+        scheduleAutomaticSyncRetry()
     }
 
     #if DEBUG

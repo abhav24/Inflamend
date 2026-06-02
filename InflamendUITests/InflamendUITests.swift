@@ -205,6 +205,7 @@ final class InflamendUITests: XCTestCase {
 
         tapWhenVisible(app.buttons["profile-sync-detail-retry-button"], in: app)
         waitForLabel(syncSummary, contains: "blocked")
+        waitForLabel(app.staticTexts["profile-sync-automatic-retry-detail"], contains: "Next automatic retry")
         let firstSyncDetailRow = app.descendants(matching: .any)["profile-sync-detail-row-0"]
         waitForLabel(firstSyncDetailRow, contains: "Blocked")
         waitForLabel(firstSyncDetailRow, contains: "Next retry")
@@ -229,6 +230,7 @@ final class InflamendUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["profile-sync-detail-title"].waitForExistence(timeout: 5))
         waitForLabel(app.staticTexts["profile-sync-network-status"], contains: "Offline")
         waitForLabel(app.staticTexts["profile-sync-network-detail"], contains: "waits")
+        waitForLabel(app.staticTexts["profile-sync-automatic-retry-detail"], contains: "waits for network")
 
         tapWhenVisible(app.buttons["profile-sync-detail-retry-button"], in: app)
         let syncSummary = app.staticTexts["profile-sync-detail-summary"]

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 45 unit tests in HealthLogicTests plus 27 UI smoke tests in InflamendUITests.
+Coverage: 46 unit tests in HealthLogicTests plus 27 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,11 +19,17 @@ Latest checkpoint verification:
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testOfflineReachabilityPausesSyncRetryWithoutMutatingQueue
 Result: TEST SUCCEEDED with 1 focused unit test.
 
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testAutomaticSyncRetryRunsOnlyDueMutationsWhenOnline
+Result: TEST SUCCEEDED with 1 focused unit test.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryShowsBackendBlockedSmoke -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
+Result: TEST SUCCEEDED with 2 UI smoke tests.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 45 unit tests.
+Result: TEST SUCCEEDED with 46 unit tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -99,6 +105,7 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Replay metadata carries stable idempotency keys plus optional server record and receipt IDs.
 - Replay payload snapshots carry typed health-log create/update fields into future backend plans.
 - Backend-blocked retries store per-record attempt timestamps and error details.
+- Automatic retry execution runs only due blocked/retryable mutations while online and leaves non-due or offline records untouched.
 - Legacy queued mutations decode with generated idempotency metadata.
 - Legacy queued mutations without replay payload snapshots decode safely.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
@@ -108,7 +115,7 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, retry backoff metadata, reachability-aware offline retry pause, per-record backend-blocked errors, Profile sync blocked/offline-state detail UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, automatic retry execution, auth refresh, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, retry backoff metadata, automatic due-retry execution, reachability-aware offline retry pause, per-record backend-blocked errors, Profile sync blocked/offline-state detail UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, auth refresh, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -208,7 +215,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, retry backoff metadata, reachability-aware retry pause, and per-record blocked errors implemented; Profile sync detail sheet exposes blocked/offline records and retry metadata under UI smoke coverage; backend network replay and automatic retry loop pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, retry backoff metadata, automatic due-retry execution, reachability-aware retry pause, and per-record blocked errors implemented; Profile sync detail sheet exposes blocked/offline records and retry metadata under UI smoke coverage; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -257,6 +264,7 @@ When Supabase CLI and credentials are available:
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
 - `testSyncReplayPlanCarriesHealthLogPayloadSnapshots`
 - `testSyncReplayBackoffSchedulesAndResetsAfterLocalEdit`
+- `testAutomaticSyncRetryRunsOnlyDueMutationsWhenOnline`
 - `testUndoDeleteRestoresLogAndPendingMutations`
 - `testLegacyPendingSyncMutationDecodesWithReplayMetadata`
 

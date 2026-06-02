@@ -1317,6 +1317,54 @@ final class HealthLogicTests: XCTestCase {
         store.delete()
     }
 
+    @MainActor
+    func testAutomaticSyncRetryRunsOnlyDueMutationsWhenOnline() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-automatic-sync-retry-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.setSyncNetworkStatus(.online)
+        appState.signUp(email: "auto-retry@example.com", displayName: "Auto Retry")
+        appState.completeOnboarding(
+            diagnosis: "Crohn's disease",
+            primaryGoal: "Track flares",
+            baselineStoolCount: 2,
+            hasFlarePlan: false
+        )
+
+        appState.retryPendingSyncScaffold()
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
+        XCTAssertTrue(appState.automaticSyncRetrySummary.contains("Next automatic retry"))
+
+        let retryDate = Date(timeIntervalSince1970: 1_800_001_000)
+        let dueMutationId = try XCTUnwrap(appState.pendingSyncMutations.first?.id)
+        for index in appState.pendingSyncMutations.indices {
+            appState.pendingSyncMutations[index].nextRetryAt = index == 0
+                ? retryDate.addingTimeInterval(-1)
+                : retryDate.addingTimeInterval(600)
+        }
+
+        XCTAssertTrue(appState.runAutomaticSyncRetryIfEligible(at: retryDate))
+
+        let retriedMutation = try XCTUnwrap(appState.pendingSyncMutations.first { $0.id == dueMutationId })
+        XCTAssertEqual(retriedMutation.attemptCount, 2)
+        XCTAssertEqual(try XCTUnwrap(retriedMutation.lastAttemptedAt), retryDate)
+        XCTAssertEqual(try XCTUnwrap(retriedMutation.nextRetryAt), retryDate.addingTimeInterval(300))
+        XCTAssertTrue(retriedMutation.lastError?.contains("Supabase not configured") == true)
+        XCTAssertTrue(appState.lastSyncStatus.contains("Automatic retry"))
+
+        let notDueMutations = appState.pendingSyncMutations.filter { $0.id != dueMutationId }
+        XCTAssertFalse(notDueMutations.isEmpty)
+        XCTAssertTrue(notDueMutations.allSatisfy { $0.attemptCount == 1 })
+
+        appState.setSyncNetworkStatus(.offline)
+        XCTAssertFalse(appState.runAutomaticSyncRetryIfEligible(at: retryDate.addingTimeInterval(601)))
+
+        store.delete()
+    }
+
     func testLegacyPendingSyncMutationDecodesWithReplayMetadata() throws {
         let legacyMutation = """
         {
