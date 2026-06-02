@@ -318,7 +318,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: Local mutations now have typed queue records with stable local IDs, attempt count, and status. Snapshot decoding tolerates older files.
-- Required fixes: Add a repository/sync worker, server IDs, retry backoff, network reachability, and conflict resolution.
+- Required fixes: Add a repository/sync worker, server IDs, automatic retry execution, and conflict resolution.
 - Status: Accept local queue scaffold.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1022,7 +1022,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: The UI test exercises real queued local auth/onboarding mutations and verifies the retry path marks them blocked because Supabase is not configured.
-- Required fixes: Replace the scaffold with a replay worker, server IDs, conflict handling, backoff, reachability, and durable per-record error details.
+- Required fixes: Replace the scaffold with live replay, server IDs, conflict handling, automatic retry execution, and durable per-record error details.
 - Status: Accept local implementation.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1214,7 +1214,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: `LocalSyncReplayWorker` maps pending auth, onboarding, health log create/update/delete, privacy, chat, safety, export, and deletion mutations to explicit future Supabase targets/actions. Retry records `lastAttemptedAt` and `lastError` per mutation, repeated updates coalesce, and edit-then-delete removes redundant update replay.
-- Required fixes: Connect the planner to a real Supabase client, returned server IDs, receipts, retry backoff, reachability, and conflict handling once credentials exist.
+- Required fixes: Connect the planner to a real Supabase client, returned server IDs, receipts, automatic retry execution, and conflict handling once credentials exist.
 - Status: Accept local contract.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1246,7 +1246,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: The UI surfaces replay-plan kind/action/target/attempt/error metadata that already exists locally, while preserving the truth that Supabase is not configured and no backend mutation has completed.
-- Required fixes: Connect live replay, store returned server IDs/receipts, add automatic retry execution/reachability, and expose conflict/user-action states when the backend is available.
+- Required fixes: Connect live replay, store returned server IDs/receipts, add automatic retry execution, and expose conflict/user-action states when the backend is available.
 - Status: Accept local blocked-state implementation.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1256,7 +1256,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The first two focused UI attempts exposed that a decorative status chip did not reliably publish the dynamic blocked label to XCTest. The final implementation uses combined row accessibility metadata, and the focused sync-detail UI test, full unit target, and clean build pass.
-- Required fixes: Add full live replay success/failure, conflict, automatic retry execution, reachability, and manual accessibility regression coverage once Supabase credentials exist.
+- Required fixes: Add full live replay success/failure, conflict, automatic retry execution, and manual accessibility regression coverage once Supabase credentials exist.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -1293,6 +1293,38 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live replay execution, reachability-aware retry, server IDs/receipts, and manual accessibility QA.
+
+## Network Reachability Sync Pause Audit
+
+### Feature Audit: Offline-Aware Sync Retry Gate
+
+Product Simplicity Reviewer:
+- Findings: Offline sync retry now gives a direct pause state instead of turning local records into backend-blocked errors when there is no connection. The user sees the state in the same Profile sync detail sheet.
+- Required fixes: Keep automatic retry behavior quiet and focused once live replay exists.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The network status block uses existing sheet styling, stable identifiers, and simple text copy. Offline state is visible in the Profile row summary and the detail sheet.
+- Required fixes: Manually verify network detail wrapping and VoiceOver order at large Dynamic Type.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `NetworkReachabilityMonitor` uses `NWPathMonitor`, debug launch overrides keep tests deterministic, and `retryPendingSyncScaffold` preserves pending mutation status/attempt/error/retry metadata while offline.
+- Required fixes: Connect reachability to automatic replay scheduling, live Supabase retry, token refresh, server IDs/receipts, and conflict handling.
+- Status: Accept local reachability gate.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Reachability state is runtime-only and does not add persisted health data or telemetry. Offline retry copy does not imply cloud sync or cloud deletion.
+- Required fixes: Re-check future diagnostics/support exports before including network or sync metadata.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused offline reachability unit coverage, focused Profile offline sync UI coverage, full unit target with 45 tests, and clean build pass. The first focused unit validation caught a Swift actor-isolation compile issue in `deinit`; removing that cleanup path resolved the build.
+- Required fixes: Add live automatic retry, online/offline transition, conflict, and manual accessibility regression tests once Supabase credentials exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live replay execution, automatic retry scheduling, server IDs/receipts, auth refresh, and manual accessibility QA.
 
 ## Timeline Delete Undo Audit
 
@@ -1342,7 +1374,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: Pending mutations now carry stable idempotency keys, optional server record IDs, and optional receipt metadata. Replay plans propagate those fields, and legacy queued mutations decode with generated keys.
-- Required fixes: Connect live Supabase replay, persist returned server IDs/receipts, add retry backoff, reachability, and conflict resolution.
+- Required fixes: Connect live Supabase replay, persist returned server IDs/receipts, add automatic retry execution, and conflict resolution.
 - Status: Accept local replay contract.
 
 Privacy, Security, and Medical Safety Reviewer:

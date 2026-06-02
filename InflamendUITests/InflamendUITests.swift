@@ -212,6 +212,32 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileSyncRetryPausesWhenNetworkOfflineSmoke() {
+        let app = openFreshOnboardedHome(
+            displayName: "UI Offline Sync",
+            email: "ui-offline-sync@example.com",
+            extraLaunchArguments: ["--inflamend-network-offline"]
+        )
+
+        app.buttons["tab-profile"].tap()
+        XCTAssertTrue(app.staticTexts["YOUR ACCOUNT"].waitForExistence(timeout: 5))
+
+        let syncRow = app.buttons["profile-sync-status-row"]
+        waitForLabel(syncRow, contains: "offline")
+        tapWhenVisible(syncRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["profile-sync-detail-title"].waitForExistence(timeout: 5))
+        waitForLabel(app.staticTexts["profile-sync-network-status"], contains: "Offline")
+        waitForLabel(app.staticTexts["profile-sync-network-detail"], contains: "waits")
+
+        tapWhenVisible(app.buttons["profile-sync-detail-retry-button"], in: app)
+        let syncSummary = app.staticTexts["profile-sync-detail-summary"]
+        waitForLabel(syncSummary, contains: "network offline")
+        let firstSyncDetailRow = app.descendants(matching: .any)["profile-sync-detail-row-0"]
+        waitForLabel(firstSyncDetailRow, contains: "Pending")
+    }
+
+    @MainActor
     func testProfileSignOutReturnsToAuthGateSmoke() {
         let app = openSeededProfile()
 
@@ -627,9 +653,13 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
-    private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
+    private func openFreshOnboardedHome(
+        displayName: String,
+        email: String,
+        extraLaunchArguments: [String] = []
+    ) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--inflamend-reset-state"]
+        app.launchArguments = ["--inflamend-reset-state"] + extraLaunchArguments
         app.launch()
 
         XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 8))

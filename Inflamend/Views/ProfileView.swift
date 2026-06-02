@@ -263,6 +263,21 @@ private struct SyncStatusDetailSheet: View {
                     .foregroundColor(.fgDim)
                     .lineSpacing(3)
 
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Network: \(appState.syncNetworkStatus.label)")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                        .accessibilityIdentifier("profile-sync-network-status")
+                    Text(appState.syncNetworkStatus.detail)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgFaint)
+                        .accessibilityIdentifier("profile-sync-network-detail")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+
                 Button {
                     appState.retryPendingSyncScaffold()
                 } label: {

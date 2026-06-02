@@ -33,6 +33,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for Profile sync status retry showing the backend-blocked state.
 - Added stable identifiers and combined accessibility labels for the Profile sync detail sheet rows so pending/blocked status, replay target, attempts, and errors are exposed to UI tests and assistive technology.
 - Added Profile sync detail next-retry text to the combined row accessibility label and UI smoke assertion.
+- Added Profile sync detail network status/detail identifiers and UI smoke coverage for the offline retry-pause path.
 - Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
 - Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 - Added stable identifiers and UI smoke coverage for populated Insights confidence text, stat tiles, chart containers, and food pattern rows.
@@ -58,9 +59,9 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Add manual VoiceOver notes for timeline delete confirmation dialogs.
 - Add manual VoiceOver notes for the timeline edit sheet and row action order.
 - Add manual VoiceOver notes for the timeline delete undo toast and action order.
-- Add manual VoiceOver notes for privacy toggles, the Profile sync detail sheet, and the voice permission fallback state.
+- Add manual VoiceOver notes for privacy toggles, the Profile sync detail sheet including network status, and the voice permission fallback state.
 - Add labels/hints for auth mode selection and onboarding pill selections.
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status/detail, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status/detail including offline state, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

@@ -561,6 +561,33 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testOfflineReachabilityPausesSyncRetryWithoutMutatingQueue() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-offline-sync-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.setSyncNetworkStatus(.offline)
+        appState.signUp(email: "offline-sync@example.com", displayName: "Offline Sync")
+        let queuedId = try XCTUnwrap(appState.pendingSyncMutations.first?.id)
+
+        appState.retryPendingSyncScaffold()
+
+        let queuedMutation = try XCTUnwrap(appState.pendingSyncMutations.first { $0.id == queuedId })
+        XCTAssertEqual(appState.syncNetworkStatus, .offline)
+        XCTAssertTrue(appState.syncSummary.contains("offline"))
+        XCTAssertEqual(queuedMutation.status, .pending)
+        XCTAssertEqual(queuedMutation.attemptCount, 0)
+        XCTAssertNil(queuedMutation.lastAttemptedAt)
+        XCTAssertNil(queuedMutation.nextRetryAt)
+        XCTAssertNil(queuedMutation.lastError)
+        XCTAssertTrue(appState.lastSyncStatus.contains("network offline"))
+
+        store.delete()
+    }
+
+    @MainActor
     func testDeleteLogRemovesEntryAndCoalescesPendingCreate() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-delete-log-\(UUID().uuidString).json")

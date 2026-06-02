@@ -1,4 +1,5 @@
 import Foundation
+@preconcurrency import Network
 import SwiftUI
 
 // MARK: - Local Snapshot Store
@@ -109,6 +110,58 @@ enum SyncMutationStatus: String, Codable, Equatable {
     case synced
     case failedRetryable
     case failedNeedsUser
+}
+
+enum SyncNetworkStatus: String, Codable, Equatable {
+    case unknown
+    case online
+    case offline
+
+    var label: String {
+        switch self {
+        case .unknown:
+            return "Network unknown"
+        case .online:
+            return "Online"
+        case .offline:
+            return "Offline"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .unknown:
+            return "Inflamend has not confirmed network reachability yet."
+        case .online:
+            return "Network appears available for future backend replay."
+        case .offline:
+            return "Sync replay waits until network connectivity returns."
+        }
+    }
+}
+
+protocol NetworkReachabilityMonitoring: AnyObject {
+    func start(_ onChange: @escaping @Sendable (SyncNetworkStatus) -> Void)
+    func cancel()
+}
+
+final class NetworkReachabilityMonitor: NetworkReachabilityMonitoring {
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "com.inflamend.network-reachability")
+    private var started = false
+
+    func start(_ onChange: @escaping @Sendable (SyncNetworkStatus) -> Void) {
+        guard !started else { return }
+        started = true
+        monitor.pathUpdateHandler = { path in
+            onChange(path.status == .satisfied ? .online : .offline)
+        }
+        monitor.start(queue: queue)
+    }
+
+    func cancel() {
+        monitor.cancel()
+    }
 }
 
 struct HealthLogReplayPayload: Codable, Equatable {
@@ -497,6 +550,7 @@ private extension JSONDecoder {
 class AppState {
     @ObservationIgnored private let store: AppSnapshotStore
     @ObservationIgnored private let syncReplayWorker: LocalSyncReplayWorker
+    @ObservationIgnored private let reachabilityMonitor: NetworkReachabilityMonitoring?
 
     var authSession: AuthSession? = nil
     var onboardingProfile: OnboardingProfile? = nil
@@ -508,6 +562,7 @@ class AppState {
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
     var lastSyncStatus: String = "Saved on this device"
+    var syncNetworkStatus: SyncNetworkStatus = .unknown
     var pendingSyncMutations: [PendingSyncMutation] = []
     var logs: [LogEntry] = []
     var chatMessages: [ChatMessage] = [
@@ -519,16 +574,27 @@ class AppState {
     @ObservationIgnored private var toastGeneration = 0
     private var toastTask: Task<Void, Never>? = nil
 
-    init(store: AppSnapshotStore = .live, syncReplayWorker: LocalSyncReplayWorker = LocalSyncReplayWorker()) {
+    init(
+        store: AppSnapshotStore = .live,
+        syncReplayWorker: LocalSyncReplayWorker = LocalSyncReplayWorker(),
+        reachabilityMonitor: NetworkReachabilityMonitoring? = NetworkReachabilityMonitor()
+    ) {
         self.store = store
         self.syncReplayWorker = syncReplayWorker
+        let launchArguments = ProcessInfo.processInfo.arguments
+        let networkOverride = Self.networkStatusOverride(from: launchArguments)
+        self.reachabilityMonitor = networkOverride == nil ? reachabilityMonitor : nil
+        if let networkOverride {
+            syncNetworkStatus = networkOverride
+        }
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--inflamend-reset-state") {
+        if launchArguments.contains("--inflamend-reset-state") {
             store.delete()
         }
-        if ProcessInfo.processInfo.arguments.contains("--inflamend-seed-complete-state") {
+        if launchArguments.contains("--inflamend-seed-complete-state") {
             seedCompleteState()
             persist()
+            startReachabilityMonitoring()
             return
         }
         #endif
@@ -537,6 +603,7 @@ class AppState {
         } else if store.fileExists {
             lastSyncStatus = "Local snapshot unreadable; using clean state"
         }
+        startReachabilityMonitoring()
     }
 
     var isAuthenticated: Bool {
@@ -568,6 +635,9 @@ class AppState {
             return lastSyncStatus
         }
         var statusPieces = ["\(pendingSyncCount) pending"]
+        if syncNetworkStatus == .offline {
+            statusPieces.append("offline")
+        }
         let blockedCount = pendingSyncMutations.filter { $0.status == .blockedNoBackend }.count
         if blockedCount > 0 {
             statusPieces.append("\(blockedCount) blocked")
@@ -583,6 +653,30 @@ class AppState {
 
     var pendingSyncReplayPlan: [SyncReplayPlanItem] {
         syncReplayWorker.plan(for: pendingSyncMutations)
+    }
+
+    func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
+        syncNetworkStatus = status
+    }
+
+    private static func networkStatusOverride(from arguments: [String]) -> SyncNetworkStatus? {
+        #if DEBUG
+        if arguments.contains("--inflamend-network-offline") {
+            return .offline
+        }
+        if arguments.contains("--inflamend-network-online") {
+            return .online
+        }
+        #endif
+        return nil
+    }
+
+    private func startReachabilityMonitoring() {
+        reachabilityMonitor?.start { [weak self] status in
+            Task { @MainActor [weak self] in
+                self?.setSyncNetworkStatus(status)
+            }
+        }
     }
 
     func showToast(_ message: String, actionTitle: String? = nil, action: (() -> Void)? = nil) {
@@ -1059,6 +1153,12 @@ class AppState {
             lastSyncStatus = "Nothing pending"
             persist(updateSyncTimestamp: false)
             showToast("Nothing pending")
+            return
+        }
+        guard syncNetworkStatus != .offline else {
+            lastSyncStatus = "Sync paused: network offline"
+            persist(updateSyncTimestamp: false)
+            showToast("Sync waits for network")
             return
         }
         let result = syncReplayWorker.retry(pendingSyncMutations)
