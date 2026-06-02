@@ -10,6 +10,8 @@
 - AI provider key is server-side only by design.
 - Local snapshot persistence writes to Application Support and applies iOS file protection.
 - Password entered in the local auth scaffold is not stored.
+- Pending sync queue is local-only and does not send data without backend setup.
+- Corrupt local snapshots fall back to clean state instead of crashing.
 
 ## High-Priority Risks
 
@@ -22,7 +24,7 @@
 | No PHI logging policy enforcement | Open | Add logging wrapper and review |
 | Generated Info.plist lacks permission descriptions for voice | Open | Add when Speech/mic features are implemented |
 | `.claude/settings.local.json` exists locally | External/user file | Do not add to git |
-| Local snapshot corruption handling | Open | Add recovery UI and tests for unreadable snapshot files |
+| Local snapshot corruption handling | Partially mitigated | Unit-tested clean fallback exists; add recovery UI |
 
 ## Secrets Policy
 

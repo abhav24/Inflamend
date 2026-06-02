@@ -319,6 +319,7 @@ struct AppIcon: View {
         case "note":     return "note.text"
         case "shield":   return "checkmark.shield"
         case "lock":     return "lock"
+        case "cloud":    return "icloud"
         default:         return "circle"
         }
     }

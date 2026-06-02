@@ -167,12 +167,39 @@ Fixes made:
 
 What remains:
 - Replace local auth scaffold with Supabase Auth and Keychain-backed token/session handling.
-- Add an offline mutation queue and server sync status per log.
+- Add a real Supabase sync worker, server IDs, and conflict handling.
 - Add UI tests for auth, onboarding, sign out, and first-log empty state.
 - Add confirmation dialogs for destructive privacy/account actions.
 
 What was committed:
 - Commit message: `Add local auth onboarding and persistence`
+
+## Current Checkpoint: Local Sync Queue and Snapshot Resilience
+
+What changed:
+- Added `PendingSyncMutation`, `SyncMutationKind`, and `SyncMutationStatus` to model local mutations that need backend replay.
+- Added the pending sync queue to `AppSnapshot` so auth, onboarding, logs, privacy preference changes, safety notices, and export/delete scaffolds survive app restart.
+- Added a Profile sync status row that shows pending count and lets users retry. Retry currently marks queued mutations as blocked because Supabase is not configured.
+- Avoided queuing chat messages for backend replay unless AI memory is explicitly enabled.
+- Made `AppSnapshot` decoding resilient to older snapshot files that do not contain the new queue fields.
+- Added corrupt snapshot fallback so unreadable local JSON starts from clean state instead of crashing.
+
+What was tested:
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 14 tests, including pending queue persistence, backend-blocked retry, legacy snapshot decode, and corrupt snapshot fallback.
+
+What remains:
+- Move queue replay behind a repository/sync-worker protocol.
+- Add Supabase Auth token handling and server-side replay once credentials exist.
+- Add per-record server IDs, conflict handling, retry backoff, and network reachability.
+- Add UI tests for Profile sync status and first-log offline save behavior.
+
+What will be committed:
+- Commit message: `Add local sync queue and snapshot recovery`
 
 ## Command Log
 
@@ -214,6 +241,12 @@ Result after auth/persistence pass: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after auth/persistence pass: TEST SUCCEEDED with 11 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after sync-queue pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after sync-queue pass: TEST SUCCEEDED with 14 tests.
 ```
 
 ## Pass Progress
@@ -221,7 +254,7 @@ Result after auth/persistence pass: TEST SUCCEEDED with 11 tests.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence; core logging, safety, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, safety, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -243,6 +276,7 @@ Result after auth/persistence pass: TEST SUCCEEDED with 11 tests.
 | Sleep logging | Implemented with local persistence | Sleep form saves quality/wake entry | Add editable times/duration and backend sync |
 | Weight logging | Implemented with local persistence | Weight form saves manual entry | Add units/validation and backend sync |
 | Notes logging | Implemented with local persistence | `LogNoteForm` | Add edit/delete and backend sync |
+| Offline sync queue | Implemented locally | `PendingSyncMutation`, Profile sync row, queue persistence tests | Add Supabase replay worker, server IDs, conflicts, backoff |
 | Voice logging parser | Logic implemented/tested and surfaced | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm` | Add speech capture and editable parsed fields |
 | Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
 | Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
@@ -296,12 +330,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 11 unit tests through `InflamendTests`.
+- Tests: passing with 14 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, logging, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, and core UX checkpoint exist; auth/persistence checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, and auth/persistence checkpoints exist; sync queue checkpoint pending commit.
 
 Continue working.
 

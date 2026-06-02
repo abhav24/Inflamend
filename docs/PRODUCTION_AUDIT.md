@@ -301,3 +301,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with sync/repository boundaries, UI tests, or insights/report polish.
+
+## Local Sync Queue and Snapshot Recovery Audit
+
+### Feature Audit: Pending Queue, Retry Status, Snapshot Resilience
+
+Product Simplicity Reviewer:
+- Findings: Sync status is visible from Profile without introducing a complex settings workflow. Retry tells the user backend setup is required instead of pretending cloud sync worked.
+- Required fixes: Keep future sync errors short and route actionable conflicts to one focused screen.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sync status row fits the existing Profile privacy section and uses the same row component, so the new state does not add layout risk.
+- Required fixes: Add UI tests and VoiceOver labels once Profile smoke testing exists.
+- Status: Accept scaffold.
+
+Backend and Data Integrity Reviewer:
+- Findings: Local mutations now have typed queue records with stable local IDs, attempt count, and status. Snapshot decoding tolerates older files.
+- Required fixes: Add a repository/sync worker, server IDs, retry backoff, network reachability, and conflict resolution.
+- Status: Accept local queue scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Chat messages are not queued for backend replay unless AI memory is enabled. Corrupt snapshots fall back safely instead of exposing stale state.
+- Required fixes: Production storage still needs encryption/keychain strategy and a clear recovery/delete UI for corrupted local data.
+- Status: Accept checkpoint with storage caveat.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` passes with 14 tests, including queue persistence, backend-blocked retry, legacy snapshot decode, and corrupt snapshot fallback.
+- Required fixes: Add UI smoke tests for sync status and offline first-log behavior.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with repository/sync worker boundaries, UI tests, or insights/report polish.

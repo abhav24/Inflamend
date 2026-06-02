@@ -170,4 +170,89 @@ final class HealthLogicTests: XCTestCase {
 
         store.delete()
     }
+
+    @MainActor
+    func testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-sync-test-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "sync@example.com", displayName: "Sync Patient")
+        appState.completeOnboarding(
+            diagnosis: "Ulcerative colitis",
+            primaryGoal: "Track flares",
+            baselineStoolCount: 2,
+            hasFlarePlan: false
+        )
+        appState.addLog(type: .note, title: "Needs sync", sub: "Queued")
+
+        let beforeChatCount = appState.pendingSyncCount
+        appState.addChatMessage(role: .user, content: "Do not sync this while memory is off")
+        XCTAssertEqual(appState.pendingSyncCount, beforeChatCount)
+
+        appState.setAIMemoryEnabled(true)
+        appState.addChatMessage(role: .user, content: "Syncable with memory on")
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .chatMessage })
+
+        appState.retryPendingSyncScaffold()
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
+        XCTAssertTrue(appState.lastSyncStatus.contains("Supabase not configured"))
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.pendingSyncCount, appState.pendingSyncCount)
+        XCTAssertTrue(restored.pendingSyncMutations.contains { $0.kind == .healthLog })
+        XCTAssertTrue(restored.pendingSyncMutations.contains { $0.kind == .onboardingProfile })
+
+        store.delete()
+    }
+
+    @MainActor
+    func testCorruptSnapshotFallsBackToCleanState() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-corrupt-test-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+        try Data("not-json".utf8).write(to: url)
+
+        let appState = AppState(store: store)
+
+        XCTAssertFalse(appState.isAuthenticated)
+        XCTAssertTrue(appState.logs.isEmpty)
+        XCTAssertTrue(appState.lastSyncStatus.contains("unreadable"))
+
+        store.delete()
+    }
+
+    @MainActor
+    func testLegacySnapshotWithoutQueueStillDecodes() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-legacy-test-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+        let legacySnapshot = """
+        {
+          "aiMemoryEnabled": true,
+          "chatMessages": [],
+          "lastSyncStatus": "Legacy saved",
+          "logs": [],
+          "medsTaken": 1,
+          "medsTotal": 2,
+          "riskScore": 55,
+          "voiceTranscriptStorageEnabled": false
+        }
+        """
+        try Data(legacySnapshot.utf8).write(to: url)
+
+        let appState = AppState(store: store)
+
+        XCTAssertEqual(appState.riskScore, 55)
+        XCTAssertEqual(appState.medsTaken, 1)
+        XCTAssertEqual(appState.medsTotal, 2)
+        XCTAssertTrue(appState.pendingSyncMutations.isEmpty)
+        XCTAssertEqual(appState.lastSyncStatus, "Legacy saved")
+
+        store.delete()
+    }
 }

@@ -4,7 +4,7 @@
 |---|---|---|---|
 | Auth | Invalid email/password | Human-readable error, no raw backend code | Pending |
 | Auth | Session expired | Return to sign in, preserve local unsynced logs | Pending |
-| Supabase | Network offline | Save locally or explain failure | Pending |
+| Supabase | Network offline | Save locally and queue mutation | Local queue implemented; network replay pending |
 | Supabase | RLS denied | Safe generic error, log non-PHI diagnostic | Pending |
 | Logging | Invalid fields | Inline validation | Pending |
 | Voice | Permission denied | Manual fallback | Pending |

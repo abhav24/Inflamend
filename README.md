@@ -78,7 +78,7 @@ Inflamend/
 
 All UI state is coordinated through a single `AppState` class (no Combine, no Redux). It's declared with `@Observable` and annotated `@MainActor`. Views create it at the root and pass it down via `@State` / `@Binding`.
 
-`AppState` now also owns local scaffolds for auth, onboarding, privacy preferences, logs, chat messages, risk state, and snapshot restore. `AppSnapshotStore` writes JSON to Application Support with iOS file protection while Supabase Auth and sync remain externally blocked.
+`AppState` now also owns local scaffolds for auth, onboarding, privacy preferences, logs, chat messages, risk state, snapshot restore, and a pending sync mutation queue. `AppSnapshotStore` writes JSON to Application Support with iOS file protection while the Supabase worker remains externally blocked.
 
 ```swift
 @Observable @MainActor
@@ -89,6 +89,7 @@ class AppState {
     var mood: MoodOption?
     var medsTaken: Int = 2
     var medsTotal: Int = 4
+    var pendingSyncMutations: [PendingSyncMutation] = []
     var logs: [LogEntry] = []
     var chatMessages: [ChatMessage] = [...]
     var toast: String?
@@ -96,6 +97,7 @@ class AppState {
     func signUp(email: String, displayName: String)
     func completeOnboarding(...)
     func addLog(type: LogType, title: String, sub: String)
+    func retryPendingSyncScaffold()
 }
 ```
 

@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: - Local Snapshot Store
 
 struct AppSnapshot: Codable, Equatable {
+    var schemaVersion: Int
     var authSession: AuthSession?
     var onboardingProfile: OnboardingProfile?
     var riskScore: Int
@@ -14,8 +15,111 @@ struct AppSnapshot: Codable, Equatable {
     var aiMemoryEnabled: Bool
     var voiceTranscriptStorageEnabled: Bool
     var lastSyncStatus: String
+    var pendingSyncMutations: [PendingSyncMutation]
     var logs: [LogEntry]
     var chatMessages: [ChatMessage]
+
+    init(
+        schemaVersion: Int = 1,
+        authSession: AuthSession?,
+        onboardingProfile: OnboardingProfile?,
+        riskScore: Int,
+        mood: MoodOption?,
+        medsTaken: Int,
+        medsTotal: Int,
+        latestSafetyMessage: String?,
+        aiMemoryEnabled: Bool,
+        voiceTranscriptStorageEnabled: Bool,
+        lastSyncStatus: String,
+        pendingSyncMutations: [PendingSyncMutation] = [],
+        logs: [LogEntry],
+        chatMessages: [ChatMessage]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.authSession = authSession
+        self.onboardingProfile = onboardingProfile
+        self.riskScore = riskScore
+        self.mood = mood
+        self.medsTaken = medsTaken
+        self.medsTotal = medsTotal
+        self.latestSafetyMessage = latestSafetyMessage
+        self.aiMemoryEnabled = aiMemoryEnabled
+        self.voiceTranscriptStorageEnabled = voiceTranscriptStorageEnabled
+        self.lastSyncStatus = lastSyncStatus
+        self.pendingSyncMutations = pendingSyncMutations
+        self.logs = logs
+        self.chatMessages = chatMessages
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case authSession
+        case onboardingProfile
+        case riskScore
+        case mood
+        case medsTaken
+        case medsTotal
+        case latestSafetyMessage
+        case aiMemoryEnabled
+        case voiceTranscriptStorageEnabled
+        case lastSyncStatus
+        case pendingSyncMutations
+        case logs
+        case chatMessages
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        authSession = try container.decodeIfPresent(AuthSession.self, forKey: .authSession)
+        onboardingProfile = try container.decodeIfPresent(OnboardingProfile.self, forKey: .onboardingProfile)
+        riskScore = try container.decodeIfPresent(Int.self, forKey: .riskScore) ?? 42
+        mood = try container.decodeIfPresent(MoodOption.self, forKey: .mood)
+        medsTaken = try container.decodeIfPresent(Int.self, forKey: .medsTaken) ?? 0
+        medsTotal = max(1, try container.decodeIfPresent(Int.self, forKey: .medsTotal) ?? 4)
+        latestSafetyMessage = try container.decodeIfPresent(String.self, forKey: .latestSafetyMessage)
+        aiMemoryEnabled = try container.decodeIfPresent(Bool.self, forKey: .aiMemoryEnabled) ?? false
+        voiceTranscriptStorageEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceTranscriptStorageEnabled) ?? false
+        lastSyncStatus = try container.decodeIfPresent(String.self, forKey: .lastSyncStatus) ?? "Saved on this device"
+        pendingSyncMutations = try container.decodeIfPresent([PendingSyncMutation].self, forKey: .pendingSyncMutations) ?? []
+        logs = try container.decodeIfPresent([LogEntry].self, forKey: .logs) ?? []
+        chatMessages = try container.decodeIfPresent([ChatMessage].self, forKey: .chatMessages) ?? [
+            ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage)
+        ]
+    }
+}
+
+enum SyncMutationKind: String, Codable, Equatable {
+    case authSession
+    case onboardingProfile
+    case healthLog
+    case chatMessage
+    case privacyPreference
+    case safetyNotice
+    case reportExport
+    case accountDeletion
+}
+
+enum SyncMutationStatus: String, Codable, Equatable {
+    case pending
+    case blockedNoBackend
+    case syncing
+    case synced
+    case failedNeedsUser
+}
+
+struct PendingSyncMutation: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var kind: SyncMutationKind
+    var localRecordId: String
+    var summary: String
+    var createdAt = Date()
+    var attemptCount = 0
+    var status: SyncMutationStatus = .pending
+}
+
+private enum AppDefaults {
+    static let initialAssistantMessage = "How is your gut today? I can help make sense of logs, prepare questions, or flag symptoms that may need clinician attention."
 }
 
 struct AuthSession: Codable, Equatable {
@@ -54,6 +158,10 @@ struct AppSnapshotStore {
 
     init(fileURL: URL) {
         self.fileURL = fileURL
+    }
+
+    var fileExists: Bool {
+        FileManager.default.fileExists(atPath: fileURL.path)
     }
 
     func load() -> AppSnapshot? {
@@ -119,9 +227,10 @@ class AppState {
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
     var lastSyncStatus: String = "Saved on this device"
+    var pendingSyncMutations: [PendingSyncMutation] = []
     var logs: [LogEntry] = []
     var chatMessages: [ChatMessage] = [
-        ChatMessage(role: .assistant, content: "How is your gut today? I can help make sense of logs, prepare questions, or flag symptoms that may need clinician attention.")
+        ChatMessage(role: .assistant, content: AppDefaults.initialAssistantMessage)
     ]
     var toast: String? = nil
     private var toastTask: Task<Void, Never>? = nil
@@ -130,6 +239,8 @@ class AppState {
         self.store = store
         if let snapshot = store.load() {
             apply(snapshot)
+        } else if store.fileExists {
+            lastSyncStatus = "Local snapshot unreadable; using clean state"
         }
     }
 
@@ -153,6 +264,17 @@ class AppState {
         onboardingProfile?.diagnosis ?? "IBD profile not completed"
     }
 
+    var pendingSyncCount: Int {
+        pendingSyncMutations.filter { $0.status != .synced }.count
+    }
+
+    var syncSummary: String {
+        if pendingSyncCount == 0 {
+            return lastSyncStatus
+        }
+        return "\(pendingSyncCount) pending · \(lastSyncStatus)"
+    }
+
     func showToast(_ message: String) {
         toast = message
         toastTask?.cancel()
@@ -163,7 +285,9 @@ class AppState {
     }
 
     func addLog(type: LogType, title: String, sub: String = "", date: Date = Date()) {
-        logs.insert(LogEntry(type: type, title: title, sub: sub, time: Self.timeString(from: date)), at: 0)
+        let entry = LogEntry(type: type, title: title, sub: sub, time: Self.timeString(from: date))
+        logs.insert(entry, at: 0)
+        enqueueSync(kind: .healthLog, localRecordId: entry.id.uuidString, summary: "\(type.rawValue): \(title)")
         persist()
     }
 
@@ -271,6 +395,7 @@ class AppState {
             return
         }
         authSession = .local(email: trimmedEmail, displayName: trimmedName)
+        enqueueSync(kind: .authSession, localRecordId: authSession?.userId.uuidString ?? trimmedEmail, summary: "Local account scaffold")
         persist()
         showToast("Account scaffold created")
     }
@@ -283,6 +408,7 @@ class AppState {
         }
         let existingName = authSession?.displayName ?? Self.defaultDisplayName(for: trimmedEmail)
         authSession = .local(email: trimmedEmail, displayName: existingName)
+        enqueueSync(kind: .authSession, localRecordId: authSession?.userId.uuidString ?? trimmedEmail, summary: "Local sign in")
         persist()
         showToast("Signed in locally")
     }
@@ -302,6 +428,7 @@ class AppState {
             skippedSensitiveQuestions: skippedSensitiveQuestions,
             completedAt: Date()
         )
+        enqueueSync(kind: .onboardingProfile, localRecordId: authSession?.userId.uuidString ?? "local-onboarding", summary: diagnosis)
         persist()
         showToast("Onboarding saved")
     }
@@ -318,23 +445,32 @@ class AppState {
 
     func setAIMemoryEnabled(_ enabled: Bool) {
         aiMemoryEnabled = enabled
+        enqueueSync(kind: .privacyPreference, localRecordId: "ai-memory", summary: enabled ? "AI memory on" : "AI memory off")
         persist()
         showToast("AI memory \(enabled ? "on" : "off")")
     }
 
     func setVoiceTranscriptStorageEnabled(_ enabled: Bool) {
         voiceTranscriptStorageEnabled = enabled
+        enqueueSync(kind: .privacyPreference, localRecordId: "voice-transcripts", summary: enabled ? "Voice transcript storage on" : "Voice transcript storage off")
         persist()
         showToast("Transcript storage \(enabled ? "on" : "off")")
     }
 
     func addChatMessage(role: ChatRole, content: String) {
-        chatMessages.append(ChatMessage(role: role, content: content))
+        let message = ChatMessage(role: role, content: content)
+        chatMessages.append(message)
+        if aiMemoryEnabled {
+            enqueueSync(kind: .chatMessage, localRecordId: message.id.uuidString, summary: "\(role.rawValue) chat message")
+        }
         persist()
     }
 
     func setSafetyMessage(_ message: String?) {
         latestSafetyMessage = message
+        if let message, !message.isEmpty {
+            enqueueSync(kind: .safetyNotice, localRecordId: "latest-safety", summary: "Safety notice shown")
+        }
         persist()
     }
 
@@ -347,22 +483,46 @@ class AppState {
     }
 
     func requestDataExportScaffold() {
+        enqueueSync(kind: .reportExport, localRecordId: "report-export-\(UUID().uuidString)", summary: "Data export requested")
         addLog(type: .note, title: "Data export requested", sub: "Requires backend credentials")
         showToast("Data export scaffolded")
     }
 
     func requestAccountDeletionScaffold() {
+        enqueueSync(kind: .accountDeletion, localRecordId: "account-deletion-\(UUID().uuidString)", summary: "Account deletion requested")
         addLog(type: .note, title: "Account deletion requested", sub: "Requires signed-in backend account")
         showToast("Account deletion scaffolded")
     }
 
+    func retryPendingSyncScaffold() {
+        guard !pendingSyncMutations.isEmpty else {
+            lastSyncStatus = "Nothing pending"
+            persist(updateSyncTimestamp: false)
+            showToast("Nothing pending")
+            return
+        }
+        pendingSyncMutations = pendingSyncMutations.map { mutation in
+            var copy = mutation
+            copy.attemptCount += 1
+            copy.status = .blockedNoBackend
+            return copy
+        }
+        lastSyncStatus = "Sync blocked: Supabase not configured"
+        persist(updateSyncTimestamp: false)
+        showToast("Backend setup required")
+    }
+
     private func publishSafety(_ assessment: RedFlagAssessment) {
         latestSafetyMessage = assessment.hasRedFlags ? assessment.safetyCopy : nil
+        if assessment.hasRedFlags {
+            enqueueSync(kind: .safetyNotice, localRecordId: "latest-safety", summary: "Safety notice shown")
+        }
         persist()
     }
 
     private func snapshot() -> AppSnapshot {
         AppSnapshot(
+            schemaVersion: 1,
             authSession: authSession,
             onboardingProfile: onboardingProfile,
             riskScore: riskScore,
@@ -373,6 +533,7 @@ class AppState {
             aiMemoryEnabled: aiMemoryEnabled,
             voiceTranscriptStorageEnabled: voiceTranscriptStorageEnabled,
             lastSyncStatus: lastSyncStatus,
+            pendingSyncMutations: pendingSyncMutations,
             logs: logs,
             chatMessages: chatMessages
         )
@@ -389,12 +550,24 @@ class AppState {
         aiMemoryEnabled = snapshot.aiMemoryEnabled
         voiceTranscriptStorageEnabled = snapshot.voiceTranscriptStorageEnabled
         lastSyncStatus = snapshot.lastSyncStatus
+        pendingSyncMutations = snapshot.pendingSyncMutations
         logs = snapshot.logs
         chatMessages = snapshot.chatMessages
     }
 
-    private func persist() {
-        lastSyncStatus = "Saved locally at \(Self.timeString(from: Date()))"
+    private func enqueueSync(kind: SyncMutationKind, localRecordId: String, summary: String) {
+        guard authSession != nil else { return }
+        pendingSyncMutations.insert(
+            PendingSyncMutation(kind: kind, localRecordId: localRecordId, summary: summary),
+            at: 0
+        )
+    }
+
+    private func persist(updateSyncTimestamp: Bool = true) {
+        if updateSyncTimestamp {
+            let localStatus = "Saved locally at \(Self.timeString(from: Date()))"
+            lastSyncStatus = pendingSyncCount > 0 ? "\(localStatus) · backend pending" : localStatus
+        }
         do {
             try store.save(snapshot())
         } catch {

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 11 unit tests in HealthLogicTests.
+Coverage: 14 unit tests in HealthLogicTests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,7 +19,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 11 tests.
+Result: TEST SUCCEEDED with 14 tests.
 ```
 
 ## Unit Test Priorities
@@ -83,12 +83,12 @@ Status: started. Plain-text report wording and possible-pattern language are cov
 
 6. Offline/sync queue:
 - Pending mutation enqueue.
-- Retry state.
+- Retry state blocked by missing backend setup.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore is covered. Network queue behavior is pending.
+Status: local snapshot restore, pending queue persistence, backend-blocked retry, legacy decode, and corrupt snapshot fallback are covered. Network replay and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -144,7 +144,7 @@ When Supabase CLI and credentials are available:
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Plain-text generator scaffold wired; file/share export pending |
 | Privacy | Export data | User-visible export path exists | Scaffolded |
 | Privacy | Delete data/account | User-visible scaffold explains requirements | Scaffolded |
-| Offline | Log while offline | Local save or safe failure | Local snapshot save implemented; queue pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; backend replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -161,6 +161,9 @@ When Supabase CLI and credentials are available:
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testValidationHelpers`
 - `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
+- `testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend`
+- `testCorruptSnapshotFallsBackToCleanState`
+- `testLegacySnapshotWithoutQueueStillDecodes`
 
 ## Device Targets
 

@@ -20,6 +20,7 @@ Users must be able to log important health data even with poor connectivity, wit
 | `pending` | Saved locally, not sent |
 | `syncing` | In flight |
 | `synced` | Confirmed by backend |
+| `blockedNoBackend` | Retry attempted but Supabase is not configured |
 | `failed_retryable` | Network/server temporary failure |
 | `failed_needs_user` | Validation/auth/conflict needs action |
 
@@ -40,15 +41,18 @@ Implemented:
 - iOS file protection is applied to the snapshot file.
 - Session scaffold, onboarding profile, logs, chat, privacy preferences, risk, meds, mood, and safety state restore across app launches.
 - Log actions save locally before any backend exists.
-- Profile exposes last local save status through the app state, ready for UI surfacing.
+- `PendingSyncMutation` records local mutations with kind, local record ID, summary, attempt count, and status.
+- Profile exposes pending sync count and lets users retry, which currently marks queued records as blocked because Supabase is not configured.
+- Chat messages are only queued for backend replay when AI memory is explicitly enabled.
+- Snapshot decode tolerates older snapshot files that do not contain the queue.
+- Corrupt snapshots fall back to a clean state with a visible local status string.
 
 Not implemented:
 
-- Pending mutation queue.
 - Backend sync worker.
 - Network reachability state.
 - Conflict handling.
 - Per-record sync status.
 - Supabase Auth token refresh.
 
-Next app-layer work is to split snapshot persistence into a repository plus queue so local saves can be replayed to Supabase without UI code owning sync behavior.
+Next app-layer work is to move the queue behind a repository/sync-worker protocol and implement real Supabase replay once credentials are available.

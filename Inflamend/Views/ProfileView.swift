@@ -128,6 +128,9 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
+                    ProfileRow(icon: "cloud", label: "Sync status", sub: appState.syncSummary) {
+                        appState.retryPendingSyncScaffold()
+                    }
                     ProfileRow(
                         icon: "sparkle",
                         label: "AI memory",
