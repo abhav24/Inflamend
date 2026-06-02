@@ -20,6 +20,10 @@ Support URL: TBD
 
 Privacy Policy URL: TBD
 
+Terms URL: TBD
+
+Draft legal sources: `docs/PRIVACY_POLICY_DRAFT.md`, `docs/TERMS_OF_USE_DRAFT.md`
+
 Review notes: Demo account required if auth is mandatory. Do not include real PHI in demo data.
 
 ## Screenshot Plan
@@ -33,4 +37,4 @@ Review notes: Demo account required if auth is mandatory. Do not include real PH
 
 ## Icon and Launch Screen
 
-Current app icon catalog has no actual artwork. A production icon and launch screen direction are required before App Store submission.
+The current app icon catalog contains an opaque generated 1024x1024 icon from `scripts/generate_app_icon.py`. Final brand review, SpringBoard-size visual QA, App Store screenshots, and launch screen review are required before submission.

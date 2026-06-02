@@ -15,6 +15,7 @@ Not ready for App Store submission.
 | Build resources | Improved | Preview asset catalog remains under development assets and is no longer packaged as an app resource |
 | Launch screen | Generated | Needs visual QA |
 | Privacy manifest | Added scaffold | Must be reviewed before release |
+| Privacy policy and terms | Drafted | `docs/PRIVACY_POLICY_DRAFT.md` and `docs/TERMS_OF_USE_DRAFT.md` exist; legal review and public URLs still required |
 | Permission strings | Partial | Microphone and speech-recognition usage strings are present for the voice scaffold; HealthKit and notifications remain pending |
 | Medical claims | Risk | Copy must remain cautious |
 | Account deletion | Partial | Confirmation and local deletion request exist; required backend deletion still blocked until production auth/Supabase are live |
@@ -28,7 +29,7 @@ Not ready for App Store submission.
 ## Required Before Submission
 
 - Production auth, onboarding profile sync, and backend account deletion.
-- Privacy policy and terms URLs.
+- Legal review and public privacy policy/terms URLs from the draft documents.
 - App Store privacy questionnaire completed from `PRIVACY_DATA_INVENTORY.md`.
 - Medical disclaimer in relevant UI.
 - App Store screenshots and final icon review.

@@ -284,6 +284,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
+| Release | Privacy policy and terms | Drafts exist, match current app behavior, and publishable URLs are configured before submission | Drafts exist in docs; legal review, company/contact details, public URLs, and deletion workflow pending |
 | Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, retry backoff metadata, automatic due-retry execution, reachability-aware retry pause, and per-record blocked errors implemented; Profile sync detail sheet exposes blocked/offline records and retry metadata under UI smoke coverage; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |

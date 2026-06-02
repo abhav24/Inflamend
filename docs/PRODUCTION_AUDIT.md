@@ -1102,6 +1102,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with App Store screenshots, launch-screen visual QA, final brand review, and release-archive checks.
 
+## Privacy Policy and Terms Draft Audit
+
+### Feature Audit: App Store Legal Copy Drafts
+
+Product Simplicity Reviewer:
+- Findings: Legal-copy work now has concrete draft documents instead of a blank App Store placeholder. The drafts are scoped to the current product state and do not pretend live backend deletion/export exists.
+- Required fixes: Keep final policy and terms concise for users after counsel review.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No runtime UI changed. App Store metadata now points reviewers to the draft legal source files, which reduces release-prep ambiguity.
+- Required fixes: Add public URLs and verify App Store Connect metadata once hosting exists.
+- Status: Accept documentation checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The privacy draft matches current local storage, planned Supabase, planned AI provider, export/delete limitations, and sync metadata behavior.
+- Required fixes: Update the drafts when live Supabase auth, backend deletion jobs, cloud exports, analytics, or subscriptions are implemented.
+- Status: Accept checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The drafts explicitly avoid HIPAA claims, fake publication URLs, fake deletion guarantees, and medical-advice claims. They preserve emergency and clinician-care disclaimers.
+- Required fixes: Counsel review, company/contact details, jurisdiction-specific terms, data deletion workflow, and final App Store privacy questionnaire answers are still required.
+- Status: Accept draft checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Repository search confirmed the new metadata references point to draft files, and no secrets or PHI were introduced.
+- Required fixes: Add release checklist validation for published URLs and policy consistency after backend capabilities change.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with legal review, public privacy/terms URLs, deletion URL/workflow, and App Store privacy questionnaire completion.
+
 ## Populated Insights UI Coverage Audit
 
 ### Feature Audit: Local-Log Summary and Food Frequency UI

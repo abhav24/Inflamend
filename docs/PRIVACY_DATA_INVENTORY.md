@@ -26,6 +26,7 @@
 - No ad tracking.
 - No cross-app tracking.
 - No sale/share of health data.
+- `PRIVACY_POLICY_DRAFT.md` and `TERMS_OF_USE_DRAFT.md` are draft release documents, not published legal commitments; final public URLs and counsel review are still required.
 - Do not send sensitive health logs to AI without explicit consent and clear disclosure.
 - Do not log PHI to console in production.
 - Do not commit secrets.
