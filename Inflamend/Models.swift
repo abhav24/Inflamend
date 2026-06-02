@@ -560,8 +560,8 @@ class AppState {
         toastActionHandler?()
     }
 
-    func addLog(type: LogType, title: String, sub: String = "", date: Date = Date()) {
-        let entry = LogEntry(type: type, title: title, sub: sub, loggedAt: date)
+    func addLog(type: LogType, title: String, sub: String = "", date: Date = Date(), payload: HealthLogPayload? = nil) {
+        let entry = LogEntry(type: type, title: title, sub: sub, loggedAt: date, payload: payload)
         logs.insert(entry, at: 0)
         enqueueSync(kind: .healthLog, localRecordId: entry.id.uuidString, summary: "\(type.rawValue): \(title)")
         persist()
@@ -639,6 +639,7 @@ class AppState {
 
         logs[index].title = cleanedTitle
         logs[index].sub = cleanedSub
+        logs[index].payload = nil
 
         let entry = logs[index]
         let localRecordId = entry.id.uuidString
@@ -706,7 +707,16 @@ class AppState {
         addLog(
             type: .checkin,
             title: "\(statusLabel) check-in · pain \(pain)/10",
-            sub: "Fatigue \(fatigue)/10 · urgency \(urgency)/10 · stool \(stoolCount)"
+            sub: "Fatigue \(fatigue)/10 · urgency \(urgency)/10 · stool \(stoolCount)",
+            payload: .checkIn(
+                status: status,
+                pain: pain,
+                fatigue: fatigue,
+                urgency: urgency,
+                stoolCount: stoolCount,
+                bloodPresent: bloodPresent,
+                medicationTaken: medicationTaken
+            )
         )
         showToast("Check-in saved")
     }
@@ -740,7 +750,19 @@ class AppState {
         let details = [bloodLabel, mucus ? "mucus" : nil, nighttime ? "nighttime" : nil]
             .compactMap { $0 }
             .joined(separator: " · ")
-        addLog(type: .bowel, title: "Bristol \(bristol) · urgency \(urgency)/10", sub: details)
+        addLog(
+            type: .bowel,
+            title: "Bristol \(bristol) · urgency \(urgency)/10",
+            sub: details,
+            payload: .bowel(
+                bristol: bristol,
+                urgency: urgency,
+                blood: blood,
+                mucus: mucus,
+                pain: pain,
+                nighttime: nighttime
+            )
+        )
         showToast("Bowel movement saved")
     }
 
@@ -749,7 +771,7 @@ class AppState {
             .sorted { $0.key < $1.key }
             .map { "\($0.key.replacingOccurrences(of: "_", with: " ")): \($0.value)" }
             .joined(separator: " · ")
-        addLog(type: .voice, title: "Voice \(draft.type.rawValue) confirmed", sub: fieldSummary)
+        addLog(type: .voice, title: "Voice \(draft.type.rawValue) confirmed", sub: fieldSummary, payload: .voice(draft))
         publishSafety(RedFlagAssessment(flags: draft.safetyFlags))
         showToast("Voice log saved")
     }
@@ -758,7 +780,7 @@ class AppState {
         if medsTaken < medsTotal {
             medsTaken += 1
         }
-        addLog(type: .meds, title: "\(name) · taken", sub: "Logged manually")
+        addLog(type: .meds, title: "\(name) · taken", sub: "Logged manually", payload: .medication(name: name, status: "taken"))
         showToast("\(name) marked taken")
     }
 
@@ -864,7 +886,7 @@ class AppState {
 
     func prepareUserDataExport() throws -> UserDataExport {
         let export = try UserDataExporter.writeJSONExport(snapshot: snapshot())
-        addLog(type: .note, title: "User data exported", sub: export.fileName)
+        addLog(type: .note, title: "User data exported", sub: export.fileName, payload: .note("User data exported: \(export.fileName)"))
         enqueueSync(kind: .reportExport, localRecordId: export.id.uuidString, summary: "User data JSON exported")
         persist()
         showToast("Data export ready to share")
@@ -878,7 +900,7 @@ class AppState {
             medsTotal: medsTotal,
             displayName: displayName
         )
-        addLog(type: .note, title: "Doctor report exported", sub: export.fileName)
+        addLog(type: .note, title: "Doctor report exported", sub: export.fileName, payload: .note("Doctor report exported: \(export.fileName)"))
         enqueueSync(kind: .reportExport, localRecordId: export.id.uuidString, summary: "Doctor report exported")
         persist()
         showToast("Report ready to share")
@@ -887,7 +909,12 @@ class AppState {
 
     func requestAccountDeletionScaffold() {
         enqueueSync(kind: .accountDeletion, localRecordId: "account-deletion-\(UUID().uuidString)", summary: "Account deletion requested")
-        addLog(type: .note, title: "Account deletion requested", sub: "Requires signed-in backend account")
+        addLog(
+            type: .note,
+            title: "Account deletion requested",
+            sub: "Requires signed-in backend account",
+            payload: .note("Account deletion requested; requires signed-in backend account")
+        )
         showToast("Account deletion scaffolded")
     }
 
@@ -1020,6 +1047,183 @@ class AppState {
 
 // MARK: - Log Entry
 
+struct HealthLogPayload: Codable, Equatable {
+    enum Kind: String, Codable {
+        case checkIn
+        case bowel
+        case food
+        case symptom
+        case medication
+        case sleep
+        case weight
+        case note
+        case voice
+    }
+
+    var kind: Kind
+    var status: MoodOption?
+    var painScore: Int?
+    var fatigueScore: Int?
+    var urgencyScore: Int?
+    var moodScore: Int?
+    var stoolCount: Int?
+    var blood: BloodAmount?
+    var medicationTaken: Bool?
+    var bristolType: Int?
+    var mucus: Bool?
+    var nighttime: Bool?
+    var mealTime: String?
+    var foodDescription: String?
+    var foodTags: [String]?
+    var medicationName: String?
+    var medicationStatus: String?
+    var sleepQuality: Int?
+    var bathroomWakeCount: Int?
+    var weightValue: Double?
+    var weightUnit: String?
+    var note: String?
+    var voiceType: VoiceLogType?
+    var voiceFields: [String: String]?
+    var safetyFlags: [RedFlagKind]?
+
+    init(
+        kind: Kind,
+        status: MoodOption? = nil,
+        painScore: Int? = nil,
+        fatigueScore: Int? = nil,
+        urgencyScore: Int? = nil,
+        moodScore: Int? = nil,
+        stoolCount: Int? = nil,
+        blood: BloodAmount? = nil,
+        medicationTaken: Bool? = nil,
+        bristolType: Int? = nil,
+        mucus: Bool? = nil,
+        nighttime: Bool? = nil,
+        mealTime: String? = nil,
+        foodDescription: String? = nil,
+        foodTags: [String]? = nil,
+        medicationName: String? = nil,
+        medicationStatus: String? = nil,
+        sleepQuality: Int? = nil,
+        bathroomWakeCount: Int? = nil,
+        weightValue: Double? = nil,
+        weightUnit: String? = nil,
+        note: String? = nil,
+        voiceType: VoiceLogType? = nil,
+        voiceFields: [String: String]? = nil,
+        safetyFlags: [RedFlagKind]? = nil
+    ) {
+        self.kind = kind
+        self.status = status
+        self.painScore = painScore
+        self.fatigueScore = fatigueScore
+        self.urgencyScore = urgencyScore
+        self.moodScore = moodScore
+        self.stoolCount = stoolCount
+        self.blood = blood
+        self.medicationTaken = medicationTaken
+        self.bristolType = bristolType
+        self.mucus = mucus
+        self.nighttime = nighttime
+        self.mealTime = mealTime
+        self.foodDescription = foodDescription
+        self.foodTags = foodTags
+        self.medicationName = medicationName
+        self.medicationStatus = medicationStatus
+        self.sleepQuality = sleepQuality
+        self.bathroomWakeCount = bathroomWakeCount
+        self.weightValue = weightValue
+        self.weightUnit = weightUnit
+        self.note = note
+        self.voiceType = voiceType
+        self.voiceFields = voiceFields
+        self.safetyFlags = safetyFlags
+    }
+
+    static func checkIn(
+        status: MoodOption?,
+        pain: Int,
+        fatigue: Int,
+        urgency: Int,
+        stoolCount: Int,
+        bloodPresent: Bool,
+        medicationTaken: Bool
+    ) -> HealthLogPayload {
+        HealthLogPayload(
+            kind: .checkIn,
+            status: status,
+            painScore: pain,
+            fatigueScore: fatigue,
+            urgencyScore: urgency,
+            stoolCount: stoolCount,
+            blood: bloodPresent ? .visible : .none,
+            medicationTaken: medicationTaken
+        )
+    }
+
+    static func bowel(
+        bristol: Int,
+        urgency: Int,
+        blood: BloodAmount,
+        mucus: Bool,
+        pain: Int,
+        nighttime: Bool
+    ) -> HealthLogPayload {
+        HealthLogPayload(
+            kind: .bowel,
+            painScore: pain,
+            urgencyScore: urgency,
+            blood: blood,
+            bristolType: bristol,
+            mucus: mucus,
+            nighttime: nighttime
+        )
+    }
+
+    static func food(mealTime: String, description: String, tags: [String]) -> HealthLogPayload {
+        HealthLogPayload(
+            kind: .food,
+            mealTime: mealTime,
+            foodDescription: description,
+            foodTags: tags
+        )
+    }
+
+    static func symptom(pain: Int, fatigue: Int, mood: Int) -> HealthLogPayload {
+        HealthLogPayload(
+            kind: .symptom,
+            painScore: pain,
+            fatigueScore: fatigue,
+            moodScore: mood
+        )
+    }
+
+    static func medication(name: String, status: String) -> HealthLogPayload {
+        HealthLogPayload(kind: .medication, medicationName: name, medicationStatus: status)
+    }
+
+    static func sleep(quality: Int, bathroomWakeCount: Int) -> HealthLogPayload {
+        HealthLogPayload(kind: .sleep, sleepQuality: quality, bathroomWakeCount: bathroomWakeCount)
+    }
+
+    static func weight(value: Double?, unit: String) -> HealthLogPayload {
+        HealthLogPayload(kind: .weight, weightValue: value, weightUnit: unit)
+    }
+
+    static func note(_ note: String) -> HealthLogPayload {
+        HealthLogPayload(kind: .note, note: note)
+    }
+
+    static func voice(_ draft: VoiceLogDraft) -> HealthLogPayload {
+        HealthLogPayload(
+            kind: .voice,
+            voiceType: draft.type,
+            voiceFields: draft.fields,
+            safetyFlags: draft.safetyFlags
+        )
+    }
+}
+
 struct LogEntry: Identifiable, Codable, Equatable {
     var id = UUID()
     var type: LogType
@@ -1027,6 +1231,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
     var sub: String
     var time: String
     var loggedAt: Date
+    var payload: HealthLogPayload?
 
     init(
         id: UUID = UUID(),
@@ -1034,7 +1239,8 @@ struct LogEntry: Identifiable, Codable, Equatable {
         title: String,
         sub: String,
         time: String? = nil,
-        loggedAt: Date = Date()
+        loggedAt: Date = Date(),
+        payload: HealthLogPayload? = nil
     ) {
         self.id = id
         self.type = type
@@ -1042,6 +1248,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
         self.sub = sub
         self.loggedAt = loggedAt
         self.time = time ?? Self.displayTime(from: loggedAt)
+        self.payload = payload
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1051,6 +1258,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
         case sub
         case time
         case loggedAt
+        case payload
     }
 
     init(from decoder: Decoder) throws {
@@ -1061,6 +1269,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
         sub = try container.decodeIfPresent(String.self, forKey: .sub) ?? ""
         loggedAt = try container.decodeIfPresent(Date.self, forKey: .loggedAt) ?? Date()
         time = try container.decodeIfPresent(String.self, forKey: .time) ?? Self.displayTime(from: loggedAt)
+        payload = try container.decodeIfPresent(HealthLogPayload.self, forKey: .payload)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1071,6 +1280,7 @@ struct LogEntry: Identifiable, Codable, Equatable {
         try container.encode(sub, forKey: .sub)
         try container.encode(time, forKey: .time)
         try container.encode(loggedAt, forKey: .loggedAt)
+        try container.encodeIfPresent(payload, forKey: .payload)
     }
 
     private static func displayTime(from date: Date) -> String {

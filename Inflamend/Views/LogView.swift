@@ -239,9 +239,16 @@ struct LogFoodForm: View {
         }
 
         PrimaryButton(title: "Save entry") {
-            let title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Meal · \(meal)" : name
-            let sub = tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
-            appState.addLog(type: .food, title: title, sub: sub)
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = trimmedName.isEmpty ? "Meal · \(meal)" : trimmedName
+            let sortedTags = tags.sorted()
+            let sub = sortedTags.isEmpty ? "Food pattern tracking" : sortedTags.joined(separator: " · ")
+            appState.addLog(
+                type: .food,
+                title: title,
+                sub: sub,
+                payload: .food(mealTime: meal, description: title, tags: sortedTags)
+            )
             appState.showToast("Meal logged")
             name = ""; tags = []
         }
@@ -379,7 +386,12 @@ struct LogSymptomForm: View {
             }
         }
         PrimaryButton(title: "Save entry") {
-            appState.addLog(type: .symptom, title: "Pain \(Int(painVal))/10 · fatigue \(Int(fatigueVal))/10", sub: "Mood \(Int(moodVal))/10")
+            appState.addLog(
+                type: .symptom,
+                title: "Pain \(Int(painVal))/10 · fatigue \(Int(fatigueVal))/10",
+                sub: "Mood \(Int(moodVal))/10",
+                payload: .symptom(pain: Int(painVal), fatigue: Int(fatigueVal), mood: Int(moodVal))
+            )
             appState.showToast("Symptoms saved")
         }
     }
@@ -517,7 +529,12 @@ struct LogSleepForm: View {
         }
 
         PrimaryButton(title: "Save entry") {
-            appState.addLog(type: .sleep, title: "Sleep quality \(Int(quality))/10", sub: "\(wake) bathroom wakes")
+            appState.addLog(
+                type: .sleep,
+                title: "Sleep quality \(Int(quality))/10",
+                sub: "\(wake) bathroom wakes",
+                payload: .sleep(quality: Int(quality), bathroomWakeCount: wake)
+            )
             appState.showToast("Sleep logged")
         }
     }
@@ -556,7 +573,13 @@ struct LogWeightForm: View {
             .padding(.top, 2)
 
             PrimaryButton(title: "Save entry") {
-                appState.addLog(type: .weight, title: "Weight · \(weight) kg", sub: "Manual entry")
+                let trimmedWeight = weight.trimmingCharacters(in: .whitespacesAndNewlines)
+                appState.addLog(
+                    type: .weight,
+                    title: "Weight · \(trimmedWeight) kg",
+                    sub: "Manual entry",
+                    payload: .weight(value: Double(trimmedWeight), unit: "kg")
+                )
                 appState.showToast("Weight · \(weight) kg")
             }
             .padding(.top, 14)
@@ -591,7 +614,7 @@ struct LogNoteForm: View {
                 appState.showToast("Add a note first")
                 return
             }
-            appState.addLog(type: .note, title: trimmed, sub: "Manual note")
+            appState.addLog(type: .note, title: trimmed, sub: "Manual note", payload: .note(trimmed))
             appState.showToast("Note saved")
             note = ""
         }

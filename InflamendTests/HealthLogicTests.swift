@@ -184,6 +184,41 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertFalse(report.contains("Old coffee"))
     }
 
+    func testDoctorReportExporterUsesTypedPayloadBloodAndFoodTags() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let generatedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2, hour: 12)))
+        let logs = [
+            LogEntry(
+                type: .food,
+                title: "Breakfast",
+                sub: "Tracked",
+                loggedAt: generatedAt,
+                payload: .food(mealTime: "breakfast", description: "Breakfast", tags: ["Caffeine"])
+            ),
+            LogEntry(
+                type: .bowel,
+                title: "Bowel movement",
+                sub: "Tracked",
+                loggedAt: generatedAt,
+                payload: .bowel(bristol: 6, urgency: 7, blood: .visible, mucus: false, pain: 4, nighttime: false)
+            )
+        ]
+
+        let report = DoctorReportExporter.buildPlainTextReport(
+            logs: logs,
+            medsTaken: 3,
+            medsTotal: 4,
+            displayName: "Soham",
+            generatedAt: generatedAt,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(report.contains("Blood flags: 1"))
+        XCTAssertTrue(report.contains("Coffee appeared in 1 food log; frequency only, not a trigger claim."))
+        XCTAssertFalse(report.contains("Caffeine appeared"))
+    }
+
     func testUserDataExporterBuildsLocalJSONSnapshot() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -324,6 +359,52 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(allSummary.foodPatterns.contains { $0.label == "Dairy" })
     }
 
+    func testInsightSummaryPrefersTypedPayloadOverDisplayText() {
+        let logs = [
+            LogEntry(
+                type: .food,
+                title: "Meal without visible tags",
+                sub: "Tracked",
+                payload: .food(mealTime: "lunch", description: "Meal without visible tags", tags: ["Raw veg", "Caffeine"])
+            ),
+            LogEntry(
+                type: .bowel,
+                title: "Bowel movement pain 9/10",
+                sub: "fatigue 9/10",
+                payload: .bowel(bristol: 6, urgency: 7, blood: .none, mucus: false, pain: 9, nighttime: false)
+            ),
+            LogEntry(
+                type: .symptom,
+                title: "Symptoms logged",
+                sub: "No numeric summary",
+                payload: .symptom(pain: 3, fatigue: 4, mood: 5)
+            ),
+            LogEntry(
+                type: .checkin,
+                title: "Daily update",
+                sub: "No numeric summary",
+                payload: .checkIn(
+                    status: .flare,
+                    pain: 6,
+                    fatigue: 7,
+                    urgency: 8,
+                    stoolCount: 4,
+                    bloodPresent: false,
+                    medicationTaken: true
+                )
+            )
+        ]
+
+        let summary = InsightSummaryBuilder.build(logs: logs)
+
+        XCTAssertEqual(summary.painValues, [6, 3])
+        XCTAssertEqual(summary.fatigueValues, [7, 4])
+        XCTAssertTrue(summary.bowelValues.contains(4))
+        XCTAssertEqual(summary.flareMentionCount, 1)
+        XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Raw vegetables" })
+        XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Coffee" })
+    }
+
     func testValidationHelpers() {
         XCTAssertTrue(HealthLogValidator.isValidBristolType(4))
         XCTAssertFalse(HealthLogValidator.isValidBristolType(8))
@@ -391,6 +472,45 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(restored.logs.first?.title, "Timestamped note")
         XCTAssertEqual(restored.logs.first?.loggedAt, loggedAt)
         XCTAssertEqual(restored.logs.first?.time, appState.logs.first?.time)
+
+        store.delete()
+    }
+
+    @MainActor
+    func testAppStatePersistsTypedLogPayloadAndLegacyPayloadDecode() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-log-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "payload@example.com", displayName: "Payload")
+        appState.recordBowel(bristol: 6, urgency: 7, blood: .visible, mucus: true, pain: 5, nighttime: false)
+
+        XCTAssertEqual(appState.logs.first?.payload?.kind, .bowel)
+        XCTAssertEqual(appState.logs.first?.payload?.bristolType, 6)
+        XCTAssertEqual(appState.logs.first?.payload?.blood, .visible)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.kind, .bowel)
+        XCTAssertEqual(restored.logs.first?.payload?.mucus, true)
+        XCTAssertEqual(restored.logs.first?.payload?.painScore, 5)
+
+        let legacyLogJSON = """
+        {
+          "id": "99999999-9999-9999-9999-999999999999",
+          "type": "food",
+          "title": "Legacy meal",
+          "sub": "Dairy",
+          "time": "8:00am",
+          "loggedAt": "2026-06-02T08:00:00Z"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let legacyLog = try decoder.decode(LogEntry.self, from: Data(legacyLogJSON.utf8))
+        XCTAssertNil(legacyLog.payload)
+        XCTAssertEqual(legacyLog.title, "Legacy meal")
 
         store.delete()
     }
@@ -545,12 +665,13 @@ final class HealthLogicTests: XCTestCase {
 
         let appState = AppState(store: store)
         appState.signUp(email: "update-log@example.com", displayName: "Update Log")
-        appState.addLog(type: .note, title: "Original note", sub: "Original detail")
+        appState.addLog(type: .note, title: "Original note", sub: "Original detail", payload: .note("Original note"))
 
         let logID = appState.logs[0].id
         XCTAssertTrue(appState.updateLog(id: logID, title: " Updated note ", sub: " Updated detail "))
         XCTAssertEqual(appState.logs[0].title, "Updated note")
         XCTAssertEqual(appState.logs[0].sub, "Updated detail")
+        XCTAssertNil(appState.logs[0].payload)
         XCTAssertTrue(appState.pendingSyncMutations.contains {
             $0.kind == .healthLog && $0.localRecordId == logID.uuidString && $0.summary.contains("Updated note")
         })

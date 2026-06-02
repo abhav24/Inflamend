@@ -1357,3 +1357,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with typed per-log payloads, custom ranges, live Supabase sync/query parity, and manual accessibility QA.
+
+## Typed Local Log Payload Audit
+
+### Feature Audit: Backward-Compatible Structured Health Log Payloads
+
+Product Simplicity Reviewer:
+- Findings: Structured payloads are invisible to users and keep the existing timeline UI unchanged while making summaries and reports less dependent on display text.
+- Required fixes: Add type-specific edit forms before users can safely edit structured values such as blood, stool count, pain, fatigue, tags, sleep, and weight.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No new visible controls or layout surfaces were added. The existing populated Insights UI smoke test caught a real summary regression after typed payloads were introduced.
+- Required fixes: Keep UI smoke coverage around populated Insights as structured payload behavior expands, and manually verify Dynamic Type/VoiceOver later.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `LogEntry` now carries an optional typed `HealthLogPayload` that persists in the local snapshot and decodes legacy rows without payloads. Local logging flows populate payloads for check-ins, bowel logs, food, symptoms, medications, sleep, weight, notes, voice confirmations, and audit notes.
+- Required fixes: Add Supabase serialization, migrations or JSONB mapping, live replay support, server-side summary parity, and conflict handling for typed payloads.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Typed payload fields make symptom, bowel, food-tag, medication, sleep, weight, note, and voice-parsed data easier to export and reason about, but also expand the structured health-data surface. No new cloud, AI, or analytics path was added in this checkpoint.
+- Required fixes: Re-check backend sync, local/cloud exports, AI context construction, and production diagnostics before typed payloads leave protected local storage.
+- Status: Accept checkpoint with privacy follow-up.
+
+QA and Regression Reviewer:
+- Findings: Focused typed-payload tests passed. The first full scheme run failed because typed bowel pain was included in the overall Insights pain average; the fix restricts pain/fatigue trend inputs to check-in and symptom payloads, with a unit regression case. Full unit tests now pass with 35 tests, full scheme tests pass with 56 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add type-specific edit tests, backend payload serialization tests, and partial-payload edge cases.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with type-specific structured edits, live Supabase replay/serialization, custom reports, and manual accessibility QA.

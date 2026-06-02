@@ -1,6 +1,6 @@
 import Foundation
 
-enum RedFlagKind: String, CaseIterable, Equatable {
+enum RedFlagKind: String, CaseIterable, Codable, Equatable {
     case severeAbdominalPain
     case heavyBleeding
     case blackTarryStool
@@ -89,7 +89,7 @@ enum RedFlagDetector {
     }
 }
 
-enum BloodAmount: String, Equatable {
+enum BloodAmount: String, Codable, Equatable {
     case none
     case trace
     case visible
@@ -349,16 +349,18 @@ enum InsightSummaryBuilder {
         } ?? logs
         let scopedLogs = limit.map { Array(dateScopedLogs.prefix($0)) } ?? dateScopedLogs
         let chronologicalLogs = scopedLogs.reversed()
-        let painValues = chronologicalLogs.compactMap { extractScore(label: "pain", from: $0.searchableText) }
-        let fatigueValues = chronologicalLogs.compactMap { extractScore(label: "fatigue", from: $0.searchableText) }
+        let painValues = chronologicalLogs.compactMap { painValue(from: $0) }
+        let fatigueValues = chronologicalLogs.compactMap { fatigueValue(from: $0) }
         let bowelValues = chronologicalLogs.map { log -> Double in
+            if log.payload?.kind == .bowel { return 1 }
+            if let stoolCount = log.payload?.stoolCount { return Double(stoolCount) }
             if log.type == .bowel { return 1 }
             if log.type == .checkin {
                 return Double(extractInteger(label: "stool", from: log.searchableText) ?? 0)
             }
             return 0
         }
-        let flareMentionCount = scopedLogs.filter { $0.searchableText.localizedCaseInsensitiveContains("flare") }.count
+        let flareMentionCount = scopedLogs.filter(isFlareLog).count
 
         return InsightSummary(
             logCount: scopedLogs.count,
@@ -387,6 +389,22 @@ enum InsightSummaryBuilder {
 
     private static func extractScore(label: String, from text: String) -> Double? {
         extractInteger(label: label, from: text).map(Double.init)
+    }
+
+    private static func painValue(from log: LogEntry) -> Double? {
+        if let payload = log.payload {
+            guard payload.kind == .checkIn || payload.kind == .symptom else { return nil }
+            return payload.painScore.map(Double.init)
+        }
+        return extractScore(label: "pain", from: log.searchableText)
+    }
+
+    private static func fatigueValue(from log: LogEntry) -> Double? {
+        if let payload = log.payload {
+            guard payload.kind == .checkIn || payload.kind == .symptom else { return nil }
+            return payload.fatigueScore.map(Double.init)
+        }
+        return extractScore(label: "fatigue", from: log.searchableText)
     }
 
     private static func average(_ values: [Double]) -> Double? {
@@ -429,6 +447,11 @@ enum InsightSummaryBuilder {
     }
 
     private static func foodLabels(from log: LogEntry) -> [String] {
+        if let tags = log.payload?.foodTags, !tags.isEmpty {
+            let labels = tags.map(canonicalFoodLabel).filter { !$0.isEmpty }
+            if !labels.isEmpty { return uniqueLabels(labels) }
+        }
+
         let normalizedText = log.searchableText.lowercased()
         let knownLabels: [(needle: String, label: String)] = [
             ("dairy", "Dairy"),
@@ -449,6 +472,34 @@ enum InsightSummaryBuilder {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return [cleaned.isEmpty ? "Meal logged" : cleaned]
     }
+
+    private static func canonicalFoodLabel(_ rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmed.lowercased()
+        if normalized.contains("dairy") { return "Dairy" }
+        if normalized.contains("spicy") { return "Spicy food" }
+        if normalized.contains("coffee") || normalized.contains("caffeine") { return "Coffee" }
+        if normalized.contains("raw veg") || normalized.contains("raw vegetable") { return "Raw vegetables" }
+        if normalized.contains("fried") { return "Fried foods" }
+        if normalized.contains("alcohol") { return "Alcohol" }
+        if normalized.contains("gluten") { return "Gluten" }
+        if normalized.contains("fiber") { return "High fiber" }
+        return trimmed
+    }
+
+    private static func uniqueLabels(_ labels: [String]) -> [String] {
+        var seen = Set<String>()
+        return labels.filter { label in
+            guard !seen.contains(label) else { return false }
+            seen.insert(label)
+            return true
+        }
+    }
+
+    private static func isFlareLog(_ log: LogEntry) -> Bool {
+        if log.payload?.status == .flare { return true }
+        return log.searchableText.localizedCaseInsensitiveContains("flare")
+    }
 }
 
 private extension LogEntry {
@@ -457,7 +508,7 @@ private extension LogEntry {
     }
 }
 
-enum VoiceLogType: String, Equatable {
+enum VoiceLogType: String, Codable, Equatable {
     case bowel
     case meal
     case medication
@@ -820,10 +871,7 @@ enum DoctorReportExporter {
     ) -> ReportSummaryInput {
         let recentLogs = HealthLogDateRange.filter(logs, last: 30, endingAt: generatedAt, calendar: calendar)
         let insightSummary = InsightSummaryBuilder.build(logs: recentLogs)
-        let bloodCount = recentLogs.filter { log in
-            let text = "\(log.title) \(log.sub)".lowercased()
-            return text.contains("blood") && !text.contains("no blood")
-        }.count
+        let bloodCount = recentLogs.filter(hasBloodFlag).count
         let possiblePatterns = insightSummary.foodPatterns.map { pattern in
             "\(pattern.label) appeared in \(pattern.count) food log\(pattern.count == 1 ? "" : "s"); frequency only, not a trigger claim."
         }
@@ -842,6 +890,14 @@ enum DoctorReportExporter {
             possiblePatterns: possiblePatterns,
             notes: notes
         )
+    }
+
+    private static func hasBloodFlag(_ log: LogEntry) -> Bool {
+        if let blood = log.payload?.blood {
+            return blood != .none
+        }
+        let text = "\(log.title) \(log.sub)".lowercased()
+        return text.contains("blood") && !text.contains("no blood")
     }
 }
 

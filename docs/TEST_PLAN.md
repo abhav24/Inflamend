@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 32 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
+Coverage: 35 unit tests in HealthLogicTests plus 21 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 53 tests.
+Result: TEST SUCCEEDED with 56 tests.
 ```
 
 ## Unit Test Priorities
@@ -81,7 +81,7 @@ Status: started. Twice-daily schedule calculation is covered.
 - CSV/plain text export shape.
 - Full local user-data JSON export shape.
 
-Status: started. Plain-text report wording, possible-pattern language, local doctor-report content generation, 30-day `loggedAt` range filtering, Profile doctor-report export UI, and local user-data JSON export are covered.
+Status: started. Plain-text report wording, possible-pattern language, local doctor-report content generation, 30-day `loggedAt` range filtering, typed blood payload and food-tag report extraction, Profile doctor-report export UI, and local user-data JSON export are covered.
 
 6. Offline/sync queue:
 - Pending mutation enqueue.
@@ -94,11 +94,13 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Backend-blocked retries store per-record attempt timestamps and error details.
 - Legacy queued mutations decode with generated idempotency metadata.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
+- Typed local log payloads persist and legacy timeline logs without `payload` decode safely.
+- Generic timeline text edits clear stale typed payloads until type-specific edit forms exist.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp persistence, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, deterministic replay planning with idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -110,8 +112,9 @@ Status: local snapshot restore, structured log timestamp persistence, pending qu
 - Pain/fatigue summaries derived from local logs instead of demo arrays.
 - Food pattern summaries framed as frequency, not trigger causation.
 - Recent-range summaries filter by structured `loggedAt` dates instead of display text.
+- Typed payload summaries prefer structured fields over display text, and bowel payload pain is excluded from the overall symptom pain average.
 
-Status: started. Empty, local-log, and 7-day recent summary behavior is covered by unit tests, and no-data plus populated local-log UI smoke coverage exists, including populated chart accessibility summary assertions.
+Status: started. Empty, local-log, typed-payload, and 7-day recent summary behavior is covered by unit tests, and no-data plus populated local-log UI smoke coverage exists, including populated chart accessibility summary assertions.
 
 9. Care/AI safety:
 - Red-flag prompt bypasses general advice.
@@ -142,7 +145,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
-- Populated Insights uses local logs, frequency framing, recent `loggedAt` filtering, and chart accessibility summaries. Status: covered by UI smoke test plus unit date-range coverage.
+- Populated Insights uses local logs, typed payloads, frequency framing, recent `loggedAt` filtering, and chart accessibility summaries. Status: covered by UI smoke test plus unit date-range/payload coverage.
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test; 30-day `loggedAt` range filtering covered by unit test.
@@ -172,7 +175,7 @@ When Supabase CLI and credentials are available:
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
-| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; backend update replay planned but not connected |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; generic edits clear typed payloads to avoid stale summaries; type-specific edit forms and backend update replay are pending |
 | Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay planned but not connected |
 | Logging | Undo timeline deletion | Recently deleted local row is restored and pending sync mutations are restored/coalesced safely | Implemented locally and covered by unit plus UI smoke tests; backend delete/update replay still pending |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
@@ -183,14 +186,14 @@ When Supabase CLI and credentials are available:
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and covered by UI smoke test |
 | Insights | No data | Empty state, no fake claims | Implemented locally and covered by UI smoke test |
-| Insights | Local logs present | Charts, stats, and food patterns populate from recent local logs without trigger claims | Implemented locally with 7-day `loggedAt` filtering, covered by UI smoke and unit tests; chart accessibility summaries implemented and UI-asserted; manual VoiceOver/Dynamic Type pending |
-| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable 30-day text report implemented and covered by UI smoke and unit tests; CSV/PDF/backend export pending |
+| Insights | Local logs present | Charts, stats, and food patterns populate from recent local logs without trigger claims | Implemented locally with typed payloads and 7-day `loggedAt` filtering, covered by UI smoke and unit tests; chart accessibility summaries implemented and UI-asserted; manual VoiceOver/Dynamic Type pending |
+| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable 30-day text report implemented with typed blood/tag payload extraction and covered by UI smoke and unit tests; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
 | Privacy | AI memory toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend AI enforcement pending |
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, pending queue, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, pending queue, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -207,6 +210,7 @@ When Supabase CLI and credentials are available:
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`
 - `testDoctorReportExporterUsesLastThirtyDayLoggedAtRange`
+- `testDoctorReportExporterUsesTypedPayloadBloodAndFoodTags`
 - `testUserDataExporterBuildsLocalJSONSnapshot`
 - `testCareResponseBlocksMedicationChangeAdvice`
 - `testCareResponseUsesRedFlagSafetyBeforeGeneralAdvice`
@@ -214,6 +218,7 @@ When Supabase CLI and credentials are available:
 - `testValidationHelpers`
 - `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
 - `testAppStatePersistsStructuredLogTimestamp`
+- `testAppStatePersistsTypedLogPayloadAndLegacyPayloadDecode`
 - `testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend`
 - `testClearAIHistoryLeavesLocalConfirmationMessage`
 - `testAccountDeletionRequestQueuesAndLogsScaffold`
@@ -223,6 +228,7 @@ When Supabase CLI and credentials are available:
 - `testInsightSummaryReturnsEmptyStateForNoLogs`
 - `testInsightSummaryUsesLocalLogsWithoutDemoData`
 - `testInsightSummaryRecentRangeUsesLoggedAtDates`
+- `testInsightSummaryPrefersTypedPayloadOverDisplayText`
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
