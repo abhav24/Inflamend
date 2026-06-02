@@ -7,6 +7,7 @@ struct ProfileView: View {
     @State private var showingSyncDetails = false
     @State private var showingMedicationReminders = false
     @State private var showingPreferences = false
+    @State private var showingFlareHistory = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -88,8 +89,13 @@ struct ProfileView: View {
                     ) {
                         showingMedicationReminders = true
                     }
-                    ProfileRow(icon: "calendar", label: "Flare history", sub: "Scaffolded") {
-                        appState.showToast("Flare history scaffolded")
+                    ProfileRow(
+                        icon: "calendar",
+                        label: "Flare history",
+                        sub: appState.flareHistorySummary.profileSummary,
+                        accessibilityID: "profile-flare-history-row"
+                    ) {
+                        showingFlareHistory = true
                     }
                     ProfileRow(icon: "heart", label: "Care plan", sub: "Questions for your GI", isLast: true) {
                         appState.showToast("Care plan scaffolded")
@@ -206,6 +212,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showingPreferences) {
             ProfilePreferencesSheet(appState: appState)
         }
+        .sheet(isPresented: $showingFlareHistory) {
+            FlareHistorySheet(summary: appState.flareHistorySummary)
+        }
         .sheet(item: $preparedExport) { export in
             switch export {
             case .doctorReport(let report):
@@ -244,6 +253,86 @@ struct ProfileView: View {
         case .deleteDataAccount:
             appState.requestAccountDeletionScaffold()
         }
+    }
+}
+
+private struct FlareHistorySheet: View {
+    let summary: FlareHistorySummary
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "flame", color: .clay)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Flare history")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("flare-history-title")
+                        Text(summary.detailSummary)
+                            .font(DS.sans(13))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("flare-history-summary")
+                    }
+                    Spacer()
+                }
+
+                if summary.events.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("No local flare marks yet")
+                            .font(DS.sans(15, weight: .medium))
+                            .foregroundColor(.fgPrimary)
+                        Text("Flare-marked check-ins and logs will appear here after they are saved on this device.")
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
+                            .lineSpacing(3)
+                    }
+                    .padding(14)
+                    .background(Color.bgCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("flare-history-empty-state")
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(Array(summary.events.enumerated()), id: \.element.id) { index, event in
+                            FlareHistoryEventRow(event: event, index: index)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct FlareHistoryEventRow: View {
+    let event: FlareHistoryEvent
+    let index: Int
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            IconBadge(name: "flame", size: 34, iconSize: 15, color: .clay)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.title)
+                    .font(DS.sans(14, weight: .medium))
+                    .foregroundColor(.fgPrimary)
+                Text(event.detail)
+                    .font(DS.sans(12))
+                    .foregroundColor(.fgDim)
+                    .lineLimit(2)
+                Text(event.loggedAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(DS.mono(11))
+                    .foregroundColor(.fgFaint)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("flare-history-event-\(index)")
     }
 }
 

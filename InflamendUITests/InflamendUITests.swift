@@ -233,6 +233,26 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileFlareHistoryShowsLocalFlareMarksSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        tapWhenVisible(app.buttons["rapid-log-flare"], in: app)
+
+        app.buttons["tab-profile"].tap()
+        XCTAssertTrue(app.staticTexts["YOUR ACCOUNT"].waitForExistence(timeout: 5))
+        let flareHistoryRow = app.buttons["profile-flare-history-row"]
+        waitForLabel(flareHistoryRow, contains: "1 local flare mark")
+        tapWhenVisible(flareHistoryRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["flare-history-title"].waitForExistence(timeout: 5))
+        waitForLabel(app.staticTexts["flare-history-summary"], contains: "1 local flare mark")
+        let firstEvent = app.descendants(matching: .any)["flare-history-event-0"]
+        waitForLabel(firstEvent, contains: "Flare check-in")
+        waitForLabel(firstEvent, contains: "pain 7/10")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",

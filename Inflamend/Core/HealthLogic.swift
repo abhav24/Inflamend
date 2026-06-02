@@ -303,6 +303,36 @@ struct InsightSummary: Equatable {
     }
 }
 
+struct FlareHistoryEvent: Identifiable, Equatable {
+    var id: UUID
+    var title: String
+    var detail: String
+    var loggedAt: Date
+}
+
+struct FlareHistorySummary: Equatable {
+    var events: [FlareHistoryEvent]
+
+    var count: Int { events.count }
+
+    var profileSummary: String {
+        switch count {
+        case 0:
+            return "No flare marks"
+        case 1:
+            return "1 local flare mark"
+        default:
+            return "\(count) local flare marks"
+        }
+    }
+
+    var detailSummary: String {
+        count == 0
+            ? "No flare-marked check-ins or logs are saved on this device."
+            : profileSummary
+    }
+}
+
 enum HealthLogDateRange {
     static func interval(last days: Int, endingAt: Date = Date(), calendar: Calendar = .current) -> DateInterval {
         let dayCount = max(1, days)
@@ -496,9 +526,31 @@ enum InsightSummaryBuilder {
         }
     }
 
+    static func isFlareMarked(_ log: LogEntry) -> Bool {
+        isFlareLog(log)
+    }
+
     private static func isFlareLog(_ log: LogEntry) -> Bool {
         if log.payload?.status == .flare { return true }
         return log.searchableText.localizedCaseInsensitiveContains("flare")
+    }
+}
+
+enum FlareHistoryBuilder {
+    static func build(logs: [LogEntry], limit: Int? = nil) -> FlareHistorySummary {
+        let flareLogs = logs
+            .filter(InsightSummaryBuilder.isFlareMarked)
+            .sorted { $0.loggedAt > $1.loggedAt }
+        let scopedLogs = limit.map { Array(flareLogs.prefix($0)) } ?? flareLogs
+        let events = scopedLogs.map { log in
+            FlareHistoryEvent(
+                id: log.id,
+                title: log.title,
+                detail: log.sub.isEmpty ? "No additional details" : log.sub,
+                loggedAt: log.loggedAt
+            )
+        }
+        return FlareHistorySummary(events: events)
     }
 }
 

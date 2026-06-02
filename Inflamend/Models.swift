@@ -828,6 +828,10 @@ class AppState {
         appPreferences.summary
     }
 
+    var flareHistorySummary: FlareHistorySummary {
+        FlareHistoryBuilder.build(logs: logs)
+    }
+
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
         syncNetworkStatus = status
         if status == .online {

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 49 unit tests in HealthLogicTests plus 30 UI smoke tests in InflamendUITests.
+Coverage: 50 unit tests in HealthLogicTests plus 31 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -31,6 +31,9 @@ Result: TEST SUCCEEDED with 1 focused unit test.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testAppPreferencesPersistExportAndWeightLoggingUsesPreferredUnit
 Result: TEST SUCCEEDED with 1 focused unit test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testFlareHistoryBuilderUsesTypedFlareLogs
+Result: TEST SUCCEEDED with 1 focused unit test.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
@@ -49,8 +52,11 @@ Result: TEST SUCCEEDED with 1 UI smoke test.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testWeightLogCanBeEditedFromTimelineSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileFlareHistoryShowsLocalFlareMarksSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
+
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 49 unit tests.
+Result: TEST SUCCEEDED with 50 unit tests.
 
 xcodebuild clean build -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -150,6 +156,7 @@ Status: local snapshot restore, structured log timestamp and typed payload persi
 - Pain/fatigue summaries derived from local logs instead of demo arrays.
 - Food pattern summaries framed as frequency, not trigger causation.
 - Recent-range summaries filter by structured `loggedAt` dates instead of display text.
+- Flare-history summaries reuse typed flare check-ins and local log text.
 - Typed payload summaries prefer structured fields over display text, and bowel payload pain is excluded from the overall symptom pain average.
 
 Status: started. Empty, local-log, typed-payload, and 7-day recent summary behavior is covered by unit tests, and no-data plus populated local-log UI smoke coverage exists, including populated chart accessibility summary assertions.
@@ -184,6 +191,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Weight log saves and structured value edits are visible from Home. Status: covered by UI smoke test, including 62.4 kg edit to 63.0 kg.
 - Medication taken/skipped changes adherence state. Status: dose-taken path, persisted skipped status, local reminder settings, and timeline status correction covered by unit and UI smoke tests.
 - Profile preferences drive logging units. Status: preferred LB setting persists locally, exports in JSON, queues a future user-settings replay, and drives a new Weight log in UI smoke coverage.
+- Profile flare history shows local flare marks. Status: typed flare-history builder and Profile sheet smoke coverage exist.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
@@ -228,6 +236,7 @@ When Supabase CLI and credentials are available:
 | Logging | Weight log | Weight value saves and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Medications | Dose taken/status corrected/reminder preference changed | Adherence state updates and reminder intent persists | Implemented locally with persisted dose statuses and reminder settings; covered by unit/UI smoke tests for dose taken, skipped persistence, Profile reminder settings, and timeline status correction |
 | Preferences | Weight unit changed | New Weight logs use selected unit | Implemented locally with persisted/exported `AppPreferences`, Profile preferences UI, LB weight-log smoke coverage, and default KG weight edit regression coverage |
+| Profile | Flare history | Local flare-marked logs appear in a Profile sheet | Implemented locally with typed payload-aware `FlareHistoryBuilder` and UI smoke coverage after saving a rapid flare marker |
 | Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |

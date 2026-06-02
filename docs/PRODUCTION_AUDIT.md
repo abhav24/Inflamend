@@ -1454,6 +1454,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with backend settings sync, richer timezone behavior, unit conversion helpers, and manual accessibility QA.
 
+## Local Flare History Audit
+
+### Feature Audit: Profile Flare History Sheet
+
+Product Simplicity Reviewer:
+- Findings: The Profile Flare history placeholder now shows local flare-marked logs without adding a separate history module. It reuses existing check-ins and logs, so the workflow remains simple.
+- Required fixes: Add episode grouping and date filters only after the underlying flare model is clearer.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sheet has a clear title, count summary, empty state, and compact event rows with visible date/detail text. Event rows expose combined accessibility labels for UI tests and assistive tech.
+- Required fixes: Manually verify row order, date formatting, and wrapping at large Dynamic Type and VoiceOver.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `FlareHistoryBuilder` derives events from typed flare check-ins first and falls back to the same local text predicate used by Insights, keeping local Profile and Insights counts aligned.
+- Required fixes: Add backend flare-history queries, server-side typed flare filters, conflict handling, and report/export parity once Supabase replay is live.
+- Status: Accept local derivation checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Flare history is derived from existing local health logs and adds no new data category. It does not diagnose flare severity or provide treatment advice.
+- Required fixes: Review cloud export/delete and AI-context behavior before exposing backend flare history.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for typed flare check-ins, text flare notes, newest-first ordering, row summaries, and non-flare exclusion. Focused Profile UI smoke coverage passed after saving a rapid flare marker. Full unit target passed with 50 tests and clean build passed.
+- Required fixes: Add backend query tests, date-filter tests, report integration tests, and manual accessibility once those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with backend flare-history sync/query, episode grouping, report integration, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

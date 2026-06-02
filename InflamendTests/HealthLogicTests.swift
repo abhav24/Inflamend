@@ -469,6 +469,43 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(allSummary.foodPatterns.contains { $0.label == "Dairy" })
     }
 
+    func testFlareHistoryBuilderUsesTypedFlareLogs() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let recentDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2, hour: 9)))
+        let oldDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 5, day: 20, hour: 7)))
+        let logs = [
+            LogEntry(
+                type: .checkin,
+                title: "Flare check-in · pain 7/10",
+                sub: "Fatigue 8/10 · urgency 7/10 · stool 5",
+                loggedAt: recentDate,
+                payload: .checkIn(status: .flare, pain: 7, fatigue: 8, urgency: 7, stoolCount: 5, bloodPresent: false, medicationTaken: true)
+            ),
+            LogEntry(
+                type: .note,
+                title: "Flare plan reviewed",
+                sub: "Called GI clinic",
+                loggedAt: oldDate,
+                payload: .note("Flare plan reviewed")
+            ),
+            LogEntry(
+                type: .checkin,
+                title: "Okay check-in · pain 2/10",
+                sub: "Stable",
+                loggedAt: recentDate.addingTimeInterval(60),
+                payload: .checkIn(status: .ok, pain: 2, fatigue: 2, urgency: 1, stoolCount: 2, bloodPresent: false, medicationTaken: true)
+            )
+        ]
+
+        let summary = FlareHistoryBuilder.build(logs: logs)
+
+        XCTAssertEqual(summary.count, 2)
+        XCTAssertEqual(summary.profileSummary, "2 local flare marks")
+        XCTAssertEqual(summary.events.first?.title, "Flare check-in · pain 7/10")
+        XCTAssertEqual(summary.events.first?.detail, "Fatigue 8/10 · urgency 7/10 · stool 5")
+    }
+
     func testInsightSummaryPrefersTypedPayloadOverDisplayText() {
         let logs = [
             LogEntry(
