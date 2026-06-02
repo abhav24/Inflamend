@@ -545,6 +545,7 @@ final class HealthLogicTests: XCTestCase {
 
         appState.retryPendingSyncScaffold()
         XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.nextRetryAt != nil })
         XCTAssertTrue(appState.lastSyncStatus.contains("Supabase not configured"))
 
         let restored = AppState(store: store)
@@ -1156,6 +1157,7 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(appState.syncSummary.contains("blocked"))
         XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
         XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.lastAttemptedAt != nil })
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.nextRetryAt != nil })
         XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.lastError?.contains("Supabase not configured") == true })
 
         let blockedDeletion = appState.pendingSyncMutations.first {
@@ -1168,6 +1170,9 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(restored.pendingSyncCount, appState.pendingSyncCount)
         XCTAssertTrue(restored.pendingSyncMutations.contains {
             $0.kind == .healthLogDeletion && $0.lastError?.contains("public.log_notes.deleted_at") == true
+        })
+        XCTAssertTrue(restored.pendingSyncMutations.contains {
+            $0.kind == .healthLogDeletion && $0.nextRetryAt != nil
         })
 
         store.delete()
@@ -1236,6 +1241,55 @@ final class HealthLogicTests: XCTestCase {
         store.delete()
     }
 
+    @MainActor
+    func testSyncReplayBackoffSchedulesAndResetsAfterLocalEdit() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-sync-backoff-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        let createdLog = LogEntry(type: .note, title: "Backoff note", sub: "Queued")
+        appState.logs.insert(createdLog, at: 0)
+        let initialMutation = PendingSyncMutation(
+            kind: .healthLog,
+            localRecordId: createdLog.id.uuidString,
+            summary: "Note: Backoff note",
+            payload: .healthLogSnapshot(for: createdLog)
+        )
+        let worker = LocalSyncReplayWorker()
+        let firstAttempt = Date(timeIntervalSince1970: 1_800_000_000)
+
+        var result = worker.retry([initialMutation], attemptedAt: firstAttempt)
+        var mutation = try XCTUnwrap(result.pendingMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(mutation.attemptCount, 1)
+        XCTAssertEqual(try XCTUnwrap(mutation.nextRetryAt), firstAttempt.addingTimeInterval(60))
+
+        let secondAttempt = try XCTUnwrap(mutation.nextRetryAt)
+        result = worker.retry(result.pendingMutations, attemptedAt: secondAttempt)
+        mutation = try XCTUnwrap(result.pendingMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(mutation.attemptCount, 2)
+        XCTAssertEqual(try XCTUnwrap(mutation.nextRetryAt), secondAttempt.addingTimeInterval(300))
+
+        appState.pendingSyncMutations = result.pendingMutations
+        XCTAssertTrue(appState.updateLog(id: createdLog.id, title: "Backoff note edited", sub: "Fresh local edit"))
+
+        let resetMutation = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(resetMutation.attemptCount, 0)
+        XCTAssertEqual(resetMutation.status, .pending)
+        XCTAssertNil(resetMutation.lastAttemptedAt)
+        XCTAssertNil(resetMutation.nextRetryAt)
+        XCTAssertNil(resetMutation.lastError)
+
+        store.delete()
+    }
+
     func testLegacyPendingSyncMutationDecodesWithReplayMetadata() throws {
         let legacyMutation = """
         {
@@ -1259,6 +1313,7 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertNil(mutation.serverRecordId)
         XCTAssertNil(mutation.receiptId)
         XCTAssertNil(mutation.receiptRecordedAt)
+        XCTAssertNil(mutation.nextRetryAt)
         XCTAssertNil(mutation.payload)
     }
 

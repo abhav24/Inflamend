@@ -158,6 +158,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
     var attemptCount = 0
     var status: SyncMutationStatus = .pending
     var lastAttemptedAt: Date? = nil
+    var nextRetryAt: Date? = nil
     var lastError: String? = nil
 
     init(
@@ -174,6 +175,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         attemptCount: Int = 0,
         status: SyncMutationStatus = .pending,
         lastAttemptedAt: Date? = nil,
+        nextRetryAt: Date? = nil,
         lastError: String? = nil
     ) {
         self.id = id
@@ -189,6 +191,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         self.attemptCount = attemptCount
         self.status = status
         self.lastAttemptedAt = lastAttemptedAt
+        self.nextRetryAt = nextRetryAt
         self.lastError = lastError
     }
 
@@ -206,6 +209,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         case attemptCount
         case status
         case lastAttemptedAt
+        case nextRetryAt
         case lastError
     }
 
@@ -225,6 +229,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         attemptCount = try container.decodeIfPresent(Int.self, forKey: .attemptCount) ?? 0
         status = try container.decodeIfPresent(SyncMutationStatus.self, forKey: .status) ?? .pending
         lastAttemptedAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptedAt)
+        nextRetryAt = try container.decodeIfPresent(Date.self, forKey: .nextRetryAt)
         lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
     }
 
@@ -243,6 +248,7 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
         try container.encode(attemptCount, forKey: .attemptCount)
         try container.encode(status, forKey: .status)
         try container.encodeIfPresent(lastAttemptedAt, forKey: .lastAttemptedAt)
+        try container.encodeIfPresent(nextRetryAt, forKey: .nextRetryAt)
         try container.encodeIfPresent(lastError, forKey: .lastError)
     }
 
@@ -285,6 +291,7 @@ struct SyncReplayResult: Equatable {
 
 struct LocalSyncReplayWorker: Equatable {
     var supabaseConfigured = false
+    static let retryDelays: [TimeInterval] = [60, 300, 900, 3600, 21600]
 
     func plan(for mutations: [PendingSyncMutation]) -> [SyncReplayPlanItem] {
         mutations
@@ -312,6 +319,7 @@ struct LocalSyncReplayWorker: Equatable {
                 copy.attemptCount += 1
                 copy.status = .blockedNoBackend
                 copy.lastAttemptedAt = attemptedAt
+                copy.nextRetryAt = Self.nextRetryDate(afterAttemptCount: copy.attemptCount, attemptedAt: attemptedAt)
                 copy.lastError = "Supabase not configured for \(planItem.action.rawValue) \(planItem.target)"
                 return copy
             }
@@ -330,6 +338,7 @@ struct LocalSyncReplayWorker: Equatable {
             copy.attemptCount += 1
             copy.status = .failedRetryable
             copy.lastAttemptedAt = attemptedAt
+            copy.nextRetryAt = Self.nextRetryDate(afterAttemptCount: copy.attemptCount, attemptedAt: attemptedAt)
             copy.lastError = "Replay client not implemented for \(planItem.action.rawValue) \(planItem.target)"
             return copy
         }
@@ -339,6 +348,11 @@ struct LocalSyncReplayWorker: Equatable {
             statusMessage: "Sync worker scaffolded; network client pending",
             toastMessage: "Sync worker scaffolded"
         )
+    }
+
+    static func nextRetryDate(afterAttemptCount attemptCount: Int, attemptedAt: Date) -> Date {
+        let index = max(0, min(attemptCount - 1, retryDelays.count - 1))
+        return attemptedAt.addingTimeInterval(retryDelays[index])
     }
 
     private static func planItem(for mutation: PendingSyncMutation) -> SyncReplayPlanItem {
@@ -715,6 +729,7 @@ class AppState {
             pendingSyncMutations[pendingCreateIndex].status = .pending
             pendingSyncMutations[pendingCreateIndex].attemptCount = 0
             pendingSyncMutations[pendingCreateIndex].lastAttemptedAt = nil
+            pendingSyncMutations[pendingCreateIndex].nextRetryAt = nil
             pendingSyncMutations[pendingCreateIndex].lastError = nil
         } else if let pendingUpdateIndex = pendingSyncMutations.firstIndex(where: {
             $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
@@ -724,6 +739,7 @@ class AppState {
             pendingSyncMutations[pendingUpdateIndex].status = .pending
             pendingSyncMutations[pendingUpdateIndex].attemptCount = 0
             pendingSyncMutations[pendingUpdateIndex].lastAttemptedAt = nil
+            pendingSyncMutations[pendingUpdateIndex].nextRetryAt = nil
             pendingSyncMutations[pendingUpdateIndex].lastError = nil
         } else {
             enqueueSync(

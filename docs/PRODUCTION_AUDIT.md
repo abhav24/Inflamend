@@ -1246,7 +1246,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: The UI surfaces replay-plan kind/action/target/attempt/error metadata that already exists locally, while preserving the truth that Supabase is not configured and no backend mutation has completed.
-- Required fixes: Connect live replay, store returned server IDs/receipts, add retry backoff/reachability, and expose conflict/user-action states when the backend is available.
+- Required fixes: Connect live replay, store returned server IDs/receipts, add automatic retry execution/reachability, and expose conflict/user-action states when the backend is available.
 - Status: Accept local blocked-state implementation.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1255,12 +1255,44 @@ Privacy, Security, and Medical Safety Reviewer:
 - Status: Accept checkpoint.
 
 QA and Regression Reviewer:
-- Findings: The first two focused UI attempts exposed that a decorative status chip did not reliably publish the dynamic blocked label to XCTest. The final implementation uses combined row accessibility metadata, and the focused sync-detail UI test, full unit target with 43 tests, and clean build pass.
-- Required fixes: Add full live replay success/failure, conflict, backoff, reachability, and manual accessibility regression coverage once Supabase credentials exist.
+- Findings: The first two focused UI attempts exposed that a decorative status chip did not reliably publish the dynamic blocked label to XCTest. The final implementation uses combined row accessibility metadata, and the focused sync-detail UI test, full unit target, and clean build pass.
+- Required fixes: Add full live replay success/failure, conflict, automatic retry execution, reachability, and manual accessibility regression coverage once Supabase credentials exist.
 - Status: Accept checkpoint.
 
 Final decision:
 - Ship now, then continue with live Supabase replay wiring, server IDs/receipts, remediation states, and manual accessibility QA.
+
+## Sync Retry Backoff Metadata Audit
+
+### Feature Audit: Deterministic Local Retry Scheduling
+
+Product Simplicity Reviewer:
+- Findings: The app now explains blocked sync records with a next-retry timestamp in the detail sheet, without adding background-sync claims or a separate diagnostics screen.
+- Required fixes: Keep future automatic retry copy plain and avoid surfacing scheduler internals unless the user needs to act.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: "Next retry after ..." is added as a secondary metadata line and included in the combined row accessibility label, so the sync detail row remains scannable.
+- Required fixes: Manually verify long localized dates at large Dynamic Type and VoiceOver order.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `PendingSyncMutation` now persists `nextRetryAt`, legacy decode leaves it nil, blocked/no-client replay attempts schedule deterministic 1m/5m/15m/1h/6h capped delays, and local edits reset stale retry metadata.
+- Required fixes: Wire the schedule to a live Supabase replay loop, reachability checks, returned server IDs/receipts, and conflict handling.
+- Status: Accept local scheduling contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Retry metadata adds timing state only. It does not expose raw health payloads, transmit data, or imply backend completion.
+- Required fixes: Confirm future telemetry and support exports do not leak PHI through mutation summaries or retry diagnostics.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused sync UI coverage verifies next-retry row exposure, focused unit coverage verifies deterministic backoff and reset-after-local-edit behavior, full unit target now passes with 44 tests, and clean build passes. One parallel validation attempt failed due Xcode build database locking; sequential reruns passed.
+- Required fixes: Add live replay, automatic retry, reachability, conflict, and manual accessibility regression tests once Supabase credentials exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live replay execution, reachability-aware retry, server IDs/receipts, and manual accessibility QA.
 
 ## Timeline Delete Undo Audit
 

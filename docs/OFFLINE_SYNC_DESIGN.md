@@ -43,8 +43,9 @@ Implemented:
 - Session scaffold, onboarding profile, logs, chat, privacy preferences, risk, meds, mood, and safety state restore across app launches.
 - Log actions save locally before any backend exists.
 - `PendingSyncMutation` records local mutations with kind, local record ID, summary, optional typed payload snapshot, idempotency key, optional server record ID, optional receipt ID/timestamp, attempt count, status, last attempted timestamp, and last error.
+- Queued mutations persist `nextRetryAt` after blocked or retryable replay attempts. The local replay worker uses deterministic backoff delays of 1 minute, 5 minutes, 15 minutes, 1 hour, then a capped 6-hour delay.
 - `SyncReplayPlanItem` and `LocalSyncReplayWorker` turn pending mutations into deterministic future actions against Supabase Auth, public tables, soft-delete fields, or Edge Functions while carrying idempotency/server/receipt metadata and typed health-log payload snapshots into the plan.
-- Profile exposes pending sync count, opens a detail sheet with per-record future action/target/attempt/error metadata, and lets users retry, which currently marks queued records as blocked because Supabase is not configured.
+- Profile exposes pending sync count, opens a detail sheet with per-record future action/target/attempt/next-retry/error metadata, and lets users retry, which currently marks queued records as blocked because Supabase is not configured.
 - Local health-log edits coalesce into unreplayed creates when possible, existing-record edits reuse one pending update mutation, Home timeline edits preserve existing typed payloads for display-only changes, food timeline edits can replace meal/tag payloads, bowel timeline edits can replace Bristol/blood/pain payloads and safety state, symptom timeline edits can replace pain/fatigue/mood payloads and safety state, sleep timeline edits can replace quality/wake payloads, weight timeline edits can replace value/unit payloads, medication timeline edits can replace dose-status payloads and reconcile local adherence state, check-in timeline edits can replace status/pain/fatigue/urgency/stool/blood/medication-taken payloads and refresh mood/risk/safety/adherence state, generic model edits can clear stale payloads, edit payload snapshots update with the latest local row, and edit-then-delete removes redundant pending updates.
 - Chat messages are only queued for backend replay when AI memory is explicitly enabled.
 - Snapshot decode tolerates older snapshot files that do not contain the queue, and legacy queued mutations decode with generated idempotency keys.
@@ -57,4 +58,4 @@ Not implemented:
 - Conflict handling.
 - Supabase Auth token refresh.
 
-Next app-layer work is to connect the replay worker to a real Supabase client, store returned server IDs and receipts, then implement backoff, reachability, conflict handling, and richer per-record remediation actions once credentials are available.
+Next app-layer work is to connect the replay worker to a real Supabase client, store returned server IDs and receipts, then implement automatic retry execution, reachability, conflict handling, and richer per-record remediation actions once credentials are available.

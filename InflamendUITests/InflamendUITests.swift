@@ -207,6 +207,7 @@ final class InflamendUITests: XCTestCase {
         waitForLabel(syncSummary, contains: "blocked")
         let firstSyncDetailRow = app.descendants(matching: .any)["profile-sync-detail-row-0"]
         waitForLabel(firstSyncDetailRow, contains: "Blocked")
+        waitForLabel(firstSyncDetailRow, contains: "Next retry")
         waitForLabel(firstSyncDetailRow, contains: "Supabase not configured")
     }
 

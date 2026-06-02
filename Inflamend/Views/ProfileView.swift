@@ -323,6 +323,9 @@ private struct SyncMutationDetailRow: View {
         if let plan {
             pieces.append("\(plan.action.syncLabel) \(plan.target)")
         }
+        if let nextRetryAt = mutation.nextRetryAt {
+            pieces.append("Next retry after \(nextRetryAt.formatted(date: .abbreviated, time: .shortened))")
+        }
         if let lastError = mutation.lastError, !lastError.isEmpty {
             pieces.append(lastError)
         }
@@ -377,6 +380,13 @@ private struct SyncMutationDetailRow: View {
                 .font(DS.mono(11))
                 .foregroundColor(.fgFaint)
                 .accessibilityIdentifier("profile-sync-detail-attempts-\(index)")
+
+            if let nextRetryAt = mutation.nextRetryAt {
+                Text("Next retry after \(nextRetryAt.formatted(date: .abbreviated, time: .shortened))")
+                    .font(DS.mono(11))
+                    .foregroundColor(.fgFaint)
+                    .accessibilityIdentifier("profile-sync-detail-next-retry-\(index)")
+            }
         }
         .padding(14)
         .background(Color.bgInset)

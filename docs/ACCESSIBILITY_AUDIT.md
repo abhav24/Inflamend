@@ -32,6 +32,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for Profile sign-out returning to the auth gate.
 - Added stable identifiers and UI smoke coverage for Profile sync status retry showing the backend-blocked state.
 - Added stable identifiers and combined accessibility labels for the Profile sync detail sheet rows so pending/blocked status, replay target, attempts, and errors are exposed to UI tests and assistive technology.
+- Added Profile sync detail next-retry text to the combined row accessibility label and UI smoke assertion.
 - Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
 - Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 - Added stable identifiers and UI smoke coverage for populated Insights confidence text, stat tiles, chart containers, and food pattern rows.
