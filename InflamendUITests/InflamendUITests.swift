@@ -82,6 +82,48 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testInsightsPopulatedSummaryUsesLocalLogsSmoke() {
+        let app = openFreshOnboardedHome(
+            displayName: "UI Patterns",
+            email: "ui-patterns@example.com"
+        )
+
+        app.buttons["tab-log"].tap()
+        tapWhenVisible(app.buttons["rapid-log-flare"], in: app)
+        tapWhenVisible(app.buttons["rapid-log-well"], in: app)
+        tapWhenVisible(app.buttons["rapid-log-bm"], in: app)
+        tapWhenVisible(app.buttons["rapid-log-meal"], in: app)
+
+        app.buttons["tab-insights"].tap()
+
+        let confidence = app.staticTexts["insights-confidence-label"]
+        XCTAssertTrue(confidence.waitForExistence(timeout: 5))
+        XCTAssertTrue(confidence.label.contains("Early local data"))
+
+        let avgPain = app.descendants(matching: .any)["insights-stat-avg-pain"]
+        waitForLabel(avgPain, contains: "3.5")
+
+        let bowelLogs = app.descendants(matching: .any)["insights-stat-bm-logs"]
+        waitForLabel(bowelLogs, contains: "1")
+
+        let flareMarks = app.descendants(matching: .any)["insights-stat-flare-marks"]
+        waitForLabel(flareMarks, contains: "1")
+
+        XCTAssertTrue(app.descendants(matching: .any)["insights-populated-trend-chart"].waitForExistence(timeout: 5))
+
+        let bowelChart = app.descendants(matching: .any)["insights-populated-bowel-chart"]
+        waitForElement(bowelChart, in: app)
+
+        let heatmap = app.descendants(matching: .any)["insights-populated-pain-heatmap"]
+        waitForElement(heatmap, in: app)
+
+        let foodPattern = app.descendants(matching: .any)["insights-food-pattern-meal-logged"]
+        waitForElement(foodPattern, in: app)
+        XCTAssertTrue(foodPattern.label.contains("Meal logged"))
+        XCTAssertTrue(foodPattern.label.contains("1 food logs"))
+    }
+
+    @MainActor
     func testProfileUserDataExportSheetSmoke() {
         let app = openSeededProfile()
 

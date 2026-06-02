@@ -36,6 +36,7 @@ struct InsightsView: View {
                         Text(summary.confidenceLabel)
                             .font(DS.sans(12))
                             .foregroundColor(.fgDim)
+                            .accessibilityIdentifier("insights-confidence-label")
                     }
                     Spacer()
                     HStack(spacing: 2) {
@@ -65,9 +66,9 @@ struct InsightsView: View {
                 .appearAnimation(delay: 0)
 
                 HStack(spacing: 8) {
-                    StatTile(value: formatted(summary.averagePain), unit: summary.averagePain == nil ? "" : "/10", label: "Avg pain", trend: nil)
-                    StatTile(value: "\(summary.bowelLogCount)", unit: "", label: "BM logs", trend: nil)
-                    StatTile(value: "\(summary.flareMentionCount)", unit: "", label: "Flare marks", trend: nil)
+                    StatTile(value: formatted(summary.averagePain), unit: summary.averagePain == nil ? "" : "/10", label: "Avg pain", trend: nil, identifier: "insights-stat-avg-pain")
+                    StatTile(value: "\(summary.bowelLogCount)", unit: "", label: "BM logs", trend: nil, identifier: "insights-stat-bm-logs")
+                    StatTile(value: "\(summary.flareMentionCount)", unit: "", label: "Flare marks", trend: nil, identifier: "insights-stat-flare-marks")
                 }
                 .padding(.horizontal, 20)
                 .appearAnimation(delay: 0.07)
@@ -92,6 +93,7 @@ struct InsightsView: View {
                     .padding(.bottom, 16)
                     if summary.hasTrendData {
                         LineChartView(series: chartSeries)
+                            .accessibilityIdentifier("insights-populated-trend-chart")
                     } else {
                         InsightEmptyState(
                             title: "Trend needs more logs",
@@ -115,6 +117,7 @@ struct InsightsView: View {
                         .padding(.bottom, 12)
                     if summary.hasBowelData {
                         BarChartView(data: summary.bowelValues, labels: bowelLabels)
+                            .accessibilityIdentifier("insights-populated-bowel-chart")
                     } else {
                         InsightEmptyState(
                             title: "No bowel pattern yet",
@@ -163,6 +166,7 @@ struct InsightsView: View {
                         )
                     } else {
                         HeatmapView(values: summary.painHeatmapValues)
+                            .accessibilityIdentifier("insights-populated-pain-heatmap")
                     }
                 }
                 .card()
@@ -214,6 +218,7 @@ struct StatTile: View {
     let unit: String
     let label: String
     let trend: Double?
+    var identifier: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -234,6 +239,8 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .card(padding: 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier ?? label)
     }
 }
 
@@ -422,6 +429,17 @@ struct PatternRow: View {
                 Rectangle().fill(Color.strokeDefault).frame(height: 0.5)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("insights-food-pattern-\(pattern.identifierSuffix)")
+    }
+}
+
+private extension InsightFoodPattern {
+    var identifierSuffix: String {
+        label
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: "/", with: "-")
     }
 }
 

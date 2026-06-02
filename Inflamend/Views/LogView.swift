@@ -167,6 +167,7 @@ struct LogRapidForm: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("rapid-log-\(item.k)")
             }
         }
 

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 17 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 18 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 41 tests.
+Result: TEST SUCCEEDED with 42 tests.
 ```
 
 ## Unit Test Priorities
@@ -102,7 +102,7 @@ Status: local snapshot restore, pending queue persistence, backend-blocked retry
 - Pain/fatigue summaries derived from local logs instead of demo arrays.
 - Food pattern summaries framed as frequency, not trigger causation.
 
-Status: started. Empty and local-log summary behavior is covered by unit tests, and no-data UI smoke coverage exists.
+Status: started. Empty and local-log summary behavior is covered by unit tests, and no-data plus populated local-log UI smoke coverage exists.
 
 9. Care/AI safety:
 - Red-flag prompt bypasses general advice.
@@ -130,6 +130,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
+- Populated Insights uses local logs and frequency framing. Status: covered by UI smoke test.
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test.
@@ -167,6 +168,7 @@ When Supabase CLI and credentials are available:
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and covered by UI smoke test |
 | Insights | No data | Empty state, no fake claims | Implemented locally and covered by UI smoke test |
+| Insights | Local logs present | Charts, stats, and food patterns populate from local logs without trigger claims | Implemented locally and covered by UI smoke test; chart accessibility summaries pending |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented and covered by UI smoke test; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
 | Privacy | AI memory toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend AI enforcement pending |
@@ -212,6 +214,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testFoodLogSavesPatternEntrySmoke`
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
 - `InflamendUITests.testInsightsEmptyStateAvoidsDemoClaimsSmoke`
+- `InflamendUITests.testInsightsPopulatedSummaryUsesLocalLogsSmoke`
 - `InflamendUITests.testLocalSignInReachesOnboardingSmoke`
 - `InflamendUITests.testMedicationDoseUpdatesHomeSummarySmoke`
 - `InflamendUITests.testProfileDoctorReportExportSheetSmoke`

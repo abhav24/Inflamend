@@ -788,7 +788,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: A clean, onboarded user now sees honest no-data Insights copy instead of demo claims, and the UI smoke test verifies the trend, bowel, pain, and food empty states.
-- Required fixes: Add populated Insights coverage after more structured local health records exist.
+- Required fixes: Add partial-data Insights coverage after more structured local health records exist.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -808,7 +808,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused Insights empty-state UI test passes. `xcodebuild test` now passes with 34 tests: 24 unit tests and 10 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding UI coverage to populated Insights, report/share flows, and medication logging.
+- Required fixes: Continue expanding UI coverage to partial Insights scenarios, report/share flows, and medication logging.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -904,7 +904,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused Food logging UI test passes. `xcodebuild test` now passes with 37 tests: 24 unit tests and 13 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding UI coverage to voice confirmation, privacy toggles, populated Insights, and edit/delete flows.
+- Required fixes: Continue expanding UI coverage to voice confirmation, privacy toggles, partial Insights scenarios, and edit/delete flows.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -936,7 +936,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused voice confirmation UI test exposed and fixed offscreen tab navigation, container identifier masking, and keyboard focus issues. The focused test now passes. `xcodebuild test` passes with 38 tests: 24 unit tests and 14 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding UI coverage to privacy toggles, populated Insights, edit/delete flows, and native permission states.
+- Required fixes: Continue expanding UI coverage to privacy toggles, partial Insights scenarios, edit/delete flows, and native permission states.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -968,7 +968,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused Profile privacy-toggle UI test passes. `xcodebuild test` now passes with 39 tests: 24 unit tests and 15 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding coverage to native permission states, populated Insights, and edit/delete flows.
+- Required fixes: Continue expanding coverage to native permission states, partial Insights scenarios, and edit/delete flows.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -1036,7 +1036,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with sync-worker implementation, populated Insights coverage, and edit/delete flows.
+- Ship now, then continue with sync-worker implementation, partial Insights scenarios, and edit/delete flows.
 
 ## Project Asset Catalog Cleanup Audit
 
@@ -1068,4 +1068,36 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with production artwork, populated Insights coverage, and sync-worker implementation.
+- Ship now, then continue with production artwork, sync-worker implementation, and edit/delete flows.
+
+## Populated Insights UI Coverage Audit
+
+### Feature Audit: Local-Log Summary and Food Frequency UI
+
+Product Simplicity Reviewer:
+- Findings: Saved local logs now visibly populate Insights stats, chart containers, and food-frequency rows instead of leaving the covered UI surface limited to empty states.
+- Required fixes: Keep the current "early local data" framing and add richer partial-data cases only after the flow remains quick to verify.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Populated Insights content now has stable identifiers for confidence text, stat tiles, chart containers, and food-pattern rows.
+- Required fixes: Add actual chart accessibility summaries, Dynamic Type checks, and manual VoiceOver notes for the chart sections.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI path exercises the existing local timeline-log inference and verifies that summary values come from local user-created logs.
+- Required fixes: Replace timeline-text inference with structured dated records, server IDs, sync metadata, and backend-derived summaries before production analytics.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Food wording remains frequency-based and avoids trigger-causation claims. The test verifies "Meal logged" and "1 food logs" instead of medical conclusions.
+- Required fixes: Preserve this language in report/export and live AI paths, and avoid causal claims unless a clinician-reviewed methodology is added.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused populated Insights UI test passes. `xcodebuild test` passes with 42 tests: 24 unit tests and 18 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add partial-data scenarios, chart accessibility assertions, and export/share integration tests after structured records exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with structured records, chart accessibility summaries, sync-worker implementation, and edit/delete flows.
