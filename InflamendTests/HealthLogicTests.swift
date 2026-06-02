@@ -828,6 +828,57 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceSymptomPayloadAndPublishSafety() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-symptom-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-symptom@example.com", displayName: "Update Symptom")
+        appState.recordSymptoms(pain: 2, fatigue: 3, mood: 6)
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertEqual(createdLog.title, "Pain 2/10 · fatigue 3/10")
+        XCTAssertEqual(createdLog.sub, "Mood 6/10")
+
+        var editedPayload = try XCTUnwrap(createdLog.payload)
+        editedPayload.painScore = 9
+        editedPayload.fatigueScore = 7
+        editedPayload.moodScore = 4
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: editedPayload.symptomDisplayTitle ?? "Symptoms logged",
+            sub: editedPayload.symptomDisplayDetails ?? "",
+            preservePayload: true,
+            payload: editedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Pain 9/10 · fatigue 7/10")
+        XCTAssertEqual(appState.logs[0].sub, "Mood 4/10")
+        XCTAssertEqual(appState.logs[0].payload?.painScore, 9)
+        XCTAssertEqual(appState.logs[0].payload?.fatigueScore, 7)
+        XCTAssertEqual(appState.logs[0].payload?.moodScore, 4)
+        XCTAssertTrue(appState.latestSafetyMessage?.contains("cannot diagnose or triage emergencies") == true)
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Pain 9/10 · fatigue 7/10")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.details, "Mood 4/10")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.painScore, 9)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.fatigueScore, 7)
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .safetyNotice })
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.painScore, 9)
+        XCTAssertEqual(restored.logs.first?.payload?.moodScore, 4)
+
+        store.delete()
+    }
+
+    @MainActor
     func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")

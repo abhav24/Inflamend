@@ -608,6 +608,10 @@ private struct TimelineEditSheet: View {
                     TimelineBowelPayloadFields(payload: bowelPayloadBinding)
                 }
 
+                if let symptomPayloadBinding {
+                    TimelineSymptomPayloadFields(payload: symptomPayloadBinding)
+                }
+
                 PrimaryButton(title: "Save changes") {
                     if onSave(titleForSave, detailForSave, payload) {
                         dismiss()
@@ -662,8 +666,14 @@ private struct TimelineEditSheet: View {
     }
 
     private var titleForSave: String {
-        guard payload?.kind == .bowel else { return title }
-        return payload?.bowelDisplayTitle ?? title
+        switch payload?.kind {
+        case .bowel:
+            return payload?.bowelDisplayTitle ?? title
+        case .symptom:
+            return payload?.symptomDisplayTitle ?? title
+        default:
+            return title
+        }
     }
 
     private var detailForSave: String {
@@ -673,9 +683,19 @@ private struct TimelineEditSheet: View {
             return tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
         case .bowel:
             return payload?.bowelDisplayDetails ?? detail
+        case .symptom:
+            return payload?.symptomDisplayDetails ?? detail
         default:
             return detail
         }
+    }
+
+    private var symptomPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .symptom else { return nil }
+        return Binding(
+            get: { payload ?? entry.payload ?? HealthLogPayload.symptom(pain: 0, fatigue: 0, mood: 5) },
+            set: { payload = $0 }
+        )
     }
 }
 
@@ -875,6 +895,101 @@ private struct TimelineBowelPayloadFields: View {
         .padding(14)
         .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TimelineSymptomPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            TimelineScoreStepper(
+                title: "Pain",
+                value: Binding(
+                    get: { payload.painScore ?? 0 },
+                    set: { payload.painScore = $0 }
+                ),
+                color: .clay,
+                identifier: "timeline-edit-symptom-pain"
+            )
+
+            TimelineScoreStepper(
+                title: "Fatigue",
+                value: Binding(
+                    get: { payload.fatigueScore ?? 0 },
+                    set: { payload.fatigueScore = $0 }
+                ),
+                color: .amber,
+                identifier: "timeline-edit-symptom-fatigue"
+            )
+
+            TimelineScoreStepper(
+                title: "Mood",
+                value: Binding(
+                    get: { payload.moodScore ?? 5 },
+                    set: { payload.moodScore = $0 }
+                ),
+                color: .sage,
+                identifier: "timeline-edit-symptom-mood"
+            )
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TimelineScoreStepper: View {
+    let title: String
+    @Binding var value: Int
+    let color: Color
+    let identifier: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .dsLabel()
+                Spacer()
+                Text("\(value)/10")
+                    .dsLabel()
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    value = max(0, value - 1)
+                } label: {
+                    AppIcon(name: "minus", size: 16, color: value > 0 ? color : .fgFaint)
+                        .frame(width: 38, height: 38)
+                        .background(Color.bgPrimary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("\(identifier)-decrement")
+
+                Slider(
+                    value: Binding(
+                        get: { Double(value) },
+                        set: { value = Int($0) }
+                    ),
+                    in: 0...10,
+                    step: 1
+                )
+                .tint(color)
+                .accessibilityIdentifier("\(identifier)-slider")
+
+                Button {
+                    value = min(10, value + 1)
+                } label: {
+                    AppIcon(name: "plus", size: 16, color: value < 10 ? color : .fgFaint)
+                        .frame(width: 38, height: 38)
+                        .background(Color.bgPrimary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("\(identifier)-increment")
+            }
+        }
     }
 }
 

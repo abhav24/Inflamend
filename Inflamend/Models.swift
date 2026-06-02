@@ -728,8 +728,11 @@ class AppState {
             )
         }
 
+        let safetyText = "\(cleanedTitle) \(cleanedSub)"
         if let bowelInput = payload?.bowelSafetyInput {
-            publishSafety(RedFlagDetector.assess(text: "\(cleanedTitle) \(cleanedSub)", bowelLog: bowelInput))
+            publishSafety(RedFlagDetector.assess(text: safetyText, bowelLog: bowelInput))
+        } else if let symptomInput = payload?.symptomSafetyInput {
+            publishSafety(RedFlagDetector.assess(text: safetyText, symptomLog: symptomInput))
         }
 
         persist()
@@ -826,6 +829,20 @@ class AppState {
             payload: payload
         )
         showToast("Bowel movement saved")
+    }
+
+    func recordSymptoms(pain: Int, fatigue: Int, mood: Int) {
+        let payload = HealthLogPayload.symptom(pain: pain, fatigue: fatigue, mood: mood)
+        if let symptomInput = payload.symptomSafetyInput {
+            publishSafety(RedFlagDetector.assess(symptomLog: symptomInput))
+        }
+        addLog(
+            type: .symptom,
+            title: payload.symptomDisplayTitle ?? "Symptoms logged",
+            sub: payload.symptomDisplayDetails ?? "",
+            payload: payload
+        )
+        showToast("Symptoms saved")
     }
 
     func recordVoiceDraft(_ draft: VoiceLogDraft) {
@@ -1327,6 +1344,28 @@ struct HealthLogPayload: Codable, Equatable {
             blood: blood ?? .none,
             painScore: painScore ?? 0,
             nighttime: nighttime ?? false
+        )
+    }
+
+    var symptomDisplayTitle: String? {
+        guard kind == .symptom else { return nil }
+        return "Pain \(painScore ?? 0)/10 · fatigue \(fatigueScore ?? 0)/10"
+    }
+
+    var symptomDisplayDetails: String? {
+        guard kind == .symptom else { return nil }
+        return "Mood \(moodScore ?? 0)/10"
+    }
+
+    var symptomSafetyInput: SymptomLogInput? {
+        guard kind == .symptom else { return nil }
+        return SymptomLogInput(
+            painScore: painScore ?? 0,
+            fatigueScore: fatigueScore ?? 0,
+            urgencyScore: urgencyScore ?? 0,
+            fever: false,
+            dehydrationScore: 0,
+            rapidWorsening: false
         )
     }
 }

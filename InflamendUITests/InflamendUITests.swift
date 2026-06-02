@@ -367,6 +367,35 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testSymptomLogCanBeEditedFromTimelineSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-symptoms"], in: app)
+        tapWhenVisible(app.buttons["symptom-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let symptomEntry = app.descendants(matching: .any)["timeline-entry-symptom"]
+        waitForLabel(symptomEntry, contains: "Pain 4/10")
+
+        tapWhenVisible(app.buttons["timeline-edit-symptom"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        for _ in 0..<4 {
+            tapWhenVisible(app.buttons["timeline-edit-symptom-pain-increment"], in: app)
+        }
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedSymptomEntry = app.descendants(matching: .any)["timeline-entry-symptom"]
+        waitForLabel(editedSymptomEntry, contains: "Pain 8/10")
+        XCTAssertTrue(editedSymptomEntry.label.contains("fatigue 6/10"), editedSymptomEntry.label)
+        XCTAssertTrue(editedSymptomEntry.label.contains("Mood 5/10"), editedSymptomEntry.label)
+
+        let safetyCard = app.descendants(matching: .any)["home-safety-card"]
+        XCTAssertTrue(safetyCard.waitForExistence(timeout: 5))
+        XCTAssertTrue(safetyCard.label.contains("cannot diagnose or triage emergencies"))
+    }
+
+    @MainActor
     func testMedicationDoseUpdatesHomeSummarySmoke() {
         let app = openSeededHome()
 

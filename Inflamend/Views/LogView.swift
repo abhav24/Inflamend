@@ -386,14 +386,9 @@ struct LogSymptomForm: View {
             }
         }
         PrimaryButton(title: "Save entry") {
-            appState.addLog(
-                type: .symptom,
-                title: "Pain \(Int(painVal))/10 · fatigue \(Int(fatigueVal))/10",
-                sub: "Mood \(Int(moodVal))/10",
-                payload: .symptom(pain: Int(painVal), fatigue: Int(fatigueVal), mood: Int(moodVal))
-            )
-            appState.showToast("Symptoms saved")
+            appState.recordSymptoms(pain: Int(painVal), fatigue: Int(fatigueVal), mood: Int(moodVal))
         }
+        .accessibilityIdentifier("symptom-save-entry-button")
     }
 }
 

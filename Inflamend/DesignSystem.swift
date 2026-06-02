@@ -291,6 +291,7 @@ struct AppIcon: View {
         switch name {
         case "home":     return "house"
         case "plus":     return "plus"
+        case "minus":    return "minus"
         case "chart":    return "chart.bar"
         case "chat":     return "bubble.left"
         case "user":     return "person"
