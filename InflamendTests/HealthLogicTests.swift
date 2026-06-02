@@ -123,7 +123,35 @@ final class HealthLogicTests: XCTestCase {
 
         XCTAssertTrue(report.contains("Self-reported tracking summary"))
         XCTAssertTrue(report.contains("Possible pattern"))
+        XCTAssertTrue(report.contains("do not prove triggers or causes"))
         XCTAssertFalse(report.contains("caused"))
+    }
+
+    func testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let generatedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2)))
+        let logs = [
+            LogEntry(type: .food, title: "Dinner", sub: "Dairy", time: "7:00pm"),
+            LogEntry(type: .bowel, title: "Bristol 6 · urgency 7/10", sub: "visible blood", time: "9:00am")
+        ]
+
+        let report = DoctorReportExporter.buildPlainTextReport(
+            logs: logs,
+            medsTaken: 3,
+            medsTotal: 4,
+            displayName: "Soham",
+            generatedAt: generatedAt,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(report.contains("Prepared for: Soham"))
+        XCTAssertTrue(report.contains("Range: Recent local logs exported 2026-06-02"))
+        XCTAssertTrue(report.contains("Bowel movements logged: 1"))
+        XCTAssertTrue(report.contains("Blood flags: 1"))
+        XCTAssertTrue(report.contains("Dairy appeared in 1 food log; frequency only, not a trigger claim."))
+        XCTAssertFalse(report.contains("caused"))
+        XCTAssertEqual(DoctorReportExporter.fileName(generatedAt: generatedAt, calendar: calendar), "Inflamend-Doctor-Report-2026-06-02.txt")
     }
 
     func testInsightSummaryReturnsEmptyStateForNoLogs() {

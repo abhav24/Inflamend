@@ -514,6 +514,8 @@ enum MedicationScheduleCalculator {
 }
 
 struct ReportSummaryInput: Equatable {
+    var preparedFor: String = "Inflamend user"
+    var rangeDescription: String = "Recent local logs"
     var daysLogged: Int
     var bowelMovementCount: Int
     var bloodEventCount: Int
@@ -532,14 +534,17 @@ enum ReportSummaryGenerator {
         return [
             "Inflamend Doctor Report",
             "Self-reported tracking summary. Not a diagnosis.",
+            "Prepared for: \(input.preparedFor)",
+            "Range: \(input.rangeDescription)",
             "",
-            "Days logged: \(input.daysLogged)",
+            "Local logs included: \(input.daysLogged)",
             "Bowel movements logged: \(input.bowelMovementCount)",
             "Blood flags: \(input.bloodEventCount)",
             adherence,
             "",
             "Possible patterns:",
             input.possiblePatterns.isEmpty ? "Keep logging to improve confidence." : input.possiblePatterns.map { "- Possible pattern: \($0)" }.joined(separator: "\n"),
+            "Pattern notes are based on local logs and do not prove triggers or causes.",
             "",
             "Notes:",
             input.notes.isEmpty ? "No notes in this range." : input.notes.map { "- \($0)" }.joined(separator: "\n"),
@@ -548,6 +553,119 @@ enum ReportSummaryGenerator {
             "- Are these symptom changes expected for my condition?",
             "- Should any medication questions be reviewed by my GI team or pharmacist?"
         ].joined(separator: "\n")
+    }
+}
+
+struct DoctorReportExport: Identifiable, Equatable {
+    let id: UUID
+    let fileName: String
+    let fileURL: URL
+    let content: String
+    let generatedAt: Date
+}
+
+enum DoctorReportExporter {
+    static func buildPlainTextReport(
+        logs: [LogEntry],
+        medsTaken: Int,
+        medsTotal: Int,
+        displayName: String,
+        generatedAt: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
+        ReportSummaryGenerator.plainText(
+            input(
+                logs: logs,
+                medsTaken: medsTaken,
+                medsTotal: medsTotal,
+                displayName: displayName,
+                generatedAt: generatedAt,
+                calendar: calendar
+            )
+        )
+    }
+
+    static func writePlainTextReport(
+        logs: [LogEntry],
+        medsTaken: Int,
+        medsTotal: Int,
+        displayName: String,
+        generatedAt: Date = Date(),
+        directory: URL = FileManager.default.temporaryDirectory,
+        calendar: Calendar = .current
+    ) throws -> DoctorReportExport {
+        let content = buildPlainTextReport(
+            logs: logs,
+            medsTaken: medsTaken,
+            medsTotal: medsTotal,
+            displayName: displayName,
+            generatedAt: generatedAt,
+            calendar: calendar
+        )
+        let reportsDirectory = directory.appendingPathComponent("InflamendReports", isDirectory: true)
+        try FileManager.default.createDirectory(at: reportsDirectory, withIntermediateDirectories: true)
+        let fileName = fileName(generatedAt: generatedAt, calendar: calendar)
+        let fileURL = reportsDirectory.appendingPathComponent(fileName)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: fileURL.path
+        )
+        return DoctorReportExport(
+            id: UUID(),
+            fileName: fileName,
+            fileURL: fileURL,
+            content: content,
+            generatedAt: generatedAt
+        )
+    }
+
+    static func fileName(generatedAt: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: generatedAt)
+        return String(
+            format: "Inflamend-Doctor-Report-%04d-%02d-%02d.txt",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1
+        )
+    }
+
+    private static func input(
+        logs: [LogEntry],
+        medsTaken: Int,
+        medsTotal: Int,
+        displayName: String,
+        generatedAt: Date,
+        calendar: Calendar
+    ) -> ReportSummaryInput {
+        let recentLogs = Array(logs.prefix(30))
+        let insightSummary = InsightSummaryBuilder.build(logs: recentLogs)
+        let bloodCount = recentLogs.filter { log in
+            let text = "\(log.title) \(log.sub)".lowercased()
+            return text.contains("blood") && !text.contains("no blood")
+        }.count
+        let possiblePatterns = insightSummary.foodPatterns.map { pattern in
+            "\(pattern.label) appeared in \(pattern.count) food log\(pattern.count == 1 ? "" : "s"); frequency only, not a trigger claim."
+        }
+        let notes = recentLogs.prefix(10).map { log in
+            let detail = log.sub.isEmpty ? "" : " - \(log.sub)"
+            return "\(log.type.rawValue.capitalized): \(log.title)\(detail)"
+        }
+        let date = fileName(generatedAt: generatedAt, calendar: calendar)
+            .replacingOccurrences(of: "Inflamend-Doctor-Report-", with: "")
+            .replacingOccurrences(of: ".txt", with: "")
+
+        return ReportSummaryInput(
+            preparedFor: displayName,
+            rangeDescription: "Recent local logs exported \(date)",
+            daysLogged: recentLogs.count,
+            bowelMovementCount: insightSummary.bowelLogCount,
+            bloodEventCount: bloodCount,
+            medicationDosesTaken: medsTaken,
+            medicationDosesScheduled: medsTotal,
+            possiblePatterns: possiblePatterns,
+            notes: notes
+        )
     }
 }
 

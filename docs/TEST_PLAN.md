@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 16 unit tests in HealthLogicTests.
+Coverage: 17 unit tests in HealthLogicTests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,7 +19,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 16 tests.
+Result: TEST SUCCEEDED with 17 tests.
 ```
 
 ## Unit Test Priorities
@@ -79,7 +79,7 @@ Status: started. Twice-daily schedule calculation is covered.
 - Notes and doctor questions.
 - CSV/plain text export shape.
 
-Status: started. Plain-text report wording and possible-pattern language are covered.
+Status: started. Plain-text report wording, possible-pattern language, and local doctor-report content generation are covered.
 
 6. Offline/sync queue:
 - Pending mutation enqueue.
@@ -148,7 +148,7 @@ When Supabase CLI and credentials are available:
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented in Care scaffold; needs UI test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Pending |
 | Insights | No data | Empty state, no fake claims | Implemented in logic; needs UI test |
-| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Plain-text generator scaffold wired; file/share export pending |
+| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path exists | Scaffolded |
 | Privacy | Delete data/account | User-visible scaffold explains requirements | Scaffolded |
 | Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; backend replay pending |
@@ -166,6 +166,7 @@ When Supabase CLI and credentials are available:
 - `testVoiceParserParsesWeight`
 - `testMedicationScheduleCalculatesTwiceDailyDoses`
 - `testReportSummaryUsesPossiblePatternLanguage`
+- `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`
 - `testValidationHelpers`
 - `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
 - `testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend`

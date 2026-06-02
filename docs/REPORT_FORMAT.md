@@ -6,9 +6,9 @@ Reports help users prepare for clinician conversations. They must not diagnose o
 
 ## Formats
 
-- Plain text: required first implementation.
+- Plain text: implemented locally from current app logs and shareable from Profile.
 - CSV: required for logs and summaries.
-- PDF: scaffolded until PDF generation and share sheet are implemented.
+- PDF: scaffolded until PDF generation is implemented.
 
 ## Sections
 
@@ -18,7 +18,7 @@ Reports help users prepare for clinician conversations. They must not diagnose o
 - Disclaimer: self-reported data, not a diagnosis.
 
 2. Summary:
-- Days logged.
+- Local logs included.
 - Overall status distribution.
 - Possible red-flag events.
 - Flare markers.
@@ -52,4 +52,4 @@ Reports help users prepare for clinician conversations. They must not diagnose o
 
 ## Current Status
 
-`export-report` Edge Function returns a safe scaffolded report. iOS export/share UI is still toast-only and must be implemented.
+`export-report` Edge Function returns a safe scaffolded report. iOS now creates a protected local plain-text doctor report and exposes it through `ShareLink`; CSV/PDF and backend export jobs are still pending.

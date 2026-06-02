@@ -228,10 +228,34 @@ Fixes made:
 What remains:
 - Add structured dated health-log models so charts do not have to infer scores from timeline copy.
 - Add UI tests for Insights empty states and populated local-log summaries.
-- Add clinician-facing export/share output for these summaries.
+- Add structured export/share output for these summaries.
+
+What was committed:
+- `49eacf1 Make Insights use local logs`
+
+## Current Checkpoint: Local Doctor Report Export
+
+What changed:
+- Added `DoctorReportExporter` to build a safe plain-text doctor report from recent local logs.
+- Wrote report files to a local temporary report directory with iOS file protection attributes.
+- Replaced the Profile report toast with a report preview sheet and `ShareLink` for the generated `.txt` file.
+- Logged doctor-report export requests locally and queued a report-export mutation for future backend replay.
+- Added unit coverage for local report content, filename generation, food-pattern framing, and no causal trigger wording.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 17 tests, including `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`.
+
+What remains:
+- Add CSV/PDF output, richer structured date ranges, and backend export job integration once Supabase is configured.
+- Add UI tests for the Profile export flow and share sheet presentation.
 
 What will be committed:
-- Commit message: `Make Insights use local logs`
+- Commit message: `Add local doctor report export`
 
 ## Command Log
 
@@ -285,6 +309,12 @@ Result after Insights pass: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after Insights pass: TEST SUCCEEDED with 16 tests.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after report-export pass: TEST SUCCEEDED with 17 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after report-export pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -292,7 +322,7 @@ Result after Insights pass: TEST SUCCEEDED with 16 tests.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, safety, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, safety, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -321,7 +351,7 @@ Result after Insights pass: TEST SUCCEEDED with 16 tests.
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
 | Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
-| Doctor report/export | Scaffolded in UI | Profile report row calls `ReportSummaryGenerator` | Add real share sheet/PDF/text file export |
+| Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
 | Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles | Enforce preferences in live backend/AI behavior |
 | Data export/delete | Scaffolded and locally logged | Export/delete rows show setup states and local audit notes | Implement Supabase-backed export/delete |
@@ -368,12 +398,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 16 unit tests through `InflamendTests`.
+- Tests: passing with 17 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, and sync queue checkpoints exist; Insights checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, and Insights checkpoints exist; report export checkpoint pending commit.
 
 Continue working.
 

@@ -488,6 +488,20 @@ class AppState {
         showToast("Data export scaffolded")
     }
 
+    func prepareDoctorReportExport() throws -> DoctorReportExport {
+        let export = try DoctorReportExporter.writePlainTextReport(
+            logs: logs,
+            medsTaken: medsTaken,
+            medsTotal: medsTotal,
+            displayName: displayName
+        )
+        addLog(type: .note, title: "Doctor report exported", sub: export.fileName)
+        enqueueSync(kind: .reportExport, localRecordId: export.id.uuidString, summary: "Doctor report exported")
+        persist()
+        showToast("Report ready to share")
+        return export
+    }
+
     func requestAccountDeletionScaffold() {
         enqueueSync(kind: .accountDeletion, localRecordId: "account-deletion-\(UUID().uuidString)", summary: "Account deletion requested")
         addLog(type: .note, title: "Account deletion requested", sub: "Requires signed-in backend account")

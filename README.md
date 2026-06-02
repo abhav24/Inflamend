@@ -12,7 +12,7 @@ A native iOS health tracking and AI companion app for people living with Inflamm
 - **Insights & Charts** — Local-log trend summaries, empty states, pain heatmap, bowel-log chart, and food frequency list
 - **AI Chat** — In-app assistant ("Ask Inflamend") for medication questions, dietary advice, and symptom explanation
 - **Medication Tracking** — Daily schedule with check-off, streak tracking, and reminder support
-- **Profile & Export** — Days logged, time since flare, medication streak, and 30-day PDF report export
+- **Profile & Export** — Saved-log stats, medication status, and a shareable local doctor report
 
 ---
 
@@ -52,6 +52,7 @@ Current test coverage is focused on deterministic health logic:
 - Voice transcript parsing.
 - Medication schedule calculations.
 - Report summary wording.
+- Local doctor report export content.
 - Validation helpers.
 
 Supabase backend files are scaffolded under `supabase/`, but local migration/function verification requires installing the Supabase CLI and Deno.
@@ -217,10 +218,11 @@ Pre-canned responses (offline, hardcoded):
 ### Profile (`ProfileView.swift`)
 
 - Circular gradient avatar with initial
-- Stats row: days logged, days since flare, med streak %
-- **HEALTH section**: Export PDF, medication reminders, menstrual tracking, flare history
-- **APP section**: AI memory, preferences, IBD library, sign out
-- Version footer: `INFLAMEND v2.4.0 · BUILD 184`
+- Stats row: saved logs, risk score, medication status
+- **HEALTH section**: Local doctor report export, medication reminders, flare history, care plan
+- **APP section**: Preferences, IBD library, sign out
+- **PRIVACY section**: Sync status, AI memory, voice transcript storage, data export/delete controls
+- Version footer: `INFLAMEND v1.0 · BUILD 1`
 
 ---
 

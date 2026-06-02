@@ -365,3 +365,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with structured repositories, UI tests, and report export/share polish.
+
+## Local Doctor Report Export Audit
+
+### Feature Audit: Profile Report Export
+
+Product Simplicity Reviewer:
+- Findings: The Profile report action now produces a tangible shareable artifact instead of a toast-only scaffold.
+- Required fixes: Add date-range selection and export options only after structured dated logs exist.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The report preview appears in a native sheet and uses the existing badge, typography, and primary action styling.
+- Required fixes: Add UI tests or screenshots for the sheet at small and large Dynamic Type sizes.
+- Status: Accept checkpoint in progress.
+
+Backend and Data Integrity Reviewer:
+- Findings: The export is local and deterministic, and it queues a report-export mutation for later backend replay.
+- Required fixes: Add CSV/PDF generation and Supabase export job integration once credentials are available.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The report repeats non-diagnostic framing and avoids causal food-trigger wording. Exported files use local iOS file protection attributes.
+- Required fixes: Add full user-data export/delete backend flows before App Store release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild clean build` passes and `xcodebuild test` passes with 17 tests, including report content and filename generation.
+- Required fixes: Add UI tests for the Profile export sheet and ShareLink path.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with UI tests, CSV/PDF export, and structured date ranges.

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     var appState: AppState
+    @State private var preparedReport: DoctorReportExport?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -68,20 +69,12 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "download", label: "Export 30-day report", sub: "Plain text scaffold") {
-                        let report = ReportSummaryGenerator.plainText(
-                            ReportSummaryInput(
-                                daysLogged: 7,
-                                bowelMovementCount: appState.logs.filter { $0.type == .bowel }.count,
-                                bloodEventCount: 0,
-                                medicationDosesTaken: appState.medsTaken,
-                                medicationDosesScheduled: appState.medsTotal,
-                                possiblePatterns: ["Keep logging to improve confidence"],
-                                notes: ["Export requested from Profile"]
-                            )
-                        )
-                        appState.addLog(type: .note, title: "Doctor report prepared", sub: "\(report.count) characters")
-                        appState.showToast("Report scaffold prepared")
+                    ProfileRow(icon: "download", label: "Export doctor report", sub: "Shareable text file") {
+                        do {
+                            preparedReport = try appState.prepareDoctorReportExport()
+                        } catch {
+                            appState.showToast("Report export failed")
+                        }
                     }
                     ProfileRow(icon: "bell", label: "Medication reminders", sub: "Requires notification setup") {
                         appState.showToast("Notification setup required")
@@ -171,6 +164,65 @@ struct ProfileView: View {
             }
         }
         .background(Color.bgPrimary)
+        .sheet(item: $preparedReport) { export in
+            DoctorReportExportSheet(export: export)
+        }
+    }
+}
+
+struct DoctorReportExportSheet: View {
+    let export: DoctorReportExport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                IconBadge(name: "note", color: .sage)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Report ready")
+                        .font(DS.sans(18, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    Text(export.fileName)
+                        .font(DS.mono(11))
+                        .foregroundColor(.fgFaint)
+                }
+                Spacer()
+            }
+
+            Text("Review the generated text before sharing it with a clinician. It is based only on local logs and is not a diagnosis.")
+                .font(DS.sans(13))
+                .foregroundColor(.fgDim)
+                .lineSpacing(3)
+
+            ScrollView {
+                Text(export.content)
+                    .font(DS.mono(12))
+                    .foregroundColor(.fgDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(maxHeight: 240)
+            .padding(12)
+            .background(Color.bgInset)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            ShareLink(item: export.fileURL) {
+                HStack(spacing: 8) {
+                    AppIcon(name: "share", size: 16, color: .darkText)
+                    Text("Share report")
+                        .font(DS.sans(15, weight: .medium))
+                        .tracking(-0.1)
+                }
+                .foregroundColor(.darkText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.sage)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(PressableButtonStyle(scale: 0.97))
+        }
+        .padding(20)
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
     }
 }
 
