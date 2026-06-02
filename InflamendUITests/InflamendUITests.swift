@@ -207,6 +207,32 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfilePreferencesWeightUnitDrivesWeightLogSmoke() {
+        let app = openSeededProfile()
+
+        let preferencesRow = app.buttons["profile-preferences-row"]
+        waitForLabel(preferencesRow, contains: "KG")
+        tapWhenVisible(preferencesRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["profile-preferences-title"].waitForExistence(timeout: 5))
+        let status = app.staticTexts["profile-preferences-status"]
+        waitForLabel(status, contains: "KG")
+
+        tapWhenVisible(app.buttons["profile-preference-weight-lb-button"], in: app)
+        waitForLabel(status, contains: "LB")
+        tapWhenVisible(app.buttons["profile-preferences-close-button"], in: app)
+        waitForLabel(preferencesRow, contains: "LB")
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-weight"], in: app)
+        tapWhenVisible(app.buttons["weight-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let weightEntry = app.descendants(matching: .any)["timeline-entry-weight"]
+        waitForLabel(weightEntry, contains: "Weight · 62.4 lb")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",

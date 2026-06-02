@@ -14,6 +14,7 @@ struct AppSnapshot: Codable, Equatable {
     var medsTotal: Int
     var medicationDoses: [MedEntry]
     var medicationReminderSettings: MedicationReminderSettings
+    var appPreferences: AppPreferences
     var latestSafetyMessage: String?
     var aiMemoryEnabled: Bool
     var voiceTranscriptStorageEnabled: Bool
@@ -32,6 +33,7 @@ struct AppSnapshot: Codable, Equatable {
         medsTotal: Int,
         medicationDoses: [MedEntry] = [],
         medicationReminderSettings: MedicationReminderSettings = .disabled,
+        appPreferences: AppPreferences = .standard,
         latestSafetyMessage: String?,
         aiMemoryEnabled: Bool,
         voiceTranscriptStorageEnabled: Bool,
@@ -49,6 +51,7 @@ struct AppSnapshot: Codable, Equatable {
         self.medsTotal = medsTotal
         self.medicationDoses = medicationDoses
         self.medicationReminderSettings = medicationReminderSettings
+        self.appPreferences = appPreferences
         self.latestSafetyMessage = latestSafetyMessage
         self.aiMemoryEnabled = aiMemoryEnabled
         self.voiceTranscriptStorageEnabled = voiceTranscriptStorageEnabled
@@ -68,6 +71,7 @@ struct AppSnapshot: Codable, Equatable {
         case medsTotal
         case medicationDoses
         case medicationReminderSettings
+        case appPreferences
         case latestSafetyMessage
         case aiMemoryEnabled
         case voiceTranscriptStorageEnabled
@@ -91,6 +95,7 @@ struct AppSnapshot: Codable, Equatable {
             MedicationReminderSettings.self,
             forKey: .medicationReminderSettings
         ) ?? .disabled
+        appPreferences = try container.decodeIfPresent(AppPreferences.self, forKey: .appPreferences) ?? .standard
         latestSafetyMessage = try container.decodeIfPresent(String.self, forKey: .latestSafetyMessage)
         aiMemoryEnabled = try container.decodeIfPresent(Bool.self, forKey: .aiMemoryEnabled) ?? false
         voiceTranscriptStorageEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceTranscriptStorageEnabled) ?? false
@@ -196,6 +201,55 @@ struct MedicationReminderSettings: Codable, Equatable {
             copy.advanceNoticeMinutes = 10
         }
         copy.notificationSetupRequired = true
+        if let updatedAt {
+            copy.updatedAt = updatedAt
+        }
+        return copy
+    }
+}
+
+enum WeightUnit: String, CaseIterable, Codable, Equatable, Identifiable {
+    case kg
+    case lb
+
+    var id: String { rawValue }
+
+    var label: String {
+        rawValue.uppercased()
+    }
+}
+
+struct AppPreferences: Codable, Equatable {
+    var weightUnit: WeightUnit
+    var useDeviceTimeZone: Bool
+    var timeZoneIdentifier: String
+    var updatedAt: Date?
+
+    static var standard: AppPreferences {
+        AppPreferences(
+            weightUnit: .kg,
+            useDeviceTimeZone: true,
+            timeZoneIdentifier: TimeZone.current.identifier,
+            updatedAt: nil
+        )
+    }
+
+    var summary: String {
+        "\(weightUnit.label) · \(timeZoneSummary)"
+    }
+
+    var timeZoneSummary: String {
+        useDeviceTimeZone ? "Device timezone" : timeZoneIdentifier
+    }
+
+    func normalized(updatedAt: Date? = nil) -> AppPreferences {
+        var copy = self
+        if copy.timeZoneIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            copy.timeZoneIdentifier = TimeZone.current.identifier
+        }
+        if copy.useDeviceTimeZone {
+            copy.timeZoneIdentifier = TimeZone.current.identifier
+        }
         if let updatedAt {
             copy.updatedAt = updatedAt
         }
@@ -633,6 +687,7 @@ class AppState {
     var medsTotal: Int = 4
     var medicationDoses: [MedEntry] = MedicationDefaults.defaultDoses
     var medicationReminderSettings: MedicationReminderSettings = .disabled
+    var appPreferences: AppPreferences = .standard
     var latestSafetyMessage: String? = nil
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
@@ -767,6 +822,10 @@ class AppState {
 
     var medicationReminderSummary: String {
         medicationReminderSettings.summary
+    }
+
+    var preferencesSummary: String {
+        appPreferences.summary
     }
 
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
@@ -1096,13 +1155,14 @@ class AppState {
         showToast("Sleep logged")
     }
 
-    func recordWeight(value: Double, unit: String = "kg") {
+    func recordWeight(value: Double, unit: String? = nil) {
         guard HealthLogValidator.isValidWeight(value) else {
             showToast("Enter a valid weight")
             return
         }
 
-        let payload = HealthLogPayload.weight(value: value, unit: unit)
+        let weightUnit = unit ?? appPreferences.weightUnit.rawValue
+        let payload = HealthLogPayload.weight(value: value, unit: weightUnit)
         addLog(
             type: .weight,
             title: payload.weightDisplayTitle ?? "Weight logged",
@@ -1265,6 +1325,39 @@ class AppState {
     ) {
         medicationReminderSettings = settings.normalized(updatedAt: Date())
         enqueueSync(kind: .privacyPreference, localRecordId: "medication-reminders", summary: summary)
+        persist()
+        showToast(toast)
+    }
+
+    func setPreferredWeightUnit(_ unit: WeightUnit) {
+        guard appPreferences.weightUnit != unit else { return }
+        var preferences = appPreferences
+        preferences.weightUnit = unit
+        updateAppPreferences(
+            preferences,
+            summary: "Preferred weight unit \(unit.label)",
+            toast: "Weight unit set to \(unit.label)"
+        )
+    }
+
+    func setUseDeviceTimeZone(_ enabled: Bool) {
+        guard appPreferences.useDeviceTimeZone != enabled else { return }
+        var preferences = appPreferences
+        preferences.useDeviceTimeZone = enabled
+        updateAppPreferences(
+            preferences,
+            summary: enabled ? "Device timezone on" : "Device timezone off",
+            toast: enabled ? "Device timezone on" : "Device timezone off"
+        )
+    }
+
+    private func updateAppPreferences(
+        _ preferences: AppPreferences,
+        summary: String,
+        toast: String
+    ) {
+        appPreferences = preferences.normalized(updatedAt: Date())
+        enqueueSync(kind: .privacyPreference, localRecordId: "app-preferences", summary: summary)
         persist()
         showToast(toast)
     }
@@ -1451,6 +1544,7 @@ class AppState {
             medsTotal: medsTotal,
             medicationDoses: medicationDoses,
             medicationReminderSettings: medicationReminderSettings,
+            appPreferences: appPreferences,
             latestSafetyMessage: latestSafetyMessage,
             aiMemoryEnabled: aiMemoryEnabled,
             voiceTranscriptStorageEnabled: voiceTranscriptStorageEnabled,
@@ -1470,6 +1564,7 @@ class AppState {
         medsTotal = snapshot.medsTotal
         medicationDoses = snapshot.medicationDoses.isEmpty ? MedicationDefaults.defaultDoses : snapshot.medicationDoses
         medicationReminderSettings = snapshot.medicationReminderSettings.normalized()
+        appPreferences = snapshot.appPreferences.normalized()
         latestSafetyMessage = snapshot.latestSafetyMessage
         aiMemoryEnabled = snapshot.aiMemoryEnabled
         voiceTranscriptStorageEnabled = snapshot.voiceTranscriptStorageEnabled

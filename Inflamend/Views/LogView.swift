@@ -550,8 +550,12 @@ struct LogWeightForm: View {
     var appState: AppState
     @State private var weight = "62.4"
 
+    private var unit: WeightUnit {
+        appState.appPreferences.weightUnit
+    }
+
     var body: some View {
-        FormCard(title: "Current weight", label: "KG") {
+        FormCard(title: "Current weight", label: unit.label) {
             HStack(alignment: .lastTextBaseline, spacing: 8) {
                 TextField("0.0", text: $weight)
                     .font(DS.serif(64))
@@ -560,14 +564,14 @@ struct LogWeightForm: View {
                     .keyboardType(.decimalPad)
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("weight-value-field")
-                Text("kg")
+                Text(unit.rawValue)
                     .font(DS.mono(18))
                     .foregroundColor(.fgFaint)
             }
             .padding(.vertical, 18)
 
             HStack(spacing: 4) {
-                Text("↑ 0.4 kg")
+                Text("↑ 0.4 \(unit.rawValue)")
                     .font(DS.sans(13))
                     .foregroundColor(.sage)
                 Text("since last week")
@@ -583,7 +587,7 @@ struct LogWeightForm: View {
                     appState.showToast("Enter a valid weight")
                     return
                 }
-                appState.recordWeight(value: weightValue)
+                appState.recordWeight(value: weightValue, unit: unit.rawValue)
             }
             .padding(.top, 14)
             .accessibilityIdentifier("weight-save-entry-button")

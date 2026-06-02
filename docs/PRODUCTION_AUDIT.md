@@ -1422,6 +1422,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with notification authorization/scheduling, medication schedule editing, backend settings sync, and manual accessibility QA.
 
+## Profile Preferences and Weight Units Audit
+
+### Feature Audit: Persisted Preferences and Unit-Aware Weight Logging
+
+Product Simplicity Reviewer:
+- Findings: The Profile Preferences placeholder now handles one concrete, high-frequency setting: preferred weight unit. The sheet avoids a broad settings maze while preserving a clear device-timezone state.
+- Required fixes: Add timezone editing only when date grouping and reports can explain the effect clearly.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The Preferences sheet uses short segmented unit buttons, a native device-timezone toggle, a close button for deterministic dismissal, and concise setup copy. The Weight form reflects the selected unit directly.
+- Required fixes: Manually verify the Preferences and Weight edit sheets under large Dynamic Type and VoiceOver, especially the unit segment order and timeline unit controls.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppPreferences` persists in `AppSnapshot`, restores with a legacy default, exports in local JSON, queues a future `privacyPreference` replay mutation for `public.user_settings`, and has a Supabase migration scaffold for preferred weight unit and timezone columns.
+- Required fixes: Add backend settings serialization, returned server IDs/receipts, conflict handling, server-side validation, and unit-conversion policy before live sync.
+- Status: Accept local data contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Weight-unit preference is health-adjacent and included in the local export. The app stores the selected unit with each weight payload instead of silently converting values.
+- Required fixes: Review cloud export/delete behavior and avoid production telemetry that combines preference metadata with health logs.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for persistence, export decode, queued replay, and preferred-unit weight logging. Focused UI coverage passed for changing Profile unit to LB and saving a Weight log as LB. The existing Weight edit smoke still passed for the default KG path. Full unit target passed with 49 tests and clean build passed.
+- Required fixes: Add tests for backend settings replay, conflict resolution, timezone-specific date grouping, and manual accessibility once those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with backend settings sync, richer timezone behavior, unit conversion helpers, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

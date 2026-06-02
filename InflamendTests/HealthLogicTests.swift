@@ -185,6 +185,39 @@ final class HealthLogicTests: XCTestCase {
         store.delete()
     }
 
+    @MainActor
+    func testAppPreferencesPersistExportAndWeightLoggingUsesPreferredUnit() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-app-preferences-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.signUp(email: "preferences@example.com", displayName: "Preferences Patient")
+        appState.setPreferredWeightUnit(.lb)
+        appState.recordWeight(value: 142)
+
+        XCTAssertEqual(appState.appPreferences.weightUnit, .lb)
+        XCTAssertEqual(appState.logs.first?.title, "Weight · 142.0 lb")
+        XCTAssertEqual(appState.logs.first?.payload?.weightUnit, "lb")
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .privacyPreference && $0.localRecordId == "app-preferences"
+        })
+
+        let restored = AppState(store: store, reachabilityMonitor: nil)
+        XCTAssertEqual(restored.appPreferences.weightUnit, .lb)
+        XCTAssertEqual(restored.logs.first?.payload?.weightUnit, "lb")
+
+        let export = try restored.prepareUserDataExport()
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(UserDataExportPayload.self, from: Data(export.content.utf8))
+        XCTAssertEqual(decoded.snapshot.appPreferences.weightUnit, .lb)
+
+        try? FileManager.default.removeItem(at: export.fileURL.deletingLastPathComponent())
+        store.delete()
+    }
+
     func testReportSummaryUsesPossiblePatternLanguage() {
         let report = ReportSummaryGenerator.plainText(
             ReportSummaryInput(

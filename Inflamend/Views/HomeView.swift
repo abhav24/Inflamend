@@ -1218,10 +1218,27 @@ private struct TimelineWeightPayloadFields: View {
                 weightButton(label: "+0.1", delta: 0.1, identifier: "timeline-edit-weight-increment-tenth")
                 weightButton(label: "+1", delta: 1.0, identifier: "timeline-edit-weight-increment-1")
             }
+
+            FlowLayout(spacing: 6) {
+                ForEach(WeightUnit.allCases) { unit in
+                    PillToggle(
+                        label: unit.label,
+                        isActive: normalizedUnit == unit,
+                        color: .ink
+                    ) {
+                        payload.weightUnit = unit.rawValue
+                    }
+                    .accessibilityIdentifier("timeline-edit-weight-unit-\(unit.rawValue)")
+                }
+            }
         }
         .padding(14)
         .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var normalizedUnit: WeightUnit {
+        WeightUnit(rawValue: payload.weightUnit ?? "") ?? .kg
     }
 
     private func weightButton(label: String, delta: Double, identifier: String) -> some View {

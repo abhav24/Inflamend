@@ -6,6 +6,7 @@ struct ProfileView: View {
     @State private var pendingConfirmation: ProfileConfirmation?
     @State private var showingSyncDetails = false
     @State private var showingMedicationReminders = false
+    @State private var showingPreferences = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -107,8 +108,13 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "settings", label: "Preferences", sub: "Units, timezone, reminders") {
-                        appState.showToast("Preferences scaffolded")
+                    ProfileRow(
+                        icon: "settings",
+                        label: "Preferences",
+                        sub: appState.preferencesSummary,
+                        accessibilityID: "profile-preferences-row"
+                    ) {
+                        showingPreferences = true
                     }
                     ProfileRow(icon: "book", label: "IBD library", sub: "Guided articles") {
                         appState.showToast("Education library scaffolded")
@@ -196,6 +202,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingMedicationReminders) {
             MedicationReminderSettingsSheet(appState: appState)
+        }
+        .sheet(isPresented: $showingPreferences) {
+            ProfilePreferencesSheet(appState: appState)
         }
         .sheet(item: $preparedExport) { export in
             switch export {
@@ -395,6 +404,127 @@ private extension MedicationDoseStatus {
         case .missed:
             return .clay
         }
+    }
+}
+
+private struct ProfilePreferencesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var appState: AppState
+
+    private var preferences: AppPreferences {
+        appState.appPreferences
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "settings", color: .ink)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Preferences")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("profile-preferences-title")
+                        Text(preferences.summary)
+                            .font(DS.sans(13))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("profile-preferences-status")
+                    }
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        AppIcon(name: "close", size: 15, color: .fgDim)
+                            .frame(width: 36, height: 36)
+                            .background(Color.bgInset)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
+                    .accessibilityLabel("Close preferences")
+                    .accessibilityIdentifier("profile-preferences-close-button")
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Weight unit")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+
+                    HStack(spacing: 8) {
+                        ForEach(WeightUnit.allCases) { unit in
+                            PreferenceSegmentButton(
+                                label: unit.label,
+                                isSelected: preferences.weightUnit == unit,
+                                identifier: "profile-preference-weight-\(unit.rawValue)-button"
+                            ) {
+                                appState.setPreferredWeightUnit(unit)
+                            }
+                        }
+                    }
+                }
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                Toggle(
+                    isOn: Binding(
+                        get: { preferences.useDeviceTimeZone },
+                        set: { appState.setUseDeviceTimeZone($0) }
+                    )
+                ) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Use device timezone")
+                            .font(DS.sans(15, weight: .medium))
+                            .foregroundColor(.fgPrimary)
+                        Text(preferences.timeZoneSummary)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
+                            .accessibilityIdentifier("profile-preferences-timezone-status")
+                    }
+                }
+                .toggleStyle(.switch)
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .accessibilityIdentifier("profile-preferences-device-timezone-toggle")
+
+                HStack(alignment: .top, spacing: 10) {
+                    AppIcon(name: "shield", size: 15, color: .fgDim)
+                    Text("Preferences are saved locally and included in data export. Backend settings sync waits for Supabase configuration.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                        .accessibilityIdentifier("profile-preferences-setup-status")
+                }
+                .padding(14)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct PreferenceSegmentButton: View {
+    let label: String
+    let isSelected: Bool
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(DS.sans(13, weight: .medium))
+                .foregroundColor(isSelected ? .darkText : .fgDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(isSelected ? Color.ink : Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(PressableButtonStyle(scale: 0.97))
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }
 

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 48 unit tests in HealthLogicTests plus 28 UI smoke tests in InflamendUITests.
+Coverage: 49 unit tests in HealthLogicTests plus 30 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -28,6 +28,9 @@ Result: TEST SUCCEEDED with 1 focused unit test.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testMedicationReminderSettingsPersistExportAndQueuePreference
 Result: TEST SUCCEEDED with 1 focused unit test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testAppPreferencesPersistExportAndWeightLoggingUsesPreferredUnit
+Result: TEST SUCCEEDED with 1 focused unit test.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
@@ -40,8 +43,14 @@ Result: TEST SUCCEEDED with 2 UI smoke tests.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileMedicationReminderSettingsSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfilePreferencesWeightUnitDrivesWeightLogSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
+
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testWeightLogCanBeEditedFromTimelineSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
+
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 48 unit tests.
+Result: TEST SUCCEEDED with 49 unit tests.
 
 xcodebuild clean build -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -134,6 +143,7 @@ Status: local snapshot restore, structured log timestamp and typed payload persi
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
 - Required fields for save actions.
 - Safe human-readable errors.
+- Preferred weight unit persistence and use in new weight logs.
 
 8. Insights:
 - Empty states when no local logs exist.
@@ -166,13 +176,14 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Today check-in can be saved in under 30 seconds and corrected from the timeline. Status: covered by UI smoke tests.
 - Timeline log deletion requires confirmation. Status: covered by UI smoke test.
 - Timeline log deletion can be undone before the toast expires. Status: covered by UI smoke test.
-- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test, including structured food retagging plus structured bowel, symptom, sleep, weight, medication, and check-in correction through the timeline edit sheet.
+- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test, including structured food retagging plus structured bowel, symptom, sleep, weight value/unit, medication, and check-in correction through the timeline edit sheet.
 - Bowel movement log with blood shows safety guidance. Status: covered by UI smoke test, including timeline correction from significant blood to no blood plus mucus.
 - Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test, including timeline retagging from Dairy to Rice.
 - Symptom log saves and structured pain/fatigue/mood edits are visible from Home. Status: covered by UI smoke test, including pain edit to 8/10 and safety card verification.
 - Sleep log saves and structured quality/wake edits are visible from Home. Status: covered by UI smoke test, including quality edit to 9/10 and wake edit to 3.
 - Weight log saves and structured value edits are visible from Home. Status: covered by UI smoke test, including 62.4 kg edit to 63.0 kg.
 - Medication taken/skipped changes adherence state. Status: dose-taken path, persisted skipped status, local reminder settings, and timeline status correction covered by unit and UI smoke tests.
+- Profile preferences drive logging units. Status: preferred LB setting persists locally, exports in JSON, queues a future user-settings replay, and drives a new Weight log in UI smoke coverage.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
@@ -216,6 +227,7 @@ When Supabase CLI and credentials are available:
 | Logging | Sleep log | Sleep quality and bathroom wakes save and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Logging | Weight log | Weight value saves and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Medications | Dose taken/status corrected/reminder preference changed | Adherence state updates and reminder intent persists | Implemented locally with persisted dose statuses and reminder settings; covered by unit/UI smoke tests for dose taken, skipped persistence, Profile reminder settings, and timeline status correction |
+| Preferences | Weight unit changed | New Weight logs use selected unit | Implemented locally with persisted/exported `AppPreferences`, Profile preferences UI, LB weight-log smoke coverage, and default KG weight edit regression coverage |
 | Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
