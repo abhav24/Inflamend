@@ -122,7 +122,7 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "cloud", label: "Sync status", sub: appState.syncSummary) {
+                    ProfileRow(icon: "cloud", label: "Sync status", sub: appState.syncSummary, accessibilityID: "profile-sync-status-row") {
                         appState.retryPendingSyncScaffold()
                     }
                     ProfileRow(

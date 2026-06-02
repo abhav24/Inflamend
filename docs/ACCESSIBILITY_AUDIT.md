@@ -14,7 +14,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save, food save, medication dose row, voice confirmation, and voice permission fallback paths verified | Voice permission fallback, voice confirmation, blood choices, food tags, and medication rows use text | In progress |
 | Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty states identifier-backed and smoke-tested | Empty states use explanatory text; charts need summaries | In progress |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
-| Profile | Partial | Unverified | Likely acceptable | Rows OK; report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
+| Profile | Partial | Unverified | Likely acceptable | Rows OK; sync status, report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Sync blocked state and destructive actions use visible text | In progress |
 
 ## Latest Improvements
 
@@ -30,6 +30,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
 - Added stable identifiers and UI smoke coverage for Profile sign-out returning to the auth gate.
+- Added stable identifiers and UI smoke coverage for Profile sync status retry showing the backend-blocked state.
 - Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
 - Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 - Replaced tiny medication dose toggles with full-row buttons and added UI smoke coverage for Log medication dose tracking, Home meds summary, and timeline feedback.
@@ -52,4 +53,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Insights empty state, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Insights empty state, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status, Profile privacy toggles, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

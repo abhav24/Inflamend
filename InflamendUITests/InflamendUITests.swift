@@ -139,6 +139,22 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileSyncRetryShowsBackendBlockedSmoke() {
+        let app = openFreshOnboardedHome(
+            displayName: "UI Sync",
+            email: "ui-sync@example.com"
+        )
+
+        app.buttons["tab-profile"].tap()
+        XCTAssertTrue(app.staticTexts["YOUR ACCOUNT"].waitForExistence(timeout: 5))
+
+        let syncRow = app.buttons["profile-sync-status-row"]
+        waitForLabel(syncRow, contains: "pending")
+        tapWhenVisible(syncRow, in: app)
+        waitForLabel(syncRow, contains: "Sync blocked: Supabase not configured")
+    }
+
+    @MainActor
     func testProfileSignOutReturnsToAuthGateSmoke() {
         let app = openSeededProfile()
 

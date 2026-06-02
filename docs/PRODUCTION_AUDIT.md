@@ -1005,3 +1005,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with live Speech/microphone integration and backend retention enforcement.
+
+## Profile Sync Status UI Coverage Audit
+
+### Feature Audit: Pending Queue Retry and Backend-Blocked State
+
+Product Simplicity Reviewer:
+- Findings: A fresh local user now gets a visible pending sync state in Profile and a plain blocked message when retrying without backend setup.
+- Required fixes: Keep the row concise when real per-record errors arrive.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sync row uses the existing Profile row pattern and exposes a stable identifier for automation without adding new modal UI.
+- Required fixes: Add VoiceOver and Dynamic Type checks for longer sync messages and future detailed error states.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises real queued local auth/onboarding mutations and verifies the retry path marks them blocked because Supabase is not configured.
+- Required fixes: Replace the scaffold with a replay worker, server IDs, conflict handling, backoff, reachability, and durable per-record error details.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The blocked state does not imply cloud sync succeeded, which is important for user expectations around local health data and deletion/export parity.
+- Required fixes: Add clear production wording once cloud accounts, deletion, and export receipts exist.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Profile sync-status UI test passes. `xcodebuild test` now passes with 41 tests: 24 unit tests and 17 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add first-log offline-save UI coverage and live replay tests once backend credentials are available.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with sync-worker implementation, populated Insights coverage, and edit/delete flows.
