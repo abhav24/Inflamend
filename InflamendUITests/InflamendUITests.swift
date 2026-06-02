@@ -198,6 +198,28 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testMedicationDoseUpdatesHomeSummarySmoke() {
+        let app = openSeededHome()
+
+        let initialSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        XCTAssertTrue(initialSummary.waitForExistence(timeout: 5))
+        XCTAssertTrue(initialSummary.label.contains("Meds 1 of 2"))
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-meds"], in: app)
+        tapWhenVisible(app.buttons["meds-dose-vitamin-d-8-00am-toggle"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let updatedSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        XCTAssertTrue(updatedSummary.waitForExistence(timeout: 5))
+        XCTAssertTrue(updatedSummary.label.contains("Meds 2 of 2"))
+
+        let medicationEntry = app.descendants(matching: .any)["timeline-entry-meds"]
+        XCTAssertTrue(medicationEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(medicationEntry.label.contains("Vitamin D"))
+    }
+
+    @MainActor
     private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--inflamend-reset-state"]
@@ -305,6 +327,27 @@ final class InflamendUITests: XCTestCase {
 
             let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
             let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
+
+        XCTFail("Element was not hittable: \(element)", file: file, line: line)
+    }
+
+    @MainActor
+    private func tapHorizontalWhenVisible(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        for _ in 0..<6 {
+            if element.exists && element.isHittable {
+                element.tap()
+                return
+            }
+
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.20))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.20))
             start.press(forDuration: 0.01, thenDragTo: end)
         }
 

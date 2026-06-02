@@ -664,6 +664,35 @@ What remains:
 What was committed:
 - Commit message: `Add doctor report export UI smoke test`
 
+## Current Checkpoint: Medication Dose UI Coverage
+
+What changed:
+- Replaced small medication checkbox-only controls with full-row dose buttons in the Log Meds form.
+- Added stable identifiers and accessibility labels/values for medication dose rows.
+- Added Home meds summary and timeline-row accessibility identifiers so UI tests can verify visible adherence and log feedback.
+- Added a UI smoke test that opens seeded state, verifies Meds starts at `1 of 2`, navigates to Log > Meds, marks Vitamin D taken, returns Home, and verifies Meds updates to `2 of 2` with a medication timeline entry.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testMedicationDoseUpdatesHomeSummarySmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused medication dose UI smoke test passed after the row hit-target fix.
+- Full test run passed with 36 tests: 24 unit tests and 12 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- The first focused medication test failed because the Vitamin D toggle was not hittable through the tiny checkbox-only control. The fix was to make each dose row the tappable button.
+
+What remains:
+- Add missed-dose, skipped-dose, snooze, reminder, and schedule-management UI coverage.
+- Persist medication schedules beyond the local static demo list and sync them to the backend.
+- Add manual VoiceOver and Dynamic Type verification for the full Log Meds form and Home summary/timeline rows.
+
+What was committed:
+- Commit message: `Add medication dose UI smoke test`
+
 ## Command Log
 
 ```text
@@ -848,6 +877,18 @@ Result after doctor-report export UI pass: TEST SUCCEEDED with 35 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after doctor-report export UI pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testMedicationDoseUpdatesHomeSummarySmoke
+Result before medication row fix: TEST FAILED because the Vitamin D dose toggle was not hittable through the tiny checkbox-only target.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testMedicationDoseUpdatesHomeSummarySmoke
+Result after medication dose UI pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after medication dose UI pass: TEST SUCCEEDED with 36 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after medication dose UI pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -855,7 +896,7 @@ Result after doctor-report export UI pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in and bowel red-flag UI smoke coverage, data-backed Insights with empty-state UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, voice confirmation, privacy controls, and Profile sign-out/export/destructive UI smoke tests wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in, bowel red-flag, and medication dose UI smoke coverage, data-backed Insights with empty-state UI smoke coverage, local doctor-report export with UI smoke coverage, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, voice confirmation, privacy controls, and Profile sign-out/export/destructive UI smoke tests wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -872,7 +913,7 @@ Result after doctor-report export UI pass: BUILD SUCCEEDED.
 | Today check-in | Implemented with local persistence and UI smoke coverage | `CheckInSheet`, `AppState.recordCheckIn`, snapshot store, `testTodayCheckInSavesToTimelineSmoke` | Add backend sync and edit/delete |
 | Bowel movement logging | Implemented with local persistence and UI smoke coverage | Quick Bristol and detailed bowel form call `recordBowel`; `testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke` | Add backend sync, edit/delete, and stricter validation |
 | Food/meal logging | Implemented with local persistence | Quick food and food form insert timeline logs | Add backend sync, recent/favorite foods |
-| Medication tracking | Implemented with local persistence | Quick meds and meds form update dose count/logs | Add schedules, missed-dose states, backend sync |
+| Medication tracking | Implemented with local persistence and UI smoke coverage | Quick meds and full-row Meds form dose buttons update dose count/logs; `testMedicationDoseUpdatesHomeSummarySmoke` | Add persistent schedules, skipped/missed-dose states, reminders, and backend sync |
 | Symptom logging | Implemented with local persistence | Sliders save symptom timeline entry | Add notes, red-flag linkage, backend sync |
 | Sleep logging | Implemented with local persistence | Sleep form saves quality/wake entry | Add editable times/duration and backend sync |
 | Weight logging | Implemented with local persistence | Weight form saves manual entry | Add units/validation and backend sync |
@@ -931,12 +972,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests` and 11 UI smoke tests through `InflamendUITests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 12 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty-state UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, medication dose tracking with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights with empty-state UI smoke coverage, local text doctor-report export with Profile UI smoke coverage, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Today check-in UI smoke coverage, Insights empty-state UI smoke coverage, Log bowel red-flag UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, and doctor-report export UI checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Today check-in UI smoke coverage, Insights empty-state UI smoke coverage, Log bowel red-flag UI smoke coverage, Log medication dose UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile doctor-report export UI smoke coverage, Profile user-data export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, Care medication-refusal UI, Insights empty-state UI, doctor-report export UI, and medication dose UI checkpoints exist.
 
 Continue working.
 

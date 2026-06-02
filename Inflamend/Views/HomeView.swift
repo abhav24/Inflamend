@@ -87,7 +87,7 @@ struct HomeView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.bottom, 10)
                         SummaryRow(icon: "flame",   label: "Symptoms", value: "\(appState.logs.filter { $0.type == .symptom }.count)", total: "logged", color: .clay)
-                        SummaryRow(icon: "pill",    label: "Meds",     value: "\(appState.medsTaken)", total: "of \(appState.medsTotal)", color: .sage)
+                        SummaryRow(icon: "pill",    label: "Meds",     value: "\(appState.medsTaken)", total: "of \(appState.medsTotal)", color: .sage, accessibilityID: "home-meds-summary-row")
                         SummaryRow(icon: "droplet", label: "Water",    value: "6",   total: "cups",  color: .ink)
                         SummaryRow(icon: "moon",    label: "Sleep",    value: "7.2", total: "hrs",   color: .amber, isLast: true)
                     }
@@ -341,6 +341,7 @@ struct SummaryRow: View {
     let total: String
     let color: Color
     var isLast: Bool = false
+    var accessibilityID: String? = nil
 
     var body: some View {
         HStack(spacing: 10) {
@@ -369,6 +370,9 @@ struct SummaryRow: View {
                 Rectangle().fill(Color.strokeDefault).frame(height: 0.5)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value) \(total)")
+        .accessibilityIdentifier(accessibilityID ?? "home-summary-\(label.lowercased())-row")
     }
 }
 
@@ -464,6 +468,9 @@ struct TimelineRow: View {
                 Rectangle().fill(Color.strokeDefault).frame(height: 0.5).padding(.leading, 64)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(entry.title). \(entry.sub). \(entry.time)")
+        .accessibilityIdentifier("timeline-entry-\(entry.type.rawValue)")
     }
 }
 

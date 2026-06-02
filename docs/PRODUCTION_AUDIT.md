@@ -845,3 +845,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with medication logging and report-format coverage.
+
+## Medication Dose UI Coverage Audit
+
+### Feature Audit: Log Meds Dose Tracking Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The Meds form now validates a core daily workflow: mark a scheduled dose taken, see adherence update on Home, and see the medication entry in the timeline.
+- Required fixes: Add skipped/missed-dose workflows after the taken path stays stable.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Medication dose controls are now full-row buttons instead of tiny checkbox-only targets, which improves touch ergonomics and UI automation reliability.
+- Required fixes: Run manual Dynamic Type and VoiceOver checks for the Log Meds form, Home summary, and timeline row order.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The test verifies local state changes from seeded `1 of 2` adherence to `2 of 2` after recording Vitamin D and confirms a local timeline entry.
+- Required fixes: Replace the static local medication list with persisted schedules, skipped/missed states, and backend sync.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The path logs user-entered medication adherence locally without giving medication-change guidance or prescription advice.
+- Required fixes: Keep medication-change decisions in Care refusals and add clear audit behavior once backend medication sync exists.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The first focused run failed on a real hit-target issue; after the full-row button fix, the focused test passed. `xcodebuild test` now passes with 36 tests: 24 unit tests and 12 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to food logging, voice confirmation, privacy toggles, and skipped/missed medication states.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with food logging and voice-confirmation coverage.

@@ -381,15 +381,10 @@ struct LogMedsForm: View {
         FormCard(title: "Today's schedule", label: "\(meds.count) DOSES") {
             VStack(spacing: 0) {
                 ForEach(Array(meds.enumerated()), id: \.element.id) { idx, med in
-                    HStack(spacing: 12) {
-                        Button {
-                            meds[idx].taken.toggle()
-                            let verb = meds[idx].taken ? "taken" : "marked missed"
-                            if meds[idx].taken {
-                                appState.recordMedicationTaken(name: med.name)
-                            }
-                            appState.showToast("\(med.name) · \(verb)")
-                        } label: {
+                    Button {
+                        toggleDose(at: idx, med: med)
+                    } label: {
+                        HStack(spacing: 12) {
                             ZStack {
                                 Circle()
                                     .fill(meds[idx].taken ? Color.sage : Color.clear)
@@ -401,34 +396,60 @@ struct LogMedsForm: View {
                                     AppIcon(name: "check", size: 13, color: .darkText)
                                 }
                             }
-                        }
-                        .buttonStyle(.plain)
-                        .animation(.easeInOut(duration: 0.15), value: meds[idx].taken)
 
-                        HStack(spacing: 0) {
-                            Text(med.name)
-                                .font(DS.sans(14))
-                                .foregroundColor(meds[idx].taken ? .fgDim : .fgPrimary)
-                                .tracking(-0.1)
-                            Text(" · \(med.dose)")
-                                .font(DS.sans(12))
+                            HStack(spacing: 0) {
+                                Text(med.name)
+                                    .font(DS.sans(14))
+                                    .foregroundColor(meds[idx].taken ? .fgDim : .fgPrimary)
+                                    .tracking(-0.1)
+                                Text(" · \(med.dose)")
+                                    .font(DS.sans(12))
+                                    .foregroundColor(.fgFaint)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Text(med.time)
+                                .font(DS.mono(11))
                                 .foregroundColor(.fgFaint)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Text(med.time)
-                            .font(DS.mono(11))
-                            .foregroundColor(.fgFaint)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .padding(.vertical, 12)
                     .overlay(alignment: .bottom) {
                         if idx < meds.count - 1 {
                             Rectangle().fill(Color.strokeDefault).frame(height: 0.5)
                         }
                     }
+                    .animation(.easeInOut(duration: 0.15), value: meds[idx].taken)
+                    .accessibilityLabel("\(med.name) \(med.dose) \(med.time)")
+                    .accessibilityValue(meds[idx].taken ? "taken" : "not taken")
+                    .accessibilityIdentifier(doseToggleIdentifier(for: med))
+                    .accessibilityAddTraits(.isButton)
                 }
             }
         }
+    }
+
+    private func toggleDose(at idx: Int, med: MedEntry) {
+        meds[idx].taken.toggle()
+        let verb = meds[idx].taken ? "taken" : "marked missed"
+        if meds[idx].taken {
+            appState.recordMedicationTaken(name: med.name)
+        }
+        appState.showToast("\(med.name) · \(verb)")
+    }
+
+    private func doseToggleIdentifier(for med: MedEntry) -> String {
+        "meds-dose-\(slug(for: med))-toggle"
+    }
+
+    private func slug(for med: MedEntry) -> String {
+        "\(med.name)-\(med.time)"
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
     }
 }
 
