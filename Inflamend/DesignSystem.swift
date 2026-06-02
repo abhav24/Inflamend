@@ -130,32 +130,13 @@ struct RiskRing: View {
     }
 
     var body: some View {
-        let r = (size - strokeWidth) / 2
-        let circumference = 2 * Double.pi * r
-
         ZStack {
-            // Tick marks
-            ForEach(0..<24, id: \.self) { i in
-                let angle = Double(i) / 24.0 * 2 * Double.pi - Double.pi / 2
-                let innerR = r + strokeWidth / 2 + 4
-                let outerR = r + strokeWidth / 2 + 9
-                Path { path in
-                    path.move(to: CGPoint(
-                        x: size / 2 + cos(angle) * innerR,
-                        y: size / 2 + sin(angle) * innerR))
-                    path.addLine(to: CGPoint(
-                        x: size / 2 + cos(angle) * outerR,
-                        y: size / 2 + sin(angle) * outerR))
-                }
-                .stroke(Color.fgGhost, lineWidth: 1)
-            }
+            tickMarks
 
-            // Background ring
             Circle()
                 .stroke(Color.bgInset, lineWidth: strokeWidth)
                 .frame(width: size - strokeWidth, height: size - strokeWidth)
 
-            // Foreground arc
             Circle()
                 .trim(from: 0, to: pct)
                 .stroke(ringColor, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
@@ -163,24 +144,75 @@ struct RiskRing: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(duration: 0.8), value: score)
 
-            // Center text
-            VStack(spacing: 2) {
-                Text("\(tierLabel) risk")
-                    .font(DS.mono(10, weight: .medium))
-                    .tracking(1.4)
-                    .textCase(.uppercase)
-                    .foregroundColor(ringColor)
-                HStack(alignment: .lastTextBaseline, spacing: 1) {
-                    Text("\(score)")
-                        .font(DS.serif(46))
-                        .foregroundColor(.fgPrimary)
-                    Text("/100")
-                        .font(DS.mono(13))
-                        .foregroundColor(.fgFaint)
-                }
-            }
+            centerLabel
         }
         .frame(width: size, height: size)
+    }
+
+    private var tickMarks: some View {
+        ForEach(0..<24, id: \.self) { index in
+            RiskRingTickMark(index: index, size: size, strokeWidth: strokeWidth)
+        }
+    }
+
+    private var centerLabel: some View {
+        VStack(spacing: 2) {
+            Text("\(tierLabel) risk")
+                .font(DS.mono(10, weight: .medium))
+                .tracking(1.4)
+                .textCase(.uppercase)
+                .foregroundColor(ringColor)
+            HStack(alignment: .lastTextBaseline, spacing: 1) {
+                Text("\(score)")
+                    .font(DS.serif(46))
+                    .foregroundColor(.fgPrimary)
+                Text("/100")
+                    .font(DS.mono(13))
+                    .foregroundColor(.fgFaint)
+            }
+        }
+    }
+}
+
+private struct RiskRingTickMark: View {
+    let index: Int
+    let size: CGFloat
+    let strokeWidth: CGFloat
+
+    var body: some View {
+        Path { path in
+            path.move(to: startPoint)
+            path.addLine(to: endPoint)
+        }
+        .stroke(Color.fgGhost, lineWidth: 1)
+    }
+
+    private var angle: CGFloat {
+        CGFloat(index) / 24.0 * 2.0 * .pi - .pi / 2.0
+    }
+
+    private var innerRadius: CGFloat {
+        let radius = (size - strokeWidth) / 2.0
+        return radius + strokeWidth / 2.0 + 4.0
+    }
+
+    private var outerRadius: CGFloat {
+        let radius = (size - strokeWidth) / 2.0
+        return radius + strokeWidth / 2.0 + 9.0
+    }
+
+    private var startPoint: CGPoint {
+        CGPoint(
+            x: size / 2.0 + cos(angle) * innerRadius,
+            y: size / 2.0 + sin(angle) * innerRadius
+        )
+    }
+
+    private var endPoint: CGPoint {
+        CGPoint(
+            x: size / 2.0 + cos(angle) * outerRadius,
+            y: size / 2.0 + sin(angle) * outerRadius
+        )
     }
 }
 
