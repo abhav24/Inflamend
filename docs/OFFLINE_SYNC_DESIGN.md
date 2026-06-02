@@ -32,4 +32,23 @@ Users must be able to log important health data even with poor connectivity, wit
 
 ## Current Status
 
-Not implemented in iOS yet. Supabase schema supports server-side storage; local persistence and queue services are next app-layer work.
+Partially implemented in iOS.
+
+Implemented:
+
+- `AppSnapshotStore` writes a local JSON snapshot in Application Support.
+- iOS file protection is applied to the snapshot file.
+- Session scaffold, onboarding profile, logs, chat, privacy preferences, risk, meds, mood, and safety state restore across app launches.
+- Log actions save locally before any backend exists.
+- Profile exposes last local save status through the app state, ready for UI surfacing.
+
+Not implemented:
+
+- Pending mutation queue.
+- Backend sync worker.
+- Network reachability state.
+- Conflict handling.
+- Per-record sync status.
+- Supabase Auth token refresh.
+
+Next app-layer work is to split snapshot persistence into a repository plus queue so local saves can be replayed to Supabase without UI code owning sync behavior.

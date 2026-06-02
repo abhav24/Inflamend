@@ -76,23 +76,26 @@ Inflamend/
 
 ### State Management
 
-All state lives in a single `AppState` class (no Combine, no Redux). It's declared with `@Observable` and annotated `@MainActor`. Views create it at the root and pass it down via `@State` / `@Binding`.
+All UI state is coordinated through a single `AppState` class (no Combine, no Redux). It's declared with `@Observable` and annotated `@MainActor`. Views create it at the root and pass it down via `@State` / `@Binding`.
+
+`AppState` now also owns local scaffolds for auth, onboarding, privacy preferences, logs, chat messages, risk state, and snapshot restore. `AppSnapshotStore` writes JSON to Application Support with iOS file protection while Supabase Auth and sync remain externally blocked.
 
 ```swift
 @Observable @MainActor
 class AppState {
+    var authSession: AuthSession?
+    var onboardingProfile: OnboardingProfile?
     var riskScore: Int = 42
     var mood: MoodOption?
     var medsTaken: Int = 2
     var medsTotal: Int = 4
-    var logs: [LogEntry] = [...]        // timeline entries
+    var logs: [LogEntry] = []
     var chatMessages: [ChatMessage] = [...]
     var toast: String?
 
-    func showToast(_ message: String) {
-        toast = message
-        Task { try? await Task.sleep(nanoseconds: 2_200_000_000); toast = nil }
-    }
+    func signUp(email: String, displayName: String)
+    func completeOnboarding(...)
+    func addLog(type: LogType, title: String, sub: String)
 }
 ```
 
@@ -319,7 +322,7 @@ No Swift Package Manager dependencies. All charts use SwiftUI `Path`. All icons 
 
 **7. Build and run**
 ```bash
-xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 16'
+xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ---
@@ -329,9 +332,9 @@ xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 16
 | Feature | Planned Tech |
 |---------|-------------|
 | AI chat responses | Anthropic Claude API |
-| User authentication | Supabase Auth |
-| Data persistence | Supabase Postgres |
-| Offline caching | CoreData or SwiftData |
+| Production user authentication | Supabase Auth |
+| Server data persistence | Supabase Postgres |
+| Offline sync queue | Local repository + Supabase sync worker |
 | Push notifications | APNs + Supabase Edge Functions |
 | PDF export | PDFKit |
 | Medication reminders | `UNUserNotificationCenter` |

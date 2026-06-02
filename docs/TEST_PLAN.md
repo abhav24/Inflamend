@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 10 unit tests in HealthLogicTests.
+Coverage: 11 unit tests in HealthLogicTests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,7 +19,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 10 tests.
+Result: TEST SUCCEEDED with 11 tests.
 ```
 
 ## Unit Test Priorities
@@ -88,6 +88,8 @@ Status: started. Plain-text report wording and possible-pattern language are cov
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
+Status: local snapshot restore is covered. Network queue behavior is pending.
+
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
 - Required fields for save actions.
@@ -127,9 +129,9 @@ When Supabase CLI and credentials are available:
 | Area | Scenario | Expected Result | Status |
 |---|---|---|---|
 | Install | Fresh install | Starts without crash | Pending |
-| Auth | Logged out | Shows welcome/sign in/up scaffold | Pending |
-| Auth | Sign out | Session clears, no stale PHI visible | Pending |
-| Onboarding | Sensitive questions skipped | App remains usable | Pending |
+| Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented; needs UI test |
+| Auth | Sign out | Session clears, no stale PHI visible | Implemented locally; needs UI test |
+| Onboarding | Sensitive questions skipped | App remains usable | Implemented; needs UI test |
 | Today | Check-in saved | Today and risk score update | Implemented in-memory; needs UI test |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented in-memory; needs UI test |
 | Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented in-memory; needs UI test |
@@ -142,7 +144,7 @@ When Supabase CLI and credentials are available:
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Plain-text generator scaffold wired; file/share export pending |
 | Privacy | Export data | User-visible export path exists | Scaffolded |
 | Privacy | Delete data/account | User-visible scaffold explains requirements | Scaffolded |
-| Offline | Log while offline | Local save or safe failure | Pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot save implemented; queue pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -158,6 +160,7 @@ When Supabase CLI and credentials are available:
 - `testMedicationScheduleCalculatesTwiceDailyDoses`
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testValidationHelpers`
+- `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
 
 ## Device Targets
 

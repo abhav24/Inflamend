@@ -1,11 +1,116 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Local Snapshot Store
+
+struct AppSnapshot: Codable, Equatable {
+    var authSession: AuthSession?
+    var onboardingProfile: OnboardingProfile?
+    var riskScore: Int
+    var mood: MoodOption?
+    var medsTaken: Int
+    var medsTotal: Int
+    var latestSafetyMessage: String?
+    var aiMemoryEnabled: Bool
+    var voiceTranscriptStorageEnabled: Bool
+    var lastSyncStatus: String
+    var logs: [LogEntry]
+    var chatMessages: [ChatMessage]
+}
+
+struct AuthSession: Codable, Equatable {
+    var userId: UUID
+    var email: String
+    var displayName: String
+    var signedInAt: Date
+    var isLocalScaffold: Bool
+
+    static func local(email: String, displayName: String) -> AuthSession {
+        AuthSession(
+            userId: UUID(),
+            email: email,
+            displayName: displayName.isEmpty ? AppState.defaultDisplayName(for: email) : displayName,
+            signedInAt: Date(),
+            isLocalScaffold: true
+        )
+    }
+}
+
+struct OnboardingProfile: Codable, Equatable {
+    var diagnosis: String
+    var primaryGoal: String
+    var baselineStoolCount: Int
+    var hasFlarePlan: Bool
+    var skippedSensitiveQuestions: Bool
+    var completedAt: Date
+}
+
+struct AppSnapshotStore {
+    var fileURL: URL
+
+    static var live: AppSnapshotStore {
+        AppSnapshotStore(fileURL: defaultFileURL())
+    }
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
+    func load() -> AppSnapshot? {
+        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        return try? JSONDecoder.inflamend.decode(AppSnapshot.self, from: data)
+    }
+
+    func save(_ snapshot: AppSnapshot) throws {
+        let data = try JSONEncoder.inflamend.encode(snapshot)
+        let directory = fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try data.write(to: fileURL, options: [.atomic])
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: fileURL.path
+        )
+    }
+
+    func delete() {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    private static func defaultFileURL() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return base
+            .appendingPathComponent("Inflamend", isDirectory: true)
+            .appendingPathComponent("app-snapshot-v1.json")
+    }
+}
+
+private extension JSONEncoder {
+    static var inflamend: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
+}
+
+private extension JSONDecoder {
+    static var inflamend: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}
+
 // MARK: - App State
 
 @MainActor
 @Observable
 class AppState {
+    @ObservationIgnored private let store: AppSnapshotStore
+
+    var authSession: AuthSession? = nil
+    var onboardingProfile: OnboardingProfile? = nil
     var riskScore: Int = 42
     var mood: MoodOption? = nil
     var medsTaken: Int = 2
@@ -14,18 +119,39 @@ class AppState {
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
     var lastSyncStatus: String = "Saved on this device"
-    var logs: [LogEntry] = [
-        LogEntry(type: .sleep,   title: "Slept 7h 20m · quality 7/10", sub: "1 bathroom wake",    time: "6:40a"),
-        LogEntry(type: .meds,    title: "Mesalamine · 800mg",           sub: "Azathioprine · 50mg", time: "8:00a"),
-        LogEntry(type: .food,    title: "Oatmeal, banana, almond milk", sub: "Safe · breakfast",   time: "8:30a"),
-        LogEntry(type: .water,   title: "Water · 500ml",                sub: "",                   time: "10:15a"),
-        LogEntry(type: .symptom, title: "Mild pain · urgency 3/10",     sub: "Lower abdomen",      time: "11:20a"),
-    ]
+    var logs: [LogEntry] = []
     var chatMessages: [ChatMessage] = [
-        ChatMessage(role: .assistant, content: "Hi Priya — how's your gut today? I can help make sense of your logs, talk through meals, or just listen.")
+        ChatMessage(role: .assistant, content: "How is your gut today? I can help make sense of logs, prepare questions, or flag symptoms that may need clinician attention.")
     ]
     var toast: String? = nil
     private var toastTask: Task<Void, Never>? = nil
+
+    init(store: AppSnapshotStore = .live) {
+        self.store = store
+        if let snapshot = store.load() {
+            apply(snapshot)
+        }
+    }
+
+    var isAuthenticated: Bool {
+        authSession != nil
+    }
+
+    var hasCompletedOnboarding: Bool {
+        onboardingProfile != nil
+    }
+
+    var displayName: String {
+        authSession?.displayName ?? "there"
+    }
+
+    var firstName: String {
+        displayName.split(separator: " ").first.map(String.init) ?? displayName
+    }
+
+    var diagnosisLabel: String {
+        onboardingProfile?.diagnosis ?? "IBD profile not completed"
+    }
 
     func showToast(_ message: String) {
         toast = message
@@ -38,7 +164,7 @@ class AppState {
 
     func addLog(type: LogType, title: String, sub: String = "", date: Date = Date()) {
         logs.insert(LogEntry(type: type, title: title, sub: sub, time: Self.timeString(from: date)), at: 0)
-        lastSyncStatus = "Saved on this device"
+        persist()
     }
 
     func recordCheckIn(status: MoodOption?, pain: Int, fatigue: Int, urgency: Int, stoolCount: Int, bloodPresent: Bool, medicationTaken: Bool, notes: String) {
@@ -134,10 +260,163 @@ class AppState {
 
     func clearSafetyMessage() {
         latestSafetyMessage = nil
+        persist()
+    }
+
+    func signUp(email: String, displayName: String) {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isValidEmail(trimmedEmail) else {
+            showToast("Enter a valid email")
+            return
+        }
+        authSession = .local(email: trimmedEmail, displayName: trimmedName)
+        persist()
+        showToast("Account scaffold created")
+    }
+
+    func signIn(email: String) {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard Self.isValidEmail(trimmedEmail) else {
+            showToast("Enter a valid email")
+            return
+        }
+        let existingName = authSession?.displayName ?? Self.defaultDisplayName(for: trimmedEmail)
+        authSession = .local(email: trimmedEmail, displayName: existingName)
+        persist()
+        showToast("Signed in locally")
+    }
+
+    func signOut() {
+        authSession = nil
+        persist()
+        showToast("Signed out")
+    }
+
+    func completeOnboarding(diagnosis: String, primaryGoal: String, baselineStoolCount: Int, hasFlarePlan: Bool, skippedSensitiveQuestions: Bool = false) {
+        onboardingProfile = OnboardingProfile(
+            diagnosis: diagnosis,
+            primaryGoal: primaryGoal,
+            baselineStoolCount: max(0, min(20, baselineStoolCount)),
+            hasFlarePlan: hasFlarePlan,
+            skippedSensitiveQuestions: skippedSensitiveQuestions,
+            completedAt: Date()
+        )
+        persist()
+        showToast("Onboarding saved")
+    }
+
+    func skipOnboarding() {
+        completeOnboarding(
+            diagnosis: "Prefer not to say",
+            primaryGoal: "Track symptoms",
+            baselineStoolCount: 2,
+            hasFlarePlan: false,
+            skippedSensitiveQuestions: true
+        )
+    }
+
+    func setAIMemoryEnabled(_ enabled: Bool) {
+        aiMemoryEnabled = enabled
+        persist()
+        showToast("AI memory \(enabled ? "on" : "off")")
+    }
+
+    func setVoiceTranscriptStorageEnabled(_ enabled: Bool) {
+        voiceTranscriptStorageEnabled = enabled
+        persist()
+        showToast("Transcript storage \(enabled ? "on" : "off")")
+    }
+
+    func addChatMessage(role: ChatRole, content: String) {
+        chatMessages.append(ChatMessage(role: role, content: content))
+        persist()
+    }
+
+    func setSafetyMessage(_ message: String?) {
+        latestSafetyMessage = message
+        persist()
+    }
+
+    func clearAIHistory() {
+        chatMessages = [
+            ChatMessage(role: .assistant, content: "AI history cleared on this device. Cloud deletion requires backend setup.")
+        ]
+        persist()
+        showToast("AI history cleared locally")
+    }
+
+    func requestDataExportScaffold() {
+        addLog(type: .note, title: "Data export requested", sub: "Requires backend credentials")
+        showToast("Data export scaffolded")
+    }
+
+    func requestAccountDeletionScaffold() {
+        addLog(type: .note, title: "Account deletion requested", sub: "Requires signed-in backend account")
+        showToast("Account deletion scaffolded")
     }
 
     private func publishSafety(_ assessment: RedFlagAssessment) {
         latestSafetyMessage = assessment.hasRedFlags ? assessment.safetyCopy : nil
+        persist()
+    }
+
+    private func snapshot() -> AppSnapshot {
+        AppSnapshot(
+            authSession: authSession,
+            onboardingProfile: onboardingProfile,
+            riskScore: riskScore,
+            mood: mood,
+            medsTaken: medsTaken,
+            medsTotal: medsTotal,
+            latestSafetyMessage: latestSafetyMessage,
+            aiMemoryEnabled: aiMemoryEnabled,
+            voiceTranscriptStorageEnabled: voiceTranscriptStorageEnabled,
+            lastSyncStatus: lastSyncStatus,
+            logs: logs,
+            chatMessages: chatMessages
+        )
+    }
+
+    private func apply(_ snapshot: AppSnapshot) {
+        authSession = snapshot.authSession
+        onboardingProfile = snapshot.onboardingProfile
+        riskScore = snapshot.riskScore
+        mood = snapshot.mood
+        medsTaken = snapshot.medsTaken
+        medsTotal = snapshot.medsTotal
+        latestSafetyMessage = snapshot.latestSafetyMessage
+        aiMemoryEnabled = snapshot.aiMemoryEnabled
+        voiceTranscriptStorageEnabled = snapshot.voiceTranscriptStorageEnabled
+        lastSyncStatus = snapshot.lastSyncStatus
+        logs = snapshot.logs
+        chatMessages = snapshot.chatMessages
+    }
+
+    private func persist() {
+        lastSyncStatus = "Saved locally at \(Self.timeString(from: Date()))"
+        do {
+            try store.save(snapshot())
+        } catch {
+            lastSyncStatus = "Local save failed"
+        }
+    }
+
+    nonisolated static func defaultDisplayName(for email: String) -> String {
+        let localPart = email.split(separator: "@").first.map(String.init) ?? "there"
+        let cleaned = localPart
+            .replacingOccurrences(of: ".", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+        return cleaned.split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+
+    private nonisolated static func isValidEmail(_ email: String) -> Bool {
+        let parts = email.split(separator: "@")
+        guard parts.count == 2 else { return false }
+        return parts[1].contains(".")
     }
 
     private static func timeString(from date: Date) -> String {
@@ -149,15 +428,15 @@ class AppState {
 
 // MARK: - Log Entry
 
-struct LogEntry: Identifiable {
-    let id = UUID()
+struct LogEntry: Identifiable, Codable, Equatable {
+    var id = UUID()
     var type: LogType
     var title: String
     var sub: String
     var time: String
 }
 
-enum LogType {
+enum LogType: String, Codable, Equatable {
     case checkin, food, bowel, symptom, meds, water, sleep, weight, note, voice
 
     var iconName: String {
@@ -192,7 +471,7 @@ enum LogType {
 
 // MARK: - Mood
 
-enum MoodOption: String, CaseIterable {
+enum MoodOption: String, CaseIterable, Codable {
     case great = "great"
     case ok    = "ok"
     case rough = "rough"
@@ -226,13 +505,13 @@ enum MoodOption: String, CaseIterable {
 
 // MARK: - Chat
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Codable, Equatable {
+    var id = UUID()
     var role: ChatRole
     var content: String
 }
 
-enum ChatRole { case user, assistant }
+enum ChatRole: String, Codable, Equatable { case user, assistant }
 
 // MARK: - Meds
 

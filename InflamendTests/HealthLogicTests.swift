@@ -134,4 +134,40 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(HealthLogValidator.isValidWeight(142))
         XCTAssertFalse(HealthLogValidator.isValidWaterAmountMl(0))
     }
+
+    @MainActor
+    func testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-test-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        XCTAssertFalse(appState.isAuthenticated)
+
+        appState.signUp(email: "patient@example.com", displayName: "Patient One")
+        appState.completeOnboarding(
+            diagnosis: "Crohn's disease",
+            primaryGoal: "Prepare doctor reports",
+            baselineStoolCount: 3,
+            hasFlarePlan: true
+        )
+        appState.setAIMemoryEnabled(true)
+        appState.addLog(type: .note, title: "Persistent note", sub: "Test")
+
+        let restored = AppState(store: store)
+        XCTAssertTrue(restored.isAuthenticated)
+        XCTAssertTrue(restored.hasCompletedOnboarding)
+        XCTAssertEqual(restored.displayName, "Patient One")
+        XCTAssertEqual(restored.onboardingProfile?.diagnosis, "Crohn's disease")
+        XCTAssertEqual(restored.logs.first?.title, "Persistent note")
+        XCTAssertTrue(restored.aiMemoryEnabled)
+
+        restored.signOut()
+        let signedOut = AppState(store: store)
+        XCTAssertFalse(signedOut.isAuthenticated)
+        XCTAssertEqual(signedOut.logs.first?.title, "Persistent note")
+
+        store.delete()
+    }
 }

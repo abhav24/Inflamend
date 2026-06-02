@@ -27,7 +27,7 @@ struct HomeView: View {
                         (Text("\(greeting), ")
                             .font(DS.serif(36))
                             .foregroundColor(.fgPrimary)
-                        + Text("Priya")
+                        + Text(appState.firstName)
                             .font(DS.serif(36, italic: true))
                             .foregroundColor(.fgPrimary))
                     }
@@ -184,7 +184,10 @@ struct HomeView: View {
                     .padding(.horizontal, 4)
 
                     HStack(spacing: 8) {
-                        RapidButton(icon: "droplet", label: "Water",  color: .ink)   { appState.showToast("Logged water · 250ml") }
+                        RapidButton(icon: "droplet", label: "Water",  color: .ink)   {
+                            appState.addLog(type: .water, title: "Water · 250ml", sub: "Saved locally")
+                            appState.showToast("Water logged")
+                        }
                         RapidButton(icon: "fork",    label: "Meal",   color: .sage)  { showFoodSheet = true }
                         RapidButton(icon: "pill",    label: "Meds",   color: .amber) { appState.recordMedicationTaken(name: "Mesalamine") }
                         RapidButton(icon: "activity",label: "BM",     color: .clay)  { showBristolSheet = true }
@@ -206,8 +209,14 @@ struct HomeView: View {
                     .padding(.horizontal, 4)
 
                     VStack(spacing: 0) {
-                        ForEach(Array(appState.logs.enumerated()), id: \.element.id) { idx, entry in
-                            TimelineRow(entry: entry, isLast: idx == appState.logs.count - 1)
+                        if appState.logs.isEmpty {
+                            EmptyTimelineRow {
+                                selectedTab = .log
+                            }
+                        } else {
+                            ForEach(Array(appState.logs.enumerated()), id: \.element.id) { idx, entry in
+                                TimelineRow(entry: entry, isLast: idx == appState.logs.count - 1)
+                            }
                         }
                     }
                     .background(Color.bgCard)
@@ -393,6 +402,32 @@ struct RapidButton: View {
 }
 
 // MARK: - Timeline Row
+
+struct EmptyTimelineRow: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                IconBadge(name: "plus", size: 38, iconSize: 16, color: .sage)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Start today's log")
+                        .font(DS.sans(15, weight: .medium))
+                        .foregroundColor(.fgPrimary)
+                    Text("Add a check-in, BM, meal, medication, note, or voice transcript.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(2)
+                }
+                Spacer()
+                AppIcon(name: "chevron", size: 14, color: .fgFaint)
+            }
+            .padding(16)
+        }
+        .buttonStyle(PressableButtonStyle(scale: 0.98))
+        .accessibilityLabel("Start today's log")
+    }
+}
 
 struct TimelineRow: View {
     let entry: LogEntry

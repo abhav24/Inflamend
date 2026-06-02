@@ -179,13 +179,13 @@ struct ChatView: View {
         guard !t.isEmpty else { return }
         input = ""
         withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-            appState.chatMessages.append(ChatMessage(role: .user, content: t))
+            appState.addChatMessage(role: .user, content: t)
             isTyping = true
         }
 
         let safety = RedFlagDetector.assess(text: t)
         if safety.hasRedFlags {
-            appState.latestSafetyMessage = safety.safetyCopy
+            appState.setSafetyMessage(safety.safetyCopy)
         }
         let response = safety.hasRedFlags
             ? safety.safetyCopy
@@ -194,7 +194,7 @@ struct ChatView: View {
             try? await Task.sleep(for: .seconds(1.2))
             withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                 isTyping = false
-                appState.chatMessages.append(ChatMessage(role: .assistant, content: response))
+                appState.addChatMessage(role: .assistant, content: response)
             }
         }
     }

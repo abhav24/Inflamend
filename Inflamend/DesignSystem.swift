@@ -318,6 +318,7 @@ struct AppIcon: View {
         case "logout":   return "rectangle.portrait.and.arrow.right"
         case "note":     return "note.text"
         case "shield":   return "checkmark.shield"
+        case "lock":     return "lock"
         default:         return "circle"
         }
     }

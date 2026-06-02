@@ -124,7 +124,7 @@ What passed:
 - Unit tests passed with 10 health logic tests.
 
 What failed during the loop:
-- The first build/test attempt failed because `Inflamend/Views/ProfileView.swift` had a stray top-level `push to git` text line after the preview.
+- The first build/test attempt failed because `Inflamend/Views/ProfileView.swift` had a stray top-level instruction text line after the preview.
 
 Fixes made:
 - Removed the stray top-level text line and reran build/test successfully.
@@ -138,6 +138,41 @@ What remains:
 
 What was committed:
 - Commit message: `Add core logging and privacy scaffolds`
+
+## Current Checkpoint: Auth, Onboarding, Session Restore, and Local Persistence
+
+What changed:
+- Added a local sign-up/sign-in gate so fresh installs no longer land directly in the health dashboard.
+- Added a skippable onboarding profile for diagnosis, primary goal, baseline stool count, and clinician flare plan status.
+- Added `AppSnapshotStore`, `AuthSession`, `OnboardingProfile`, and `AppSnapshot` to persist session, onboarding, logs, chat, privacy preferences, risk, mood, meds, and safety state.
+- Wrote the app snapshot as JSON in Application Support and applied iOS file protection attributes.
+- Removed seeded demo health logs so new users do not inherit fake patient history.
+- Added an empty Today timeline state and made the Today water shortcut create a local log entry.
+- Updated Home/Profile/Care to use restored session/profile state and app-state persistence methods.
+- Added a unit test covering local session restore, onboarding restore, log restore, privacy preference restore, and sign-out.
+
+What was tested:
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 11 tests, including the new `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`.
+
+What failed during the loop:
+- First build/test attempt failed because `AuthSession.local` called a static helper on `@MainActor AppState` from a nonisolated context.
+
+Fixes made:
+- Marked pure static display-name and email-validation helpers as `nonisolated`.
+
+What remains:
+- Replace local auth scaffold with Supabase Auth and Keychain-backed token/session handling.
+- Add an offline mutation queue and server sync status per log.
+- Add UI tests for auth, onboarding, sign out, and first-log empty state.
+- Add confirmation dialogs for destructive privacy/account actions.
+
+What was committed:
+- Commit message: `Add local auth onboarding and persistence`
 
 ## Command Log
 
@@ -173,6 +208,12 @@ Result after core UX pass: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after core UX pass: TEST SUCCEEDED with 10 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after auth/persistence pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after auth/persistence pass: TEST SUCCEEDED with 11 tests.
 ```
 
 ## Pass Progress
@@ -180,38 +221,38 @@ Result after core UX pass: TEST SUCCEEDED with 10 tests.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; core logging, safety, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence; core logging, safety, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
 
 | Flow | Status | Evidence | Remaining Issues |
 |---|---|---|---|
-| Welcome/auth | Missing | No auth views/services | Add email/password scaffold, session model, errors |
-| Sign up | Missing | No auth views/services | Add signup flow and profile creation scaffold |
-| Sign in | Missing | No auth views/services | Add signin flow and session restore scaffold |
-| Session restore | Missing | No persistence/auth service | Add session abstraction |
-| Sign out | Scaffolded | Profile row clears only local state/toast | Connect to auth session service |
-| Onboarding | Missing | No onboarding models/views | Add skippable health profile flow |
-| Today dashboard | Partial | Dynamic date, safety card, check-in CTA, risk updates | Replace demo profile/data with persisted user records |
-| Today check-in | Implemented in-memory | `CheckInSheet`, `AppState.recordCheckIn` | Persist/sync, add edit/delete and UI tests |
-| Bowel movement logging | Implemented in-memory | Quick Bristol and detailed bowel form call `recordBowel` | Persist/sync, add edit/delete and stricter validation |
-| Food/meal logging | Implemented in-memory | Quick food and food form insert timeline logs | Persist/sync, add recent/favorite foods |
-| Medication tracking | Implemented in-memory | Quick meds and meds form update dose count/logs | Persist/sync, add schedules and missed-dose states |
-| Symptom logging | Implemented in-memory | Sliders save symptom timeline entry | Persist/sync, add notes and red-flag linkage |
-| Sleep logging | Implemented in-memory | Sleep form saves quality/wake entry | Add editable times/duration and persistence |
-| Weight logging | Implemented in-memory | Weight form saves manual entry | Add units/validation and persistence |
-| Notes logging | Implemented in-memory | `LogNoteForm` | Persist/sync, add edit/delete |
+| Welcome/auth | Scaffolded locally | `AuthGateView`, `AuthSession` | Replace with Supabase Auth and Keychain token storage |
+| Sign up | Scaffolded locally | Local account creation validates email and restores session | Replace password scaffold with Supabase Auth |
+| Sign in | Scaffolded locally | Local sign-in validates email and restores session | Replace with Supabase Auth/errors |
+| Session restore | Implemented locally | `AppSnapshotStore` restores session from protected JSON snapshot | Replace with Supabase session/Keychain strategy |
+| Sign out | Implemented locally | Profile sign-out clears auth session and hides health dashboard | Connect to Supabase sign-out and clear tokens |
+| Onboarding | Scaffolded locally | `OnboardingGateView`, `OnboardingProfile` | Sync profile to backend and add edit flow |
+| Today dashboard | Partial | Dynamic date/name, safety card, check-in CTA, empty timeline, risk updates | Add persisted trend summaries and UI tests |
+| Today check-in | Implemented with local persistence | `CheckInSheet`, `AppState.recordCheckIn`, snapshot store | Add backend sync, edit/delete, and UI tests |
+| Bowel movement logging | Implemented with local persistence | Quick Bristol and detailed bowel form call `recordBowel` | Add backend sync, edit/delete, and stricter validation |
+| Food/meal logging | Implemented with local persistence | Quick food and food form insert timeline logs | Add backend sync, recent/favorite foods |
+| Medication tracking | Implemented with local persistence | Quick meds and meds form update dose count/logs | Add schedules, missed-dose states, backend sync |
+| Symptom logging | Implemented with local persistence | Sliders save symptom timeline entry | Add notes, red-flag linkage, backend sync |
+| Sleep logging | Implemented with local persistence | Sleep form saves quality/wake entry | Add editable times/duration and backend sync |
+| Weight logging | Implemented with local persistence | Weight form saves manual entry | Add units/validation and backend sync |
+| Notes logging | Implemented with local persistence | `LogNoteForm` | Add edit/delete and backend sync |
 | Voice logging parser | Logic implemented/tested and surfaced | `VoiceLogParser`, `HealthLogicTests`, `LogVoiceForm` | Add speech capture and editable parsed fields |
 | Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
 | Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
-| Risk score | Wired in-memory | `RiskScoreService`, `recordCheckIn`, `recordBowel` | Persist trend history and explain factors |
+| Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
 | AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
 | Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
 | Doctor report/export | Scaffolded in UI | Profile report row calls `ReportSummaryGenerator` | Add real share sheet/PDF/text file export |
-| Profile/settings | Partial | Profile rows now perform local/scaffold actions | Connect to auth, notifications, backend profile |
-| Privacy controls | Scaffolded in UI | AI memory and voice transcript storage toggles | Persist preferences and enforce backend/AI behavior |
-| Data export/delete | Scaffolded in UI | Export/delete rows show setup states | Implement Supabase-backed export/delete |
+| Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
+| Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles | Enforce preferences in live backend/AI behavior |
+| Data export/delete | Scaffolded and locally logged | Export/delete rows show setup states and local audit notes | Implement Supabase-backed export/delete |
 
 ## Blockers and External Dependencies
 
@@ -255,12 +296,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 10 unit tests through `InflamendTests`.
+- Tests: passing with 11 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: logging, safety, privacy, voice confirmation, and report scaffolds improved; auth, onboarding, session restore, durable persistence, and live backend integration remain incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, logging, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, and health logic test commits exist; core UX checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, and core UX checkpoint exist; auth/persistence checkpoint pending commit.
 
 Continue working.
 
@@ -353,3 +394,33 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship this checkpoint, then continue with auth/onboarding and persistence.
+
+## Feature Audit: Auth, Onboarding, Session Restore, and Local Persistence
+
+Product Simplicity Reviewer:
+- Findings: Fresh users now start with account and setup context before seeing health data. Onboarding is short, optional where sensitive, and aligned with daily tracking.
+- Required fixes: Keep future Supabase auth errors plain and avoid blocking urgent logging behind long profile setup.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Auth and onboarding reuse existing typography, cards, pills, and primary buttons. The empty timeline state gives a clear first action.
+- Required fixes: Add UI tests and VoiceOver checks for auth fields, segmented auth mode, onboarding pills, and first-log action.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: A protected local JSON snapshot now gives deterministic restore behavior and a clear seam for a repository/sync layer.
+- Required fixes: Add a durable mutation queue, backend IDs, conflict handling, and Supabase Auth/Keychain token storage before production.
+- Status: Accept scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Demo health logs no longer seed into new accounts, privacy preferences persist locally, and sign-out hides the health dashboard.
+- Required fixes: UserDefaults-free snapshot is a good scaffold, but production health data should move to an encrypted store or database plus Keychain-backed session tokens.
+- Status: Accept checkpoint with production-storage caveat.
+
+QA and Regression Reviewer:
+- Findings: Build passed and the automated suite increased to 11 tests, including session/onboarding/log/preference restore.
+- Required fixes: Add UI smoke tests for auth/onboarding and snapshot corruption handling.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship this checkpoint, then continue with sync/repository boundaries, insights polish, or UI test scaffolding.

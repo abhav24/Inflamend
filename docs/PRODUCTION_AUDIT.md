@@ -269,3 +269,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with auth/onboarding and persistence.
+
+## Auth, Onboarding, and Local Persistence Audit
+
+### Feature Audit: Session Gate, Setup, Snapshot Restore
+
+Product Simplicity Reviewer:
+- Findings: The app now starts with a local auth gate and short setup flow before exposing health data. Onboarding asks only for high-leverage context and can be skipped.
+- Required fixes: Keep future production auth errors simple and preserve the ability to log quickly after setup.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Auth and onboarding reuse the app's existing visual system and avoid a marketing-style landing page. Today now has an empty timeline state instead of a blank card.
+- Required fixes: Add VoiceOver labels/ordering checks and UI tests for the auth mode control and onboarding pill groups.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Local snapshot persistence restores session, profile, logs, chat, privacy preferences, risk, meds, mood, and safety state. This gives a useful interim persistence layer.
+- Required fixes: Split persistence into repository/queue layers before Supabase sync; add server IDs and conflict handling.
+- Status: Accept scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: New accounts no longer seed fake demo health logs. The local password field is not stored. The snapshot is written under Application Support with iOS file protection.
+- Required fixes: Production auth needs Supabase Auth and Keychain token storage; consider an encrypted local database for health data.
+- Status: Accept checkpoint with storage caveat.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild test` passes with 11 tests, including local session/onboarding/log/preference restore.
+- Required fixes: Add UI smoke tests and snapshot-corruption recovery tests.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with sync/repository boundaries, UI tests, or insights/report polish.

@@ -7,7 +7,7 @@ struct ProfileView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 // Header
-                ScreenHeader(subtitle: "YOUR ACCOUNT", title: "Hello, ", titleItalicSuffix: "Priya")
+                ScreenHeader(subtitle: "YOUR ACCOUNT", title: "Hello, ", titleItalicSuffix: appState.firstName)
                     .appearAnimation(delay: 0)
 
                 // Profile card
@@ -16,16 +16,16 @@ struct ProfileView: View {
                         Circle()
                             .fill(LinearGradient(colors: [.sage, .amber], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 60, height: 60)
-                        Text("P")
+                        Text(String(appState.firstName.prefix(1)).uppercased())
                             .font(DS.serif(28))
                             .foregroundColor(.darkText)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Priya Raman")
+                        Text(appState.displayName)
                             .font(DS.sans(18))
                             .foregroundColor(.fgPrimary)
                             .tracking(-0.15)
-                        Text("Diagnosed with UC · 2022")
+                        Text(appState.diagnosisLabel)
                             .font(DS.sans(13))
                             .foregroundColor(.fgDim)
                     }
@@ -48,11 +48,11 @@ struct ProfileView: View {
 
                 // Stats row
                 HStack {
-                    ProfileStat(value: "147", label: "Days logged")
+                    ProfileStat(value: "\(appState.logs.count)", label: "Logs saved")
                     Rectangle().fill(Color.strokeDefault).frame(width: 0.5).padding(.vertical, 4)
-                    ProfileStat(value: "18",  label: "Since flare")
+                    ProfileStat(value: "\(appState.riskScore)",  label: "Risk score")
                     Rectangle().fill(Color.strokeDefault).frame(width: 0.5).padding(.vertical, 4)
-                    ProfileStat(value: "92%", label: "Med streak")
+                    ProfileStat(value: "\(appState.medsTaken)/\(appState.medsTotal)", label: "Meds")
                 }
                 .padding(18)
                 .background(Color.bgCard)
@@ -113,7 +113,7 @@ struct ProfileView: View {
                         appState.showToast("Education library scaffolded")
                     }
                     ProfileRow(icon: "logout",   label: "Sign out",     isDanger: true, isLast: true) {
-                        appState.showToast("Signed out")
+                        appState.signOut()
                     }
                 }
                 .background(Color.bgCard)
@@ -133,26 +133,23 @@ struct ProfileView: View {
                         label: "AI memory",
                         sub: appState.aiMemoryEnabled ? "On · saved only with consent" : "Off"
                     ) {
-                        appState.aiMemoryEnabled.toggle()
-                        appState.showToast("AI memory \(appState.aiMemoryEnabled ? "on" : "off")")
+                        appState.setAIMemoryEnabled(!appState.aiMemoryEnabled)
                     }
                     ProfileRow(
                         icon: "mic",
                         label: "Voice transcript storage",
                         sub: appState.voiceTranscriptStorageEnabled ? "On · transcripts may be stored" : "Off · drafts only"
                     ) {
-                        appState.voiceTranscriptStorageEnabled.toggle()
-                        appState.showToast("Transcript storage \(appState.voiceTranscriptStorageEnabled ? "on" : "off")")
+                        appState.setVoiceTranscriptStorageEnabled(!appState.voiceTranscriptStorageEnabled)
                     }
                     ProfileRow(icon: "download", label: "Export my data", sub: "Requires backend credentials") {
-                        appState.showToast("Data export scaffolded")
+                        appState.requestDataExportScaffold()
                     }
                     ProfileRow(icon: "close", label: "Delete AI history", sub: "\(appState.chatMessages.count) messages", isDanger: true) {
-                        appState.chatMessages = [ChatMessage(role: .assistant, content: "AI history cleared on this device. Cloud deletion requires backend setup.")]
-                        appState.showToast("AI history cleared locally")
+                        appState.clearAIHistory()
                     }
                     ProfileRow(icon: "close", label: "Delete data/account", sub: "Requires signed-in backend account", isDanger: true, isLast: true) {
-                        appState.showToast("Account deletion scaffolded")
+                        appState.requestAccountDeletionScaffold()
                     }
                 }
                 .background(Color.bgCard)
@@ -162,7 +159,7 @@ struct ProfileView: View {
                 .padding(.bottom, 24)
                 .appearAnimation(delay: 0.35)
 
-                Text("INFLAMEND v2.4.0 · BUILD 184")
+                Text("INFLAMEND v1.0 · BUILD 1")
                     .font(DS.mono(11))
                     .tracking(1.4)
                     .textCase(.uppercase)

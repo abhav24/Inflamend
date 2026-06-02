@@ -8,18 +8,21 @@
 - Supabase schema enables RLS for every user-owned table.
 - Edge Functions verify JWT and derive user identity from Supabase Auth.
 - AI provider key is server-side only by design.
+- Local snapshot persistence writes to Application Support and applies iOS file protection.
+- Password entered in the local auth scaffold is not stored.
 
 ## High-Priority Risks
 
 | Risk | Status | Fix |
 |---|---|---|
-| No iOS auth/session implementation | Open | Add AuthService and auth screens |
-| No local encryption/keychain session handling | Open | Store session tokens safely via Supabase SDK/Keychain strategy |
+| No production iOS auth/session implementation | Partially mitigated | Local auth/session scaffold exists; replace with Supabase Auth |
+| No local encryption/keychain session handling | Open | Move live tokens to Keychain; consider encrypted local health store |
 | No hosted RLS verification | Blocked | Requires Supabase local/hosted setup |
 | No rate limiting on Edge Functions | Open | Add gateway or backend rate limits |
 | No PHI logging policy enforcement | Open | Add logging wrapper and review |
 | Generated Info.plist lacks permission descriptions for voice | Open | Add when Speech/mic features are implemented |
 | `.claude/settings.local.json` exists locally | External/user file | Do not add to git |
+| Local snapshot corruption handling | Open | Add recovery UI and tests for unreadable snapshot files |
 
 ## Secrets Policy
 
