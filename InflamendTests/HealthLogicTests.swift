@@ -506,6 +506,33 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(summary.events.first?.detail, "Fatigue 8/10 · urgency 7/10 · stool 5")
     }
 
+    func testCarePlanBuilderCreatesPreparationQuestionsWithoutTreatmentAdvice() throws {
+        let profile = OnboardingProfile(
+            diagnosis: "Ulcerative colitis",
+            primaryGoal: "Prepare doctor reports",
+            baselineStoolCount: 2,
+            hasFlarePlan: false,
+            skippedSensitiveQuestions: false,
+            completedAt: Date()
+        )
+        let flareHistory = FlareHistorySummary(events: [
+            FlareHistoryEvent(id: UUID(), title: "Flare check-in", detail: "Pain 7/10", loggedAt: Date())
+        ])
+
+        let summary = CarePlanBuilder.build(
+            onboardingProfile: profile,
+            flareHistory: flareHistory,
+            latestSafetyMessage: "Recent red-flag safety message"
+        )
+
+        XCTAssertTrue(summary.questions.first?.text.contains("red-flag") == true)
+        XCTAssertTrue(summary.questions.contains { $0.text.contains("written flare plan") })
+        XCTAssertTrue(summary.questions.contains { $0.context == "1 local flare mark" })
+        XCTAssertTrue(summary.questions.contains { $0.text.contains("Ulcerative colitis") })
+        XCTAssertFalse(summary.questions.contains { $0.text.localizedCaseInsensitiveContains("change your medication") })
+        XCTAssertTrue(summary.safetyNote.contains("not a treatment plan"))
+    }
+
     func testInsightSummaryPrefersTypedPayloadOverDisplayText() {
         let logs = [
             LogEntry(

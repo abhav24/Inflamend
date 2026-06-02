@@ -832,6 +832,14 @@ class AppState {
         FlareHistoryBuilder.build(logs: logs)
     }
 
+    var carePlanSummary: CarePlanSummary {
+        CarePlanBuilder.build(
+            onboardingProfile: onboardingProfile,
+            flareHistory: flareHistorySummary,
+            latestSafetyMessage: latestSafetyMessage
+        )
+    }
+
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
         syncNetworkStatus = status
         if status == .online {

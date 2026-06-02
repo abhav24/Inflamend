@@ -253,6 +253,21 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileCarePlanShowsLocalQuestionsSmoke() {
+        let app = openSeededProfile()
+
+        let carePlanRow = app.buttons["profile-care-plan-row"]
+        waitForLabel(carePlanRow, contains: "4 local questions")
+        tapWhenVisible(carePlanRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["care-plan-title"].waitForExistence(timeout: 5))
+        waitForLabel(app.staticTexts["care-plan-summary"], contains: "4 local questions")
+        waitForLabel(app.descendants(matching: .any)["care-plan-question-0"], contains: "Ulcerative colitis")
+        waitForLabel(app.descendants(matching: .any)["care-plan-question-1"], contains: "written flare plan")
+        waitForLabel(app.staticTexts["care-plan-safety-note"], contains: "not a treatment plan")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",

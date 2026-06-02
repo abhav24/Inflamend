@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var showingMedicationReminders = false
     @State private var showingPreferences = false
     @State private var showingFlareHistory = false
+    @State private var showingCarePlan = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -97,8 +98,14 @@ struct ProfileView: View {
                     ) {
                         showingFlareHistory = true
                     }
-                    ProfileRow(icon: "heart", label: "Care plan", sub: "Questions for your GI", isLast: true) {
-                        appState.showToast("Care plan scaffolded")
+                    ProfileRow(
+                        icon: "heart",
+                        label: "Care plan",
+                        sub: appState.carePlanSummary.profileSummary,
+                        isLast: true,
+                        accessibilityID: "profile-care-plan-row"
+                    ) {
+                        showingCarePlan = true
                     }
                 }
                 .background(Color.bgCard)
@@ -214,6 +221,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingFlareHistory) {
             FlareHistorySheet(summary: appState.flareHistorySummary)
+        }
+        .sheet(isPresented: $showingCarePlan) {
+            CarePlanSheet(summary: appState.carePlanSummary)
         }
         .sheet(item: $preparedExport) { export in
             switch export {
@@ -333,6 +343,79 @@ private struct FlareHistoryEventRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("flare-history-event-\(index)")
+    }
+}
+
+private struct CarePlanSheet: View {
+    let summary: CarePlanSummary
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "heart", color: .sage)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Care plan questions")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("care-plan-title")
+                        Text(summary.profileSummary)
+                            .font(DS.sans(13))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("care-plan-summary")
+                    }
+                    Spacer()
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(Array(summary.questions.enumerated()), id: \.element.id) { index, question in
+                        CarePlanQuestionRow(question: question, index: index)
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 10) {
+                    AppIcon(name: "shield", size: 15, color: .fgDim)
+                    Text(summary.safetyNote)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                        .accessibilityIdentifier("care-plan-safety-note")
+                }
+                .padding(14)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct CarePlanQuestionRow: View {
+    let question: CarePlanQuestion
+    let index: Int
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            IconBadge(name: "note", size: 34, iconSize: 15, color: .sage)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(question.context)
+                    .font(DS.mono(10, weight: .semibold))
+                    .foregroundColor(.fgFaint)
+                    .textCase(.uppercase)
+                Text(question.text)
+                    .font(DS.sans(14, weight: .medium))
+                    .foregroundColor(.fgPrimary)
+                    .lineSpacing(2)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("care-plan-question-\(index)")
     }
 }
 

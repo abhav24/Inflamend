@@ -1486,6 +1486,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with backend flare-history sync/query, episode grouping, report integration, and manual accessibility QA.
 
+## Local Care Plan Questions Audit
+
+### Feature Audit: Profile Care Plan Sheet
+
+Product Simplicity Reviewer:
+- Findings: The previous Profile Care plan placeholder now produces a concise list of local GI-visit questions from profile, flare history, and safety context without becoming a treatment-plan editor.
+- Required fixes: Add editable notes and appointment workflows only when users can clearly distinguish preparation from medical instructions.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sheet uses a clear title, question cards, context labels, and visible safety framing. The row count gives Profile a concrete state instead of a placeholder.
+- Required fixes: Manually verify question wrapping, row order, and safety-note announcement at large Dynamic Type and VoiceOver.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `CarePlanBuilder` is deterministic and derives questions from existing local profile/log state. It does not add a new persistence surface or backend dependency in this checkpoint.
+- Required fixes: Add backend persistence/export if care-plan notes become editable, and keep report-generation parity with any future saved questions.
+- Status: Accept local derivation checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The sheet frames content as visit-preparation questions and explicitly says it is not a treatment plan. It avoids medication-change instructions even when medication topics are included.
+- Required fixes: Review any future editable notes/export/backend sync as health data and keep red-flag guidance separate from general appointment prep.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for diagnosis, missing flare plan, local flare marks, safety-message insertion, and avoiding medication-change treatment advice. Focused Profile UI smoke coverage passed, full unit target passed with 51 tests, and clean build passed.
+- Required fixes: Add tests for editable care-plan notes, report integration, backend persistence, and manual accessibility once those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with editable care-plan notes, report integration, backend persistence, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

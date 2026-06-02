@@ -333,6 +333,29 @@ struct FlareHistorySummary: Equatable {
     }
 }
 
+struct CarePlanQuestion: Identifiable, Equatable {
+    var text: String
+    var context: String
+
+    var id: String { "\(context)-\(text)" }
+}
+
+struct CarePlanSummary: Equatable {
+    var questions: [CarePlanQuestion]
+    var safetyNote: String
+
+    var profileSummary: String {
+        switch questions.count {
+        case 0:
+            return "No local questions"
+        case 1:
+            return "1 local question"
+        default:
+            return "\(questions.count) local questions"
+        }
+    }
+}
+
 enum HealthLogDateRange {
     static func interval(last days: Int, endingAt: Date = Date(), calendar: Calendar = .current) -> DateInterval {
         let dayCount = max(1, days)
@@ -551,6 +574,79 @@ enum FlareHistoryBuilder {
             )
         }
         return FlareHistorySummary(events: events)
+    }
+}
+
+enum CarePlanBuilder {
+    static func build(
+        onboardingProfile: OnboardingProfile?,
+        flareHistory: FlareHistorySummary,
+        latestSafetyMessage: String? = nil
+    ) -> CarePlanSummary {
+        var questions: [CarePlanQuestion] = []
+
+        if let diagnosis = onboardingProfile?.diagnosis,
+           !diagnosis.localizedCaseInsensitiveContains("prefer not") {
+            questions.append(
+                CarePlanQuestion(
+                    text: "What should I track most closely for \(diagnosis) between visits?",
+                    context: "Profile diagnosis"
+                )
+            )
+        }
+
+        if onboardingProfile?.hasFlarePlan == true {
+            questions.append(
+                CarePlanQuestion(
+                    text: "When should I use my existing flare plan versus calling the clinic?",
+                    context: "Flare plan"
+                )
+            )
+        } else {
+            questions.append(
+                CarePlanQuestion(
+                    text: "What symptoms should trigger a written flare plan or urgent call?",
+                    context: "Flare plan"
+                )
+            )
+        }
+
+        if flareHistory.count > 0 {
+            questions.append(
+                CarePlanQuestion(
+                    text: "Do these flare-marked dates suggest follow-up labs, stool testing, or medication review?",
+                    context: flareHistory.profileSummary
+                )
+            )
+        }
+
+        questions.append(
+            CarePlanQuestion(
+                text: "Which medication side effects or missed-dose patterns should I report quickly?",
+                context: "Medication tracking"
+            )
+        )
+        questions.append(
+            CarePlanQuestion(
+                text: "Which Inflamend report details are most useful before appointments?",
+                context: "Doctor report"
+            )
+        )
+
+        if latestSafetyMessage?.isEmpty == false {
+            questions.insert(
+                CarePlanQuestion(
+                    text: "Do any recent red-flag symptoms need same-day advice or urgent care guidance?",
+                    context: "Safety note"
+                ),
+                at: 0
+            )
+        }
+
+        return CarePlanSummary(
+            questions: questions,
+            safetyNote: "These questions are for visit preparation and are not a treatment plan. For urgent or worsening symptoms, contact a clinician or urgent care."
+        )
     }
 }
 
