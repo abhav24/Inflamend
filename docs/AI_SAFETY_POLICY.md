@@ -50,4 +50,4 @@ After provider call:
 
 ## Current Status
 
-`supabase/functions/ai-chat` implements JWT verification, red-flag detection, medication-change fallback, and provider-key isolation. It does not yet call a live AI provider.
+`supabase/functions/ai-chat` implements JWT verification, red-flag detection, medication-change fallback, and provider-key isolation. It does not yet call a live AI provider. The iOS Care tab mirrors red-flag bypass, medication-change refusal, and cautious food/stress guidance locally while live AI remains externally blocked.

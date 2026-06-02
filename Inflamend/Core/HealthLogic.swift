@@ -207,6 +207,64 @@ enum RiskScoreService {
     }
 }
 
+struct CareResponse: Equatable {
+    let message: String
+    let redFlagAssessment: RedFlagAssessment
+}
+
+enum CareResponseService {
+    static func respond(to text: String) -> CareResponse {
+        let assessment = RedFlagDetector.assess(text: text)
+        if assessment.hasRedFlags {
+            return CareResponse(message: assessment.safetyCopy, redFlagAssessment: assessment)
+        }
+
+        let normalized = text.lowercased()
+        if isMedicationChangeQuestion(normalized) {
+            return CareResponse(
+                message: "I can't recommend starting, stopping, skipping, increasing, or decreasing prescription medication. This is worth reviewing with your GI clinician or pharmacist, especially if symptoms are changing.",
+                redFlagAssessment: assessment
+            )
+        }
+
+        if containsAny(normalized, ["tylenol", "acetaminophen"]) {
+            return CareResponse(
+                message: "Acetaminophen is often discussed as an option that may be easier on the gut than NSAIDs for some people with IBD, but your own medication list and liver health matter. Check with your GI clinician or pharmacist before relying on it during a flare.",
+                redFlagAssessment: assessment
+            )
+        }
+
+        if containsAny(normalized, ["stress", "anxiety", "worried"]) {
+            return CareResponse(
+                message: "Stress can affect gut sensations, appetite, sleep, and bowel patterns for many people. It does not mean symptoms are your fault. Keep tracking context and consider asking your care team which stress-management tools fit your treatment plan.",
+                redFlagAssessment: assessment
+            )
+        }
+
+        if containsAny(normalized, ["eat", "food", "dinner", "meal", "flare"]) {
+            return CareResponse(
+                message: "During rough symptom days, many people ask their clinician about simpler, well-tolerated meals and hydration. Inflamend can help you log what you try, but it should not label foods as triggers without enough reviewed context.",
+                redFlagAssessment: assessment
+            )
+        }
+
+        return CareResponse(
+            message: "Inflamend can help you track context and prepare questions. For diagnosis, medication changes, or worsening symptoms, check with your GI clinician or pharmacist.",
+            redFlagAssessment: assessment
+        )
+    }
+
+    private static func isMedicationChangeQuestion(_ text: String) -> Bool {
+        let medicationWords = ["med", "medicine", "medication", "mesalamine", "prednisone", "azathioprine", "dose", "pill"]
+        let changeWords = ["stop", "start", "skip", "increase", "decrease", "lower", "raise", "change", "take less", "take more"]
+        return containsAny(text, medicationWords) && containsAny(text, changeWords)
+    }
+
+    private static func containsAny(_ text: String, _ needles: [String]) -> Bool {
+        needles.contains(where: text.contains)
+    }
+}
+
 struct InsightFoodPattern: Equatable {
     let label: String
     let count: Int

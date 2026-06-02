@@ -13,6 +13,7 @@
 | AI | Missing auth | Ask user to sign in | Edge function returns 401 |
 | AI | Provider unavailable | Safe fallback, no infinite spinner | Edge function scaffold returns provider status |
 | AI | Red flag | Urgent-care guidance | Edge function scaffold implemented |
+| AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and in Edge scaffold |
 | Reports | Export fails | Retry or plain text fallback | Pending in iOS |
 | Notifications | Permission denied | Reminders disabled with explanation | Pending |
 | HealthKit | Permission denied | App remains fully usable | Pending |

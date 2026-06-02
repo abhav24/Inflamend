@@ -154,6 +154,32 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(DoctorReportExporter.fileName(generatedAt: generatedAt, calendar: calendar), "Inflamend-Doctor-Report-2026-06-02.txt")
     }
 
+    func testCareResponseBlocksMedicationChangeAdvice() {
+        let response = CareResponseService.respond(to: "Should I stop mesalamine if my flare feels bad?")
+
+        XCTAssertFalse(response.redFlagAssessment.hasRedFlags)
+        XCTAssertTrue(response.message.contains("can't recommend"))
+        XCTAssertTrue(response.message.contains("GI clinician or pharmacist"))
+        XCTAssertFalse(response.message.contains("You should stop"))
+    }
+
+    func testCareResponseUsesRedFlagSafetyBeforeGeneralAdvice() {
+        let response = CareResponseService.respond(to: "I have severe abdominal pain and lots of blood")
+
+        XCTAssertTrue(response.redFlagAssessment.hasRedFlags)
+        XCTAssertTrue(response.message.contains("urgent medical care"))
+        XCTAssertFalse(response.message.contains("track context"))
+    }
+
+    func testCareFoodResponseAvoidsTriggerClaims() {
+        let response = CareResponseService.respond(to: "What should I eat tonight during a flare?")
+
+        XCTAssertFalse(response.redFlagAssessment.hasRedFlags)
+        XCTAssertTrue(response.message.contains("log what you try"))
+        XCTAssertTrue(response.message.contains("should not label foods as triggers"))
+        XCTAssertFalse(response.message.contains("works best for you"))
+    }
+
     func testInsightSummaryReturnsEmptyStateForNoLogs() {
         let summary = InsightSummaryBuilder.build(logs: [])
 

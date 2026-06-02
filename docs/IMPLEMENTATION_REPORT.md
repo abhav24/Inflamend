@@ -254,8 +254,32 @@ What remains:
 - Add CSV/PDF output, richer structured date ranges, and backend export job integration once Supabase is configured.
 - Add UI tests for the Profile export flow and share sheet presentation.
 
+What was committed:
+- `4918f79 Add local doctor report export`
+
+## Current Checkpoint: Local Care Safety Responses
+
+What changed:
+- Added `CareResponseService` so the iOS Care tab uses deterministic local safety responses while live AI remains externally blocked.
+- Mirrored red-flag bypass behavior locally before returning any general guidance.
+- Added medication-change refusal copy for prescription start/stop/skip/increase/decrease questions.
+- Replaced hardcoded food/stress responses with cautious, non-causal guidance.
+- Added unit tests for medication-change refusal, red-flag priority, and food-trigger wording.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 20 tests, including `testCareResponseBlocksMedicationChangeAdvice`, `testCareResponseUsesRedFlagSafetyBeforeGeneralAdvice`, and `testCareFoodResponseAvoidsTriggerClaims`.
+
+What remains:
+- Wire the Care tab to live Supabase Edge Function calls once credentials and provider keys are available.
+- Add UI tests for red-flag and medication-change prompts in the Care tab.
+
 What will be committed:
-- Commit message: `Add local doctor report export`
+- Commit message: `Add local Care safety responses`
 
 ## Command Log
 
@@ -315,6 +339,12 @@ Result after report-export pass: TEST SUCCEEDED with 17 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after report-export pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Care safety pass: TEST SUCCEEDED with 20 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Care safety pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -322,7 +352,7 @@ Result after report-export pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, safety, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local Care safety responses, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -349,7 +379,7 @@ Result after report-export pass: BUILD SUCCEEDED.
 | Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
 | Insights | Implemented locally | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, and empty states | Add structured dated records, UI tests, and export/share integration |
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
-| AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
+| AI assistant backend scaffold | Scaffolded, with local safety mirror | `supabase/functions/ai-chat`, `CareResponseService`, `ChatView` | Wire live provider setup and Supabase iOS service |
 | Red-flag safety handling | Wired in UI | Care safety card, Today safety card, log/check-in detectors | Add UI tests and server parity checks |
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
@@ -398,12 +428,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 17 unit tests through `InflamendTests`.
+- Tests: passing with 20 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local Care safety responses, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, and Insights checkpoints exist; report export checkpoint pending commit.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, and report export checkpoints exist; Care safety checkpoint pending commit.
 
 Continue working.
 

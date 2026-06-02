@@ -13,13 +13,6 @@ struct ChatView: View {
         "What should I eat tonight?",
     ]
 
-    // Pre-canned responses for offline/demo mode
-    let responses: [String: String] = [
-        "Can I take Tylenol during a flare?": "Acetaminophen (Tylenol) is generally considered safer than NSAIDs like ibuprofen for people with IBD. That said, always check with your GI doctor about what's right for your specific situation.",
-        "Why does stress make my UC worse?": "The gut-brain axis is real — stress can directly affect gut motility and inflammation. Managing stress through sleep, gentle exercise, and mindfulness can really help alongside your treatment.",
-        "What should I eat tonight?": "Based on your recent logs, softer, well-cooked foods tend to work best for you. Something like white rice with steamed chicken and carrots would be gentle on your gut tonight.",
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -183,13 +176,11 @@ struct ChatView: View {
             isTyping = true
         }
 
-        let safety = RedFlagDetector.assess(text: t)
-        if safety.hasRedFlags {
-            appState.setSafetyMessage(safety.safetyCopy)
+        let careResponse = CareResponseService.respond(to: t)
+        if careResponse.redFlagAssessment.hasRedFlags {
+            appState.setSafetyMessage(careResponse.redFlagAssessment.safetyCopy)
         }
-        let response = safety.hasRedFlags
-            ? safety.safetyCopy
-            : responses[t] ?? "That's a thoughtful question. Inflamend can help you track context and prepare questions, but medication or care decisions should be reviewed with your GI clinician or pharmacist."
+        let response = careResponse.message
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
             withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {

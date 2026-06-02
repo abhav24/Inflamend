@@ -51,8 +51,9 @@ Current test coverage is focused on deterministic health logic:
 - Risk scoring.
 - Voice transcript parsing.
 - Medication schedule calculations.
-- Report summary wording.
 - Local doctor report export content.
+- Report summary wording.
+- Local Care safety responses.
 - Validation helpers.
 
 Supabase backend files are scaffolded under `supabase/`, but local migration/function verification requires installing the Supabase CLI and Deno.
@@ -210,10 +211,10 @@ All charts implemented in pure SwiftUI using `Path` and `GeometryReader`.
 - 1.2s simulated response delay (ready for Claude API)
 - `ScrollViewReader` auto-scrolls to latest message
 
-Pre-canned responses (offline, hardcoded):
-- Tylenol during a flare
-- Stress and UC physiology
-- Safe foods during a flare
+Local deterministic safety responses:
+- Red-flag prompts bypass general advice
+- Medication-change prompts advise clinician/pharmacist review
+- Food/stress guidance stays cautious and non-causal
 
 ### Profile (`ProfileView.swift`)
 

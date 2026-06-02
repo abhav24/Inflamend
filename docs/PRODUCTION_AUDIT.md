@@ -378,7 +378,7 @@ Product Simplicity Reviewer:
 Apple UI Quality Reviewer:
 - Findings: The report preview appears in a native sheet and uses the existing badge, typography, and primary action styling.
 - Required fixes: Add UI tests or screenshots for the sheet at small and large Dynamic Type sizes.
-- Status: Accept checkpoint in progress.
+- Status: Accept checkpoint.
 
 Backend and Data Integrity Reviewer:
 - Findings: The export is local and deterministic, and it queues a report-export mutation for later backend replay.
@@ -397,3 +397,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with UI tests, CSV/PDF export, and structured date ranges.
+
+## Local Care Safety Responses Audit
+
+### Feature Audit: Care Tab
+
+Product Simplicity Reviewer:
+- Findings: Care responses now cover common medication, red-flag, food, and stress prompts without pretending a live AI provider is connected.
+- Required fixes: Keep future live AI integration behind the same policy and concise fallback behavior.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No new UI surface was added, reducing layout risk. The existing Care tab now benefits from safer response content.
+- Required fixes: Add UI tests for common prompts and loading state behavior.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The local service mirrors the Edge Function safety policy while backend credentials are unavailable.
+- Required fixes: Replace local-only response generation with Supabase Edge Function calls once auth/provider setup is complete, while preserving local fallback for offline/error states.
+- Status: Accept local scaffold.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Medication-change prompts are refused, red flags bypass general advice, and food guidance avoids unsupported trigger claims.
+- Required fixes: Add response post-processing when live AI is connected so provider output cannot override these constraints.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild clean build` passes and `xcodebuild test` passes with 20 tests, including medication-change refusal, red-flag priority, and food-trigger wording.
+- Required fixes: Add UI tests for common prompts and loading state behavior.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Edge Function integration, UI tests, and offline provider-error handling.

@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 17 unit tests in HealthLogicTests.
+Coverage: 20 unit tests in HealthLogicTests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -19,7 +19,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 17 tests.
+Result: TEST SUCCEEDED with 20 tests.
 ```
 
 ## Unit Test Priorities
@@ -102,6 +102,13 @@ Status: local snapshot restore, pending queue persistence, backend-blocked retry
 
 Status: started. Empty and local-log summary behavior is covered.
 
+9. Care/AI safety:
+- Red-flag prompt bypasses general advice.
+- Medication-change prompt refuses prescription-change guidance.
+- Food guidance avoids unsupported trigger claims.
+
+Status: started. Local Care response safety behavior is covered.
+
 ## UI Test Priorities
 
 - Fresh install shows welcome/auth or Today depending on session scaffold.
@@ -146,7 +153,7 @@ When Supabase CLI and credentials are available:
 | Voice | Permission denied | Manual fallback shown | Scaffolded as manual transcript path |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented in-memory; needs UI test |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented in Care scaffold; needs UI test |
-| AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Pending |
+| AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally; needs UI test |
 | Insights | No data | Empty state, no fake claims | Implemented in logic; needs UI test |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path exists | Scaffolded |
@@ -167,6 +174,9 @@ When Supabase CLI and credentials are available:
 - `testMedicationScheduleCalculatesTwiceDailyDoses`
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`
+- `testCareResponseBlocksMedicationChangeAdvice`
+- `testCareResponseUsesRedFlagSafetyBeforeGeneralAdvice`
+- `testCareFoodResponseAvoidsTriggerClaims`
 - `testValidationHelpers`
 - `testAppStatePersistsSessionOnboardingLogsAndPrivacyPreferences`
 - `testPendingSyncQueuePersistsAndMarksBlockedWithoutBackend`
