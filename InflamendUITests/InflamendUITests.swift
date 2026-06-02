@@ -92,6 +92,19 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileDoctorReportExportSheetSmoke() {
+        let app = openSeededProfile()
+
+        tapWhenVisible(app.buttons["profile-export-report-row"], in: app)
+
+        XCTAssertTrue(app.staticTexts["doctor-report-export-title"].waitForExistence(timeout: 5))
+        let fileName = app.staticTexts["doctor-report-export-filename"]
+        XCTAssertTrue(fileName.exists)
+        XCTAssertTrue(fileName.label.hasPrefix("Inflamend-Doctor-Report-"))
+        XCTAssertTrue(app.buttons["doctor-report-export-share-button"].exists)
+    }
+
+    @MainActor
     func testProfileDestructiveActionsRequireConfirmation() {
         let app = openSeededProfile()
 

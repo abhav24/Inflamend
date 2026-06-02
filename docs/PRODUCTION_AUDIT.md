@@ -813,3 +813,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with report/share and medication logging coverage.
+
+## Profile Doctor Report Export UI Coverage Audit
+
+### Feature Audit: Local Doctor Report Export Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The clinician-facing export path now has direct UI coverage from Profile row to generated report sheet and share action.
+- Required fixes: Add richer report formats only after the plain-text path remains stable.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Stable row, sheet title, filename, and share-action identifiers make the report flow testable without changing the existing Profile layout.
+- Required fixes: Add manual share-sheet, Dynamic Type, and VoiceOver verification for the export sheet.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises the local `prepareDoctorReportExport` path and protected local file generation without depending on missing backend credentials.
+- Required fixes: Add backend export jobs, CSV/PDF output, structured ranges, and report-download receipts once Supabase setup is available.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The report sheet keeps the local-log and no-diagnosis framing visible before sharing, and the filename is generated locally without secrets.
+- Required fixes: Add deeper manual share/review QA and keep export wording aligned across report formats.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Profile doctor-report export UI test passes. `xcodebuild test` now passes with 35 tests: 24 unit tests and 11 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to medication logging, food logging, voice confirmation, and richer report/share flows.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with medication logging and report-format coverage.

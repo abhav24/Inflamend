@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 10 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 11 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 34 tests.
+Result: TEST SUCCEEDED with 35 tests.
 ```
 
 ## Unit Test Priorities
@@ -81,7 +81,7 @@ Status: started. Twice-daily schedule calculation is covered.
 - CSV/plain text export shape.
 - Full local user-data JSON export shape.
 
-Status: started. Plain-text report wording, possible-pattern language, local doctor-report content generation, and local user-data JSON export are covered.
+Status: started. Plain-text report wording, possible-pattern language, local doctor-report content generation, Profile doctor-report export UI, and local user-data JSON export are covered.
 
 6. Offline/sync queue:
 - Pending mutation enqueue.
@@ -132,7 +132,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
-- Report export scaffold explains missing setup or creates local export.
+- Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test.
 - Privacy controls expose export/delete/AI memory/transcript toggles. Status: started; Profile user-data export and destructive confirmation smoke coverage exists.
 - Dark mode, Dynamic Type, and VoiceOver labels for major screens.
 
@@ -166,7 +166,7 @@ When Supabase CLI and credentials are available:
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally and covered by UI smoke test |
 | Insights | No data | Empty state, no fake claims | Implemented locally and covered by UI smoke test |
-| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
+| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented and covered by UI smoke test; CSV/PDF/backend export pending |
 | Privacy | Export data | User-visible export path creates shareable local JSON | Implemented locally and covered by UI smoke test; backend export pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
@@ -209,6 +209,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
 - `InflamendUITests.testInsightsEmptyStateAvoidsDemoClaimsSmoke`
 - `InflamendUITests.testLocalSignInReachesOnboardingSmoke`
+- `InflamendUITests.testProfileDoctorReportExportSheetSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
 - `InflamendUITests.testProfileSignOutReturnsToAuthGateSmoke`

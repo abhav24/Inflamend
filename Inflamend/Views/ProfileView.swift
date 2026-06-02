@@ -70,7 +70,7 @@ struct ProfileView: View {
                     .padding(.bottom, 10)
 
                 VStack(spacing: 0) {
-                    ProfileRow(icon: "download", label: "Export doctor report", sub: "Shareable text file") {
+                    ProfileRow(icon: "download", label: "Export doctor report", sub: "Shareable text file", accessibilityID: "profile-export-report-row") {
                         do {
                             preparedExport = .doctorReport(try appState.prepareDoctorReportExport())
                         } catch {
@@ -289,9 +289,11 @@ struct DoctorReportExportSheet: View {
                     Text("Report ready")
                         .font(DS.sans(18, weight: .semibold))
                         .foregroundColor(.fgPrimary)
+                        .accessibilityIdentifier("doctor-report-export-title")
                     Text(export.fileName)
                         .font(DS.mono(11))
                         .foregroundColor(.fgFaint)
+                        .accessibilityIdentifier("doctor-report-export-filename")
                 }
                 Spacer()
             }
@@ -327,6 +329,7 @@ struct DoctorReportExportSheet: View {
                 .clipShape(Capsule())
             }
             .buttonStyle(PressableButtonStyle(scale: 0.97))
+            .accessibilityIdentifier("doctor-report-export-share-button")
         }
         .padding(20)
         .background(Color.bgPrimary)
