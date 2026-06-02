@@ -467,6 +467,35 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testMedicationLogCanBeEditedFromTimelineSmoke() {
+        let app = openSeededHome()
+
+        let initialSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        XCTAssertTrue(initialSummary.waitForExistence(timeout: 5))
+        XCTAssertTrue(initialSummary.label.contains("Meds 1 of 2"))
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-meds"], in: app)
+        tapWhenVisible(app.buttons["meds-dose-vitamin-d-8-00am-toggle"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let updatedSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        waitForLabel(updatedSummary, contains: "Meds 2 of 2")
+
+        let medicationEntry = app.descendants(matching: .any)["timeline-entry-meds"]
+        waitForLabel(medicationEntry, contains: "Vitamin D · taken")
+
+        tapWhenVisible(app.buttons["timeline-edit-meds"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        tapWhenVisible(app.buttons["timeline-edit-medication-status-skipped"], in: app)
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedMedicationEntry = app.descendants(matching: .any)["timeline-entry-meds"]
+        waitForLabel(editedMedicationEntry, contains: "Vitamin D · skipped")
+        waitForLabel(updatedSummary, contains: "Meds 1 of 2")
+    }
+
+    @MainActor
     func testFoodLogSavesPatternEntrySmoke() {
         let app = openSeededHome()
 

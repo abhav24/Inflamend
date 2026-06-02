@@ -775,6 +775,67 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceMedicationPayloadAndReconcileAdherence() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-medication-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-medication@example.com", displayName: "Update Medication")
+        appState.medsTaken = 0
+        appState.medsTotal = 2
+        appState.recordMedicationTaken(name: "Mesalamine")
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertEqual(createdLog.title, "Mesalamine · taken")
+        XCTAssertEqual(createdLog.sub, "Logged manually")
+        XCTAssertEqual(appState.medsTaken, 1)
+
+        var skippedPayload = try XCTUnwrap(createdLog.payload)
+        skippedPayload.medicationStatus = "skipped"
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: skippedPayload.medicationDisplayTitle ?? "Medication updated",
+            sub: skippedPayload.medicationDisplayDetails ?? "",
+            preservePayload: true,
+            payload: skippedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Mesalamine · skipped")
+        XCTAssertEqual(appState.logs[0].payload?.medicationStatus, "skipped")
+        XCTAssertEqual(appState.medsTaken, 0)
+
+        let skippedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(skippedCreate.payload?.healthLog?.title, "Mesalamine · skipped")
+        XCTAssertEqual(skippedCreate.payload?.healthLog?.typedPayload?.medicationStatus, "skipped")
+
+        var takenPayload = try XCTUnwrap(appState.logs[0].payload)
+        takenPayload.medicationStatus = "taken"
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: takenPayload.medicationDisplayTitle ?? "Medication updated",
+            sub: takenPayload.medicationDisplayDetails ?? "",
+            preservePayload: true,
+            payload: takenPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Mesalamine · taken")
+        XCTAssertEqual(appState.logs[0].payload?.medicationStatus, "taken")
+        XCTAssertEqual(appState.medsTaken, 1)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.medicationStatus, "taken")
+        XCTAssertEqual(restored.medsTaken, 1)
+
+        store.delete()
+    }
+
+    @MainActor
     func testUpdateLogCanReplaceBowelPayloadAndPublishSafety() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-update-bowel-payload-\(UUID().uuidString).json")

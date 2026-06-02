@@ -689,6 +689,7 @@ class AppState {
             return false
         }
 
+        let previousPayload = logs[index].payload
         let payload: HealthLogPayload?
         if let editedPayload {
             payload = editedPayload.preservingDisplayEdits(title: cleanedTitle)
@@ -698,6 +699,9 @@ class AppState {
         logs[index].title = cleanedTitle
         logs[index].sub = cleanedSub
         logs[index].payload = payload
+        if editedPayload?.kind == .medication {
+            reconcileMedicationAdherence(from: previousPayload, to: payload)
+        }
 
         let entry = logs[index]
         let localRecordId = entry.id.uuidString
@@ -886,7 +890,13 @@ class AppState {
         if medsTaken < medsTotal {
             medsTaken += 1
         }
-        addLog(type: .meds, title: "\(name) · taken", sub: "Logged manually", payload: .medication(name: name, status: "taken"))
+        let payload = HealthLogPayload.medication(name: name, status: "taken")
+        addLog(
+            type: .meds,
+            title: payload.medicationDisplayTitle ?? "\(name) · taken",
+            sub: payload.medicationDisplayDetails ?? "Logged manually",
+            payload: payload
+        )
         showToast("\(name) marked taken")
     }
 
@@ -1044,6 +1054,23 @@ class AppState {
             enqueueSync(kind: .safetyNotice, localRecordId: "latest-safety", summary: "Safety notice shown")
         }
         persist()
+    }
+
+    private func reconcileMedicationAdherence(from previousPayload: HealthLogPayload?, to currentPayload: HealthLogPayload?) {
+        guard previousPayload?.kind == .medication || currentPayload?.kind == .medication else { return }
+
+        let wasTaken = Self.isTakenMedicationStatus(previousPayload?.medicationStatus)
+        let isTaken = Self.isTakenMedicationStatus(currentPayload?.medicationStatus)
+
+        if wasTaken && !isTaken {
+            medsTaken = max(0, medsTaken - 1)
+        } else if !wasTaken && isTaken {
+            medsTaken = min(medsTotal, medsTaken + 1)
+        }
+    }
+
+    private nonisolated static func isTakenMedicationStatus(_ status: String?) -> Bool {
+        status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "taken"
     }
 
     private func snapshot() -> AppSnapshot {
@@ -1394,6 +1421,16 @@ struct HealthLogPayload: Codable, Equatable {
             dehydrationScore: 0,
             rapidWorsening: false
         )
+    }
+
+    var medicationDisplayTitle: String? {
+        guard kind == .medication else { return nil }
+        return "\(medicationName ?? "Medication") · \(medicationStatus ?? "taken")"
+    }
+
+    var medicationDisplayDetails: String? {
+        guard kind == .medication else { return nil }
+        return "Logged manually"
     }
 
     var sleepDisplayTitle: String? {

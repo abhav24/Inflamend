@@ -1486,6 +1486,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
 
+## Medication Timeline Structured Edit Audit
+
+### Feature Audit: Medication Status Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Medication logs now support correcting taken/skipped/missed status directly from Home, so users do not need to delete and recreate a recent dose entry to fix adherence.
+- Required fixes: Keep future medication expansion focused on persisted schedules, skipped/missed lifecycle, and reminders before adding complex medication-management workflows.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet uses compact status pills with stable identifiers, preserving the existing timeline edit pattern and avoiding keyboard friction for dose-status changes.
+- Required fixes: Manually verify the expanded edit sheet at large Dynamic Type and with VoiceOver focus order before release.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: Medication timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, keep pending create/update replay snapshots aligned with the corrected row, and reconcile the local adherence count when status changes between taken and not taken.
+- Required fixes: Add live backend update replay, conflict handling, persisted medication schedules, and backend serialization tests for payload-bearing medication edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No prescription-change guidance was added. The UI records user-entered adherence status locally and remains separate from Care's medication-change refusal policy.
+- Required fixes: Avoid logging medication replay payloads in diagnostics and keep any future medication advice behind clinician/pharmacist referral and server-side safety checks.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement medication payload persistence, adherence reconciliation, replay snapshots, and local restore. Focused medication UI smoke coverage passed after marking Vitamin D taken, editing it to skipped from the timeline, and verifying both the row and Home summary. Full unit tests pass with 42 tests, full scheme tests pass with 67 tests, and `xcodebuild clean build` passes.
+- Required fixes: Add structured edit coverage for check-in payloads as those controls land.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with check-in structured timeline editing, backend update replay, conflict handling, and manual accessibility QA.
+
 ## Weight Timeline Structured Edit Audit
 
 ### Feature Audit: Weight Field Editing From Timeline

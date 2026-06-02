@@ -612,6 +612,10 @@ private struct TimelineEditSheet: View {
                     TimelineSymptomPayloadFields(payload: symptomPayloadBinding)
                 }
 
+                if let medicationPayloadBinding {
+                    TimelineMedicationPayloadFields(payload: medicationPayloadBinding)
+                }
+
                 if let sleepPayloadBinding {
                     TimelineSleepPayloadFields(payload: sleepPayloadBinding)
                 }
@@ -679,6 +683,8 @@ private struct TimelineEditSheet: View {
             return payload?.bowelDisplayTitle ?? title
         case .symptom:
             return payload?.symptomDisplayTitle ?? title
+        case .medication:
+            return payload?.medicationDisplayTitle ?? title
         case .sleep:
             return payload?.sleepDisplayTitle ?? title
         case .weight:
@@ -697,6 +703,8 @@ private struct TimelineEditSheet: View {
             return payload?.bowelDisplayDetails ?? detail
         case .symptom:
             return payload?.symptomDisplayDetails ?? detail
+        case .medication:
+            return payload?.medicationDisplayDetails ?? detail
         case .sleep:
             return payload?.sleepDisplayDetails ?? detail
         case .weight:
@@ -710,6 +718,19 @@ private struct TimelineEditSheet: View {
         guard payload?.kind == .symptom else { return nil }
         return Binding(
             get: { payload ?? entry.payload ?? HealthLogPayload.symptom(pain: 0, fatigue: 0, mood: 5) },
+            set: { payload = $0 }
+        )
+    }
+
+    private var medicationPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .medication else { return nil }
+        return Binding(
+            get: {
+                payload ?? entry.payload ?? HealthLogPayload.medication(
+                    name: entry.title.components(separatedBy: " · ").first ?? "Medication",
+                    status: "taken"
+                )
+            },
             set: { payload = $0 }
         )
     }
@@ -968,6 +989,48 @@ private struct TimelineSymptomPayloadFields: View {
         .padding(14)
         .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TimelineMedicationPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    private let statuses = ["taken", "skipped", "missed"]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Medication")
+                    .dsLabel()
+                Text(payload.medicationName ?? "Medication")
+                    .font(DS.sans(15, weight: .medium))
+                    .foregroundColor(.fgPrimary)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Dose status")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach(statuses, id: \.self) { status in
+                        PillToggle(
+                            label: status.capitalized,
+                            isActive: normalizedStatus == status,
+                            color: status == "taken" ? .sage : .amber
+                        ) {
+                            payload.medicationStatus = status
+                        }
+                        .accessibilityIdentifier("timeline-edit-medication-status-\(status)")
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var normalizedStatus: String {
+        payload.medicationStatus?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? "taken"
     }
 }
 
