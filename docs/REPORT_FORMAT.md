@@ -7,6 +7,7 @@ Reports help users prepare for clinician conversations. They must not diagnose o
 ## Formats
 
 - Plain text: implemented locally from current app logs and shareable from Profile.
+- JSON user data: implemented locally from the protected app snapshot and shareable from Profile.
 - CSV: required for logs and summaries.
 - PDF: scaffolded until PDF generation is implemented.
 
@@ -52,4 +53,6 @@ Reports help users prepare for clinician conversations. They must not diagnose o
 
 ## Current Status
 
-`export-report` Edge Function returns a safe scaffolded report. iOS now creates a protected local plain-text doctor report and exposes it through `ShareLink`; CSV/PDF and backend export jobs are still pending.
+`export-report` Edge Function returns a safe scaffolded report. iOS now creates a protected local plain-text doctor report and a protected local user-data JSON file, then exposes both through `ShareLink`; CSV/PDF and backend export jobs are still pending.
+
+The local user-data JSON export includes a format version, export timestamp, privacy notice, and the current local app snapshot: auth scaffold, onboarding profile, logs, privacy preferences, pending sync records, and saved Care messages.

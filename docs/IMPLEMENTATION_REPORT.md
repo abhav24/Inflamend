@@ -304,6 +304,31 @@ What remains:
 What was committed:
 - Commit message: `Add privacy action confirmations`
 
+## Current Checkpoint: Local User Data Export
+
+What changed:
+- Added `UserDataExporter` to generate a protected local JSON export from the current app snapshot.
+- Added a Profile export sheet that previews the JSON and exposes it through `ShareLink`.
+- Changed the Profile "Export my data" row from a backend-only scaffold into a working local export path.
+- Logged user-data export events locally and queued a future report-export mutation for backend replay.
+- Added unit coverage for pure JSON export shape plus the `AppState` export/audit-log/queue flow.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- App build passed on the available `iPhone 17` simulator.
+- Unit tests passed with 24 tests, including `testUserDataExporterBuildsLocalJSONSnapshot` and `testPrepareUserDataExportCreatesLocalFileAndAuditLog`.
+
+What remains:
+- Add CSV and PDF exports.
+- Add backend export jobs and export receipts once Supabase credentials exist.
+- Add UI tests for both Profile export sheets and share actions.
+
+What was committed:
+- Commit message: `Add local user data export`
+
 ## Command Log
 
 ```text
@@ -374,6 +399,12 @@ Result after privacy-confirmation pass: TEST SUCCEEDED with 22 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after privacy-confirmation pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after user-data-export pass: TEST SUCCEEDED with 24 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after user-data-export pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -381,7 +412,7 @@ Result after privacy-confirmation pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local Care safety responses, destructive-action confirmations, voice confirmation, and privacy controls wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth/onboarding/session restore/local persistence, local pending sync queue, core logging, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses, destructive-action confirmations, voice confirmation, and privacy controls wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -413,7 +444,7 @@ Result after privacy-confirmation pass: BUILD SUCCEEDED.
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
 | Privacy controls | Scaffolded and locally persisted | AI memory and voice transcript storage toggles, destructive confirmations | Enforce preferences in live backend/AI behavior |
-| Data export/delete | Scaffolded and locally logged | Export/delete rows show setup states; destructive delete request is confirmed first | Implement Supabase-backed export/delete |
+| Data export/delete | Partial local implementation | Export my data writes protected local JSON; destructive delete request is confirmed first | Implement Supabase-backed export/delete and CSV/PDF |
 
 ## Blockers and External Dependencies
 
@@ -457,12 +488,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 22 unit tests through `InflamendTests`.
+- Tests: passing with 24 unit tests through `InflamendTests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth, onboarding, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export, local Care safety responses, destructive-action confirmations, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
 - Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, and visible safety/privacy UI now exist; UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, and privacy confirmation checkpoints exist.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, and user-data export checkpoints exist.
 
 Continue working.
 

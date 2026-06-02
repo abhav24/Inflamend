@@ -461,3 +461,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with backend-backed deletion, UI tests, and retention/export policy polish.
+
+## Local User Data Export Audit
+
+### Feature Audit: Profile Data Export
+
+Product Simplicity Reviewer:
+- Findings: The Profile data export row now produces a real local JSON file instead of only explaining missing backend setup.
+- Required fixes: Keep the export copy clear that this is a device-local snapshot, not a cloud export receipt.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The user-data export reuses the existing Profile sheet pattern with a short privacy explanation, scrollable preview, and native share action.
+- Required fixes: Add UI tests or screenshots for the export sheet, long JSON preview, and largest Dynamic Type behavior.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The JSON payload is generated from the same codable app snapshot used for local persistence and includes format version, export timestamp, privacy notice, and snapshot data.
+- Required fixes: Add backend export jobs, server-side receipts, and stable server IDs once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Export files are written to a protected local temporary directory and the sheet warns users to review before sharing sensitive health data.
+- Required fixes: Add retention wording, cloud export/delete parity, and App Store privacy policy text before submission.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: `xcodebuild clean build` passes and `xcodebuild test` passes with 24 tests, including local JSON export shape and AppState export/audit-log/queue behavior.
+- Required fixes: Add UI tests for Profile export sheet presentation and share flow.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with UI tests, CSV/PDF output, and backend export jobs.

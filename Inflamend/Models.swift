@@ -482,10 +482,13 @@ class AppState {
         showToast("AI history cleared locally")
     }
 
-    func requestDataExportScaffold() {
-        enqueueSync(kind: .reportExport, localRecordId: "report-export-\(UUID().uuidString)", summary: "Data export requested")
-        addLog(type: .note, title: "Data export requested", sub: "Requires backend credentials")
-        showToast("Data export scaffolded")
+    func prepareUserDataExport() throws -> UserDataExport {
+        let export = try UserDataExporter.writeJSONExport(snapshot: snapshot())
+        addLog(type: .note, title: "User data exported", sub: export.fileName)
+        enqueueSync(kind: .reportExport, localRecordId: export.id.uuidString, summary: "User data JSON exported")
+        persist()
+        showToast("Data export ready to share")
+        return export
     }
 
     func prepareDoctorReportExport() throws -> DoctorReportExport {

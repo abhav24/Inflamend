@@ -15,6 +15,7 @@
 | Crash diagnostics | Future | Platform controlled | Optional service | No | Maybe | No | Vendor policy | Vendor controls |
 | Analytics events | Not added | No | No | No | No | No | N/A | N/A |
 | Purchase/subscription status | Future if StoreKit added | Yes | Optional | No | Yes | No | Subscription lifetime | Restore/manage subscription |
+| User data export file | Implemented locally | Temporary protected JSON file | Backend export job planned | No | Yes | No | Until user shares/deletes temporary file | Export my data / delete local file |
 
 ## Rules
 
@@ -28,3 +29,4 @@
 - Voice transcript storage defaults off in the current UI.
 - Local auth scaffold stores an email/display name session but never stores the password field.
 - The local snapshot is a production scaffold, not a substitute for final encrypted storage and Keychain-backed live auth tokens.
+- Profile can create a local user-data JSON export from the current protected snapshot. Cloud export receipts and backend export jobs still require production Supabase credentials.

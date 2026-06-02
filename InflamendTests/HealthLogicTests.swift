@@ -154,6 +154,57 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(DoctorReportExporter.fileName(generatedAt: generatedAt, calendar: calendar), "Inflamend-Doctor-Report-2026-06-02.txt")
     }
 
+    func testUserDataExporterBuildsLocalJSONSnapshot() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let generatedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2)))
+        let snapshot = AppSnapshot(
+            authSession: .local(email: "export@example.com", displayName: "Export Patient"),
+            onboardingProfile: OnboardingProfile(
+                diagnosis: "Ulcerative colitis",
+                primaryGoal: "Prepare doctor reports",
+                baselineStoolCount: 3,
+                hasFlarePlan: true,
+                skippedSensitiveQuestions: false,
+                completedAt: generatedAt
+            ),
+            riskScore: 38,
+            mood: .ok,
+            medsTaken: 2,
+            medsTotal: 4,
+            latestSafetyMessage: nil,
+            aiMemoryEnabled: false,
+            voiceTranscriptStorageEnabled: false,
+            lastSyncStatus: "Saved locally",
+            logs: [
+                LogEntry(type: .note, title: "Exported note", sub: "Local only", time: "8:00am")
+            ],
+            chatMessages: [
+                ChatMessage(role: .assistant, content: "Local message")
+            ]
+        )
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-user-data-\(UUID().uuidString)", isDirectory: true)
+        let export = try UserDataExporter.writeJSONExport(
+            snapshot: snapshot,
+            generatedAt: generatedAt,
+            directory: directory,
+            calendar: calendar
+        )
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(UserDataExportPayload.self, from: Data(export.content.utf8))
+
+        XCTAssertEqual(export.fileName, "Inflamend-User-Data-2026-06-02.json")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: export.fileURL.path))
+        XCTAssertTrue(export.content.contains(UserDataExporter.privacyNotice))
+        XCTAssertEqual(decoded.snapshot.authSession?.email, "export@example.com")
+        XCTAssertEqual(decoded.snapshot.logs.first?.title, "Exported note")
+
+        try? FileManager.default.removeItem(at: directory)
+    }
+
     func testCareResponseBlocksMedicationChangeAdvice() {
         let response = CareResponseService.respond(to: "Should I stop mesalamine if my flare feels bad?")
 
@@ -326,6 +377,29 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .accountDeletion })
         XCTAssertTrue(appState.logs.contains { $0.title == "Account deletion requested" })
 
+        store.delete()
+    }
+
+    @MainActor
+    func testPrepareUserDataExportCreatesLocalFileAndAuditLog() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-user-export-state-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "local-export@example.com", displayName: "Local Export")
+        appState.addLog(type: .note, title: "Persistent export note", sub: "Included")
+
+        let export = try appState.prepareUserDataExport()
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: export.fileURL.path))
+        XCTAssertTrue(export.content.contains("local-export@example.com"))
+        XCTAssertTrue(export.content.contains("Persistent export note"))
+        XCTAssertTrue(appState.logs.contains { $0.title == "User data exported" })
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .reportExport && $0.summary.contains("User data JSON") })
+
+        try? FileManager.default.removeItem(at: export.fileURL.deletingLastPathComponent())
         store.delete()
     }
 

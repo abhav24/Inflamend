@@ -17,7 +17,7 @@ Not ready for App Store submission.
 | Permission strings | Missing for future voice/HealthKit | Add when features land |
 | Medical claims | Risk | Copy must remain cautious |
 | Account deletion | Partial | Confirmation and local deletion request exist; required backend deletion still blocked until production auth/Supabase are live |
-| Data export | Partial | Doctor report creates a local shareable text file; full user-data export, CSV/PDF, and backend export jobs are pending |
+| Data export | Partial | Doctor report creates a local shareable text file and full local user-data export creates shareable JSON; CSV/PDF and backend export jobs are pending |
 | Sign in with Apple | Not applicable yet | Local email scaffold exists; Sign in with Apple required if third-party/social login is added |
 | Subscriptions | Not implemented | No fake gates |
 | Notifications | Not implemented | Permission flow pending |
@@ -32,4 +32,4 @@ Not ready for App Store submission.
 - Medical disclaimer in relevant UI.
 - Production app icon and screenshots.
 - Build/test pass on supported devices.
-- Backend-backed account deletion and full data deletion.
+- Backend-backed account deletion, cloud data export, and full data deletion.

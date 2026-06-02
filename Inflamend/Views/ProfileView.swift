@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     var appState: AppState
-    @State private var preparedReport: DoctorReportExport?
+    @State private var preparedExport: ProfilePreparedExport?
     @State private var pendingConfirmation: ProfileConfirmation?
 
     var body: some View {
@@ -72,7 +72,7 @@ struct ProfileView: View {
                 VStack(spacing: 0) {
                     ProfileRow(icon: "download", label: "Export doctor report", sub: "Shareable text file") {
                         do {
-                            preparedReport = try appState.prepareDoctorReportExport()
+                            preparedExport = .doctorReport(try appState.prepareDoctorReportExport())
                         } catch {
                             appState.showToast("Report export failed")
                         }
@@ -139,8 +139,12 @@ struct ProfileView: View {
                     ) {
                         appState.setVoiceTranscriptStorageEnabled(!appState.voiceTranscriptStorageEnabled)
                     }
-                    ProfileRow(icon: "download", label: "Export my data", sub: "Requires backend credentials") {
-                        appState.requestDataExportScaffold()
+                    ProfileRow(icon: "download", label: "Export my data", sub: "Local JSON file") {
+                        do {
+                            preparedExport = .userData(try appState.prepareUserDataExport())
+                        } catch {
+                            appState.showToast("Data export failed")
+                        }
                     }
                     ProfileRow(icon: "close", label: "Delete AI history", sub: "\(appState.chatMessages.count) messages", isDanger: true) {
                         pendingConfirmation = .clearAIHistory
@@ -165,8 +169,13 @@ struct ProfileView: View {
             }
         }
         .background(Color.bgPrimary)
-        .sheet(item: $preparedReport) { export in
-            DoctorReportExportSheet(export: export)
+        .sheet(item: $preparedExport) { export in
+            switch export {
+            case .doctorReport(let report):
+                DoctorReportExportSheet(export: report)
+            case .userData(let userData):
+                UserDataExportSheet(export: userData)
+            }
         }
         .confirmationDialog(
             pendingConfirmation?.title ?? "",
@@ -196,6 +205,20 @@ struct ProfileView: View {
             appState.clearAIHistory()
         case .deleteDataAccount:
             appState.requestAccountDeletionScaffold()
+        }
+    }
+}
+
+private enum ProfilePreparedExport: Identifiable {
+    case doctorReport(DoctorReportExport)
+    case userData(UserDataExport)
+
+    var id: UUID {
+        switch self {
+        case .doctorReport(let export):
+            return export.id
+        case .userData(let export):
+            return export.id
         }
     }
 }
@@ -278,6 +301,62 @@ struct DoctorReportExportSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(Color.sage)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(PressableButtonStyle(scale: 0.97))
+        }
+        .padding(20)
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+struct UserDataExportSheet: View {
+    let export: UserDataExport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                IconBadge(name: "download", color: .ink)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Data export ready")
+                        .font(DS.sans(18, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    Text(export.fileName)
+                        .font(DS.mono(11))
+                        .foregroundColor(.fgFaint)
+                }
+                Spacer()
+            }
+
+            Text("This JSON file contains local data saved on this device, including logs, onboarding profile, privacy preferences, pending sync records, and saved Care messages. Review before sharing.")
+                .font(DS.sans(13))
+                .foregroundColor(.fgDim)
+                .lineSpacing(3)
+
+            ScrollView {
+                Text(export.content)
+                    .font(DS.mono(11))
+                    .foregroundColor(.fgDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(maxHeight: 240)
+            .padding(12)
+            .background(Color.bgInset)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            ShareLink(item: export.fileURL) {
+                HStack(spacing: 8) {
+                    AppIcon(name: "share", size: 16, color: .darkText)
+                    Text("Share data export")
+                        .font(DS.sans(15, weight: .medium))
+                        .tracking(-0.1)
+                }
+                .foregroundColor(.darkText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.ink)
                 .clipShape(Capsule())
             }
             .buttonStyle(PressableButtonStyle(scale: 0.97))

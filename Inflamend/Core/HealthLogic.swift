@@ -622,6 +622,74 @@ struct DoctorReportExport: Identifiable, Equatable {
     let generatedAt: Date
 }
 
+struct UserDataExport: Identifiable, Equatable {
+    let id: UUID
+    let fileName: String
+    let fileURL: URL
+    let content: String
+    let generatedAt: Date
+}
+
+struct UserDataExportPayload: Codable, Equatable {
+    var formatVersion: Int
+    var exportedAt: Date
+    var privacyNotice: String
+    var snapshot: AppSnapshot
+}
+
+enum UserDataExporter {
+    static let privacyNotice = "This export contains local Inflamend account scaffold data, onboarding profile, logs, privacy preferences, pending sync records, and saved Care messages from this device. It is self-reported health data and is not a diagnosis."
+
+    static func buildJSONExport(
+        snapshot: AppSnapshot,
+        generatedAt: Date = Date()
+    ) throws -> String {
+        let payload = UserDataExportPayload(
+            formatVersion: 1,
+            exportedAt: generatedAt,
+            privacyNotice: privacyNotice,
+            snapshot: snapshot
+        )
+        let data = try JSONEncoder.inflamendExport.encode(payload)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    static func writeJSONExport(
+        snapshot: AppSnapshot,
+        generatedAt: Date = Date(),
+        directory: URL = FileManager.default.temporaryDirectory,
+        calendar: Calendar = .current
+    ) throws -> UserDataExport {
+        let content = try buildJSONExport(snapshot: snapshot, generatedAt: generatedAt)
+        let exportsDirectory = directory.appendingPathComponent("InflamendExports", isDirectory: true)
+        try FileManager.default.createDirectory(at: exportsDirectory, withIntermediateDirectories: true)
+        let fileName = fileName(generatedAt: generatedAt, calendar: calendar)
+        let fileURL = exportsDirectory.appendingPathComponent(fileName)
+        try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: fileURL.path
+        )
+        return UserDataExport(
+            id: UUID(),
+            fileName: fileName,
+            fileURL: fileURL,
+            content: content,
+            generatedAt: generatedAt
+        )
+    }
+
+    static func fileName(generatedAt: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: generatedAt)
+        return String(
+            format: "Inflamend-User-Data-%04d-%02d-%02d.json",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1
+        )
+    }
+}
+
 enum DoctorReportExporter {
     static func buildPlainTextReport(
         logs: [LogEntry],
@@ -724,6 +792,15 @@ enum DoctorReportExporter {
             possiblePatterns: possiblePatterns,
             notes: notes
         )
+    }
+}
+
+private extension JSONEncoder {
+    static var inflamendExport: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
     }
 }
 
