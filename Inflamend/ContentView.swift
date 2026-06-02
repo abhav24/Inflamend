@@ -251,6 +251,7 @@ struct AuthGateView: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(PressableButtonStyle(scale: 0.96))
+        .accessibilityIdentifier(target == .signUp ? "auth-mode-sign-up-button" : "auth-mode-sign-in-button")
     }
 
     private func authTextField(_ placeholder: String, text: Binding<String>, contentType: UITextContentType) -> some View {

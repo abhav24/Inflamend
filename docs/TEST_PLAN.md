@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 6 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 7 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 30 tests.
+Result: TEST SUCCEEDED with 31 tests.
 ```
 
 ## Unit Test Priorities
@@ -121,7 +121,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 ## UI Test Priorities
 
 - Fresh install shows welcome/auth or Today depending on session scaffold. Status: started; fresh local sign-up UI smoke coverage exists.
-- Sign up/sign in with mock service. Status: started; local sign-up UI smoke coverage exists, sign-in still needs UI coverage.
+- Sign up/sign in with mock service. Status: started; local sign-up and sign-in UI smoke coverage exists.
 - Onboarding can be completed or skipped for sensitive fields. Status: started; default onboarding completion UI smoke coverage exists.
 - Today check-in can be saved in under 30 seconds. Status: covered by UI smoke test.
 - Bowel movement log with blood shows safety guidance.
@@ -153,7 +153,7 @@ When Supabase CLI and credentials are available:
 | Area | Scenario | Expected Result | Status |
 |---|---|---|---|
 | Install | Fresh install | Starts without crash | Pending |
-| Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh sign-up UI smoke test |
+| Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh auth UI smoke tests |
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
@@ -204,6 +204,7 @@ When Supabase CLI and credentials are available:
 
 - `InflamendUITests.testCareRedFlagPromptShowsSafetyGuidanceSmoke`
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
+- `InflamendUITests.testLocalSignInReachesOnboardingSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
 - `InflamendUITests.testProfileSignOutReturnsToAuthGateSmoke`

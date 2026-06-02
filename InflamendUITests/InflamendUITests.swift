@@ -34,6 +34,27 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testLocalSignInReachesOnboardingSmoke() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--inflamend-reset-state"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 8))
+
+        app.buttons["auth-mode-sign-in-button"].tap()
+        app.textFields["auth-email-field"].tap()
+        app.textFields["auth-email-field"].typeText("returning@example.com")
+
+        app.secureTextFields["auth-password-field"].tap()
+        app.secureTextFields["auth-password-field"].typeText("localpass")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["auth-primary-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["Make Inflamend fit your day"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testProfileUserDataExportSheetSmoke() {
         let app = openSeededProfile()
 

@@ -685,3 +685,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with sign-in coverage and high-risk logging UI coverage.
+
+## Local Sign-In UI Coverage Audit
+
+### Feature Audit: Local Sign-In Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The local auth scaffold now has separate UI coverage for sign-up, sign-in, onboarding, and sign-out, which makes the first-session account flow less brittle.
+- Required fixes: Add invalid-input coverage and replace the local password scaffold with production Supabase Auth.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Auth mode buttons now expose stable identifiers, and the test validates switching modes, entering credentials, dismissing the keyboard, and reaching onboarding.
+- Required fixes: Add Dynamic Type and VoiceOver review for mode switching and form validation messaging.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises the local `AppState.signIn` branch and pending auth-session enqueue behavior indirectly, but production token handling remains absent.
+- Required fixes: Add Supabase Auth, Keychain token persistence, refresh/error handling, and backend profile writes before release.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The local sign-in scaffold still does not store the password, and the test verifies users reach onboarding before health tracking data entry.
+- Required fixes: Replace scaffold credentials with server-backed auth and verify no password or PHI appears in logs or analytics.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused local sign-in UI test passes. `xcodebuild test` now passes with 31 tests: 24 unit tests and 7 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to invalid auth input, bowel movement red flags, Care medication-change refusal, report/share flows, and Insights empty states.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with high-risk logging and Care refusal UI coverage.
