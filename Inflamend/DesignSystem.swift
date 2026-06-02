@@ -317,6 +317,7 @@ struct AppIcon: View {
         case "download": return "arrow.down.circle"
         case "share":    return "square.and.arrow.up"
         case "trash":    return "trash"
+        case "edit":     return "pencil"
         case "logout":   return "rectangle.portrait.and.arrow.right"
         case "note":     return "note.text"
         case "shield":   return "checkmark.shield"

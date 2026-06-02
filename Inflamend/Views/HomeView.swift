@@ -6,6 +6,7 @@ struct HomeView: View {
     @Binding var showFoodSheet: Bool
     @Binding var showBristolSheet: Bool
     @Binding var showCheckInSheet: Bool
+    @State private var editingEntry: LogEntry?
 
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -217,6 +218,8 @@ struct HomeView: View {
                         } else {
                             ForEach(Array(appState.logs.enumerated()), id: \.element.id) { idx, entry in
                                 TimelineRow(entry: entry, isLast: idx == appState.logs.count - 1) {
+                                    editingEntry = entry
+                                } onDelete: {
                                     appState.deleteLog(id: entry.id)
                                 }
                             }
@@ -282,6 +285,11 @@ struct HomeView: View {
             }
         }
         .background(Color.bgPrimary)
+        .sheet(item: $editingEntry) { entry in
+            TimelineEditSheet(entry: entry) { title, sub in
+                appState.updateLog(id: entry.id, title: title, sub: sub)
+            }
+        }
     }
 
     private func timeNow() -> String {
@@ -441,6 +449,7 @@ struct EmptyTimelineRow: View {
 struct TimelineRow: View {
     let entry: LogEntry
     var isLast: Bool = false
+    var onEdit: () -> Void
     var onDelete: () -> Void
     @State private var showDeleteConfirmation = false
 
@@ -472,16 +481,27 @@ struct TimelineRow: View {
             .accessibilityLabel("\(entry.title). \(entry.sub). \(entry.time)")
             .accessibilityIdentifier("timeline-entry-\(entry.type.rawValue)")
 
-            Button {
-                showDeleteConfirmation = true
-            } label: {
-                AppIcon(name: "trash", size: 18, color: .fgFaint)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            HStack(spacing: 2) {
+                Button(action: onEdit) {
+                    AppIcon(name: "edit", size: 17, color: .fgFaint)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit \(entry.title)")
+                .accessibilityIdentifier("timeline-edit-\(entry.type.rawValue)")
+
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    AppIcon(name: "trash", size: 18, color: .fgFaint)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete \(entry.title)")
+                .accessibilityIdentifier("timeline-delete-\(entry.type.rawValue)")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Delete \(entry.title)")
-            .accessibilityIdentifier("timeline-delete-\(entry.type.rawValue)")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -506,6 +526,103 @@ struct TimelineRow: View {
             }
         } message: {
             Text("Remove \(entry.title) from local logs on this device.")
+        }
+    }
+}
+
+private struct TimelineEditSheet: View {
+    let entry: LogEntry
+    let onSave: (String, String) -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+    @State private var title: String
+    @State private var detail: String
+
+    private enum Field {
+        case title
+        case detail
+    }
+
+    init(entry: LogEntry, onSave: @escaping (String, String) -> Bool) {
+        self.entry = entry
+        self.onSave = onSave
+        _title = State(initialValue: entry.title)
+        _detail = State(initialValue: entry.sub)
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                SheetHandle()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+
+                HStack(alignment: .center, spacing: 12) {
+                    IconBadge(name: entry.type.iconName, size: 42, iconSize: 18, color: entry.type.color)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("EDIT LOG")
+                            .dsLabel()
+                        Text(entry.type.rawValue.capitalized)
+                            .font(DS.serif(28))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("timeline-edit-sheet-title")
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Title")
+                        .dsLabel()
+                    TextField("Log title", text: $title)
+                        .font(DS.sans(15))
+                        .foregroundColor(.fgPrimary)
+                        .padding(14)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .focused($focusedField, equals: .title)
+                        .submitLabel(.done)
+                        .accessibilityIdentifier("timeline-edit-title-field")
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Details")
+                        .dsLabel()
+                    TextField("Optional detail", text: $detail, axis: .vertical)
+                        .font(DS.sans(15))
+                        .foregroundColor(.fgPrimary)
+                        .lineLimit(3...5)
+                        .padding(14)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .focused($focusedField, equals: .detail)
+                        .accessibilityIdentifier("timeline-edit-detail-field")
+                }
+
+                PrimaryButton(title: "Save changes") {
+                    if onSave(title, detail) {
+                        dismiss()
+                    }
+                }
+                .accessibilityIdentifier("timeline-save-edit-button")
+
+                GhostButton(title: "Cancel") {
+                    dismiss()
+                }
+                .accessibilityIdentifier("timeline-cancel-edit-button")
+                .padding(.bottom, 24)
+            }
+            .padding(.horizontal, 20)
+        }
+        .background(Color.bgPrimary.ignoresSafeArea())
+        .presentationDetents([.medium, .large])
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                }
+                .accessibilityIdentifier("timeline-edit-keyboard-done-button")
+            }
         }
     }
 }

@@ -374,6 +374,43 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogPersistsAndCoalescesPendingCreate() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-log-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-log@example.com", displayName: "Update Log")
+        appState.addLog(type: .note, title: "Original note", sub: "Original detail")
+
+        let logID = appState.logs[0].id
+        XCTAssertTrue(appState.updateLog(id: logID, title: " Updated note ", sub: " Updated detail "))
+        XCTAssertEqual(appState.logs[0].title, "Updated note")
+        XCTAssertEqual(appState.logs[0].sub, "Updated detail")
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLog && $0.localRecordId == logID.uuidString && $0.summary.contains("Updated note")
+        })
+        XCTAssertFalse(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogUpdate && $0.localRecordId == logID.uuidString
+        })
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs[0].title, "Updated note")
+        XCTAssertEqual(restored.logs[0].sub, "Updated detail")
+
+        let syncedLikeEntry = LogEntry(type: .food, title: "Existing food", sub: "Local copy", time: "8:00am")
+        appState.logs = [syncedLikeEntry]
+        XCTAssertTrue(appState.updateLog(id: syncedLikeEntry.id, title: "Existing food edited", sub: "Dinner detail"))
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogUpdate && $0.localRecordId == syncedLikeEntry.id.uuidString && $0.summary.contains("Existing food edited")
+        })
+        XCTAssertFalse(appState.updateLog(id: syncedLikeEntry.id, title: "   ", sub: "Blank title"))
+
+        store.delete()
+    }
+
+    @MainActor
     func testClearAIHistoryLeavesLocalConfirmationMessage() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-clear-ai-\(UUID().uuidString).json")

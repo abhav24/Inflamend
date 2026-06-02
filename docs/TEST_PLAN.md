@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 25 unit tests in HealthLogicTests plus 19 UI smoke tests in InflamendUITests.
+Coverage: 26 unit tests in HealthLogicTests plus 20 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 44 tests.
+Result: TEST SUCCEEDED with 46 tests.
 ```
 
 ## Unit Test Priorities
@@ -87,11 +87,12 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Pending mutation enqueue.
 - Retry state blocked by missing backend setup.
 - Local deletion coalesces unreplayed health-log creates and queues deletion mutations for existing records.
+- Local edits coalesce into unreplayed health-log creates or queue update mutations for existing records.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, pending queue persistence, local log deletion queue behavior, backend-blocked retry, Profile sync blocked-state UI, legacy decode, and corrupt snapshot fallback are covered. Network replay and conflict behavior are pending.
+Status: local snapshot restore, pending queue persistence, local log edit/delete queue behavior, backend-blocked retry, Profile sync blocked-state UI, legacy decode, and corrupt snapshot fallback are covered. Network replay and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -126,6 +127,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Onboarding can be completed or skipped for sensitive fields. Status: started; default onboarding completion UI smoke coverage exists.
 - Today check-in can be saved in under 30 seconds. Status: covered by UI smoke test.
 - Timeline log deletion requires confirmation. Status: covered by UI smoke test.
+- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test.
 - Bowel movement log with blood shows safety guidance. Status: covered by UI smoke test.
 - Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test.
 - Medication taken/skipped changes adherence state. Status: dose-taken path covered by UI smoke test.
@@ -162,6 +164,7 @@ When Supabase CLI and credentials are available:
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; backend update replay pending |
 | Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay pending |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
 | Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented locally and covered by UI smoke test |
@@ -209,6 +212,7 @@ When Supabase CLI and credentials are available:
 - `testInsightSummaryReturnsEmptyStateForNoLogs`
 - `testInsightSummaryUsesLocalLogsWithoutDemoData`
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
+- `testUpdateLogPersistsAndCoalescesPendingCreate`
 
 ## Current UI Test List
 
@@ -228,6 +232,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testProfileSignOutReturnsToAuthGateSmoke`
 - `InflamendUITests.testProfileSyncRetryShowsBackendBlockedSmoke`
 - `InflamendUITests.testTimelineEntryDeleteRequiresConfirmationSmoke`
+- `InflamendUITests.testTimelineEntryEditUpdatesLocalRowSmoke`
 - `InflamendUITests.testTodayCheckInSavesToTimelineSmoke`
 - `InflamendUITests.testVoicePermissionDeniedKeepsManualFallbackSmoke`
 - `InflamendUITests.testVoiceTranscriptCanBeEditedBeforeSavingSmoke`

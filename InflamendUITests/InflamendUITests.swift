@@ -285,6 +285,37 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testTimelineEntryEditUpdatesLocalRowSmoke() {
+        let app = openSeededHome()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+        let noteEntry = app.descendants(matching: .any)["timeline-entry-note"]
+        XCTAssertTrue(noteEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(noteEntry.label.contains("UI test export note"))
+
+        tapWhenVisible(app.buttons["timeline-edit-note"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+
+        let titleField = app.descendants(matching: .any)["timeline-edit-title-field"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        titleField.tap()
+        titleField.typeText(" updated")
+
+        let detailField = app.descendants(matching: .any)["timeline-edit-detail-field"]
+        XCTAssertTrue(detailField.waitForExistence(timeout: 5))
+        detailField.tap()
+        detailField.typeText(" reviewed")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedEntry = app.descendants(matching: .any)["timeline-entry-note"]
+        waitForLabel(editedEntry, contains: "UI test export note updated")
+        XCTAssertTrue(editedEntry.label.contains("reviewed"), editedEntry.label)
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+    }
+
+    @MainActor
     func testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke() {
         let app = openSeededHome()
 
@@ -468,6 +499,12 @@ final class InflamendUITests: XCTestCase {
         let voiceFieldDoneButton = app.buttons["voice-field-keyboard-done-button"].firstMatch
         if voiceFieldDoneButton.waitForExistence(timeout: 1) {
             voiceFieldDoneButton.tap()
+            return
+        }
+
+        let timelineEditDoneButton = app.buttons["timeline-edit-keyboard-done-button"].firstMatch
+        if timelineEditDoneButton.waitForExistence(timeout: 1) {
+            timelineEditDoneButton.tap()
             return
         }
 

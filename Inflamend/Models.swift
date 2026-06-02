@@ -93,6 +93,7 @@ enum SyncMutationKind: String, Codable, Equatable {
     case authSession
     case onboardingProfile
     case healthLog
+    case healthLogUpdate
     case healthLogDeletion
     case chatMessage
     case privacyPreference
@@ -326,6 +327,41 @@ class AppState {
 
         persist()
         showToast("Log removed")
+    }
+
+    @discardableResult
+    func updateLog(id: LogEntry.ID, title: String, sub: String) -> Bool {
+        guard let index = logs.firstIndex(where: { $0.id == id }) else { return false }
+
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedSub = sub.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedTitle.isEmpty else {
+            showToast("Log title is required")
+            return false
+        }
+
+        logs[index].title = cleanedTitle
+        logs[index].sub = cleanedSub
+
+        let entry = logs[index]
+        let localRecordId = entry.id.uuidString
+        if let pendingCreateIndex = pendingSyncMutations.firstIndex(where: {
+            $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
+        }) {
+            pendingSyncMutations[pendingCreateIndex].summary = "\(entry.type.rawValue): \(cleanedTitle)"
+            pendingSyncMutations[pendingCreateIndex].status = .pending
+            pendingSyncMutations[pendingCreateIndex].attemptCount = 0
+        } else {
+            enqueueSync(
+                kind: .healthLogUpdate,
+                localRecordId: localRecordId,
+                summary: "Updated \(entry.type.rawValue): \(cleanedTitle)"
+            )
+        }
+
+        persist()
+        showToast("Log updated")
+        return true
     }
 
     func recordCheckIn(status: MoodOption?, pain: Int, fatigue: Int, urgency: Int, stoolCount: Int, bloodPresent: Bool, medicationTaken: Bool, notes: String) {

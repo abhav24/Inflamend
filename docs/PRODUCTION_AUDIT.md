@@ -628,7 +628,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: The Today tab's primary daily workflow now has visible UI coverage from CTA to saved timeline row, which directly protects the app's core "quick daily check-in" promise.
-- Required fixes: Add edit support, backend deletion replay, and structured trend history so the saved check-in remains useful after the initial save.
+- Required fixes: Add structured edit fields, backend update/delete replay, and structured trend history so the saved check-in remains useful after the initial save.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -724,7 +724,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: The high-risk bowel logging path now has a direct UI smoke test that records significant blood and verifies safety guidance appears on Home.
-- Required fixes: Add edit support, backend deletion replay, backend sync, and broader validation coverage for bowel entries before release.
+- Required fixes: Add structured edit fields, backend update/delete replay, backend sync, and broader validation coverage for bowel entries before release.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -1036,7 +1036,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with sync-worker implementation, partial Insights scenarios, and edit support.
+- Ship now, then continue with sync-worker implementation, partial Insights scenarios, and structured edit fields.
 
 ## Project Asset Catalog Cleanup Audit
 
@@ -1068,7 +1068,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with production artwork, sync-worker implementation, and edit support.
+- Ship now, then continue with production artwork, sync-worker implementation, and structured edit fields.
 
 ## Populated Insights UI Coverage Audit
 
@@ -1100,7 +1100,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with structured records, manual chart accessibility verification, sync-worker implementation, and edit support.
+- Ship now, then continue with structured records, manual chart accessibility verification, sync-worker implementation, and structured edit fields.
 
 ## Timeline Log Delete Confirmation Audit
 
@@ -1108,7 +1108,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: Users can now remove an accidental local timeline entry from Home after a focused confirmation, without adding a separate management screen.
-- Required fixes: Add edit and undo only if they stay fast enough for daily logging.
+- Required fixes: Add undo and type-specific structured editing only if they stay fast enough for daily logging.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -1128,11 +1128,11 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: Focused unit and UI tests pass. `xcodebuild test` passes with 44 tests: 25 unit tests and 19 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Add edit, undo, backend replay, and manual accessibility verification.
+- Required fixes: Add undo, type-specific structured editing, backend replay, and manual accessibility verification.
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with edit support, structured records, and sync-worker implementation.
+- Ship now, then continue with undo, structured records, and sync-worker implementation.
 
 ## Insights Chart Accessibility Summaries Audit
 
@@ -1165,3 +1165,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with structured records, partial Insights cases, manual accessibility QA, and sync-worker implementation.
+
+## Timeline Log Edit Support Audit
+
+### Feature Audit: Local Timeline Edit Sheet and Update Queue
+
+Product Simplicity Reviewer:
+- Findings: Users can correct a local timeline title/detail from Home without adding a management screen or changing the entry count.
+- Required fixes: Add type-specific edit fields only where they add real value.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Timeline rows now expose edit and delete as separate 44-point icon controls, and the edit sheet uses labeled fields, a native keyboard toolbar, and stable identifiers.
+- Required fixes: Manually verify VoiceOver order, Dynamic Type wrapping, and compact-device action discoverability.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppState.updateLog(id:title:sub:)` trims input, rejects blank titles, persists local edits, coalesces unreplayed creates, and queues `healthLogUpdate` for existing records.
+- Required fixes: Replace the scaffold with server IDs, update replay, conflict handling, and update receipts.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Edit support remains local and does not imply cloud update or deletion parity before Supabase exists.
+- Required fixes: Add cloud update/delete wording and receipts once backend sync is live.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused edit unit/UI tests pass; the first focused UI run failed due an over-specific detail assertion and was fixed. Full `xcodebuild test` passes with 46 tests: 26 unit tests and 20 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add structured type-specific edit cases, undo, backend replay tests, and manual accessibility QA.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with type-specific structured records, undo, sync-worker implementation, and manual accessibility QA.
