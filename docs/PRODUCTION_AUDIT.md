@@ -909,3 +909,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with voice-confirmation and privacy-toggle coverage.
+
+## Voice Confirmation UI Coverage Audit
+
+### Feature Audit: Editable Voice Confirmation Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The voice transcript scaffold now supports the expected confirmation workflow: enter a transcript, parse it, edit parsed fields, explicitly save, and see the result in the Home timeline.
+- Required fixes: Add native microphone capture only after the editable confirmation and manual transcript fallback remain stable.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The Log tab strip, voice transcript field, parsed draft type, editable parsed fields, keyboard Done controls, and save/discard actions now expose stable identifiers. The checkpoint also fixed a real keyboard-obscured editing path on iPhone-sized screens.
+- Required fixes: Run manual Dynamic Type and VoiceOver checks for multiline transcript entry, parsed-field editing, and the confirmation card.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises local voice parser output and `AppState.recordVoiceDraft` with user-edited fields, but the saved result is still timeline-oriented and not synced.
+- Required fixes: Add structured per-type voice-derived records, retention enforcement, server IDs, Supabase replay, conflict handling, and backend parser parity.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Voice-derived health data still requires explicit user confirmation before save, and the tested path verifies user edits are preserved. No native audio capture or transcript upload is added in this checkpoint.
+- Required fixes: Before native speech/audio support, add permission-denied copy, transcript retention enforcement, and backend guarantees that voice transcript preferences are honored.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused voice confirmation UI test exposed and fixed offscreen tab navigation, container identifier masking, and keyboard focus issues. The focused test now passes. `xcodebuild test` passes with 38 tests: 24 unit tests and 14 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to privacy toggles, populated Insights, edit/delete flows, and native permission states.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with privacy-toggle coverage and native voice-permission scaffolding.

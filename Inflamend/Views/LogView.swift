@@ -33,6 +33,7 @@ struct LogView: View {
                 }
                 .padding(.horizontal, 20)
             }
+            .accessibilityIdentifier("log-tab-strip")
             .padding(.bottom, 14)
 
             // Content
@@ -602,6 +603,7 @@ struct LogVoiceForm: View {
     var appState: AppState
     @State private var transcript = ""
     @State private var draft: VoiceLogDraft? = nil
+    @FocusState private var isTranscriptFocused: Bool
 
     var body: some View {
         FormCard(title: "Voice transcript", label: "SCAFFOLD") {
@@ -617,6 +619,8 @@ struct LogVoiceForm: View {
                 .padding(12)
                 .background(Color.bgInset)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("voice-transcript-field")
+                .focused($isTranscriptFocused)
 
             GhostButton(title: "Parse transcript") {
                 let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -626,12 +630,25 @@ struct LogVoiceForm: View {
                 }
                 draft = VoiceLogParser.parse(trimmed)
             }
+            .accessibilityIdentifier("voice-parse-button")
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if isTranscriptFocused {
+                    Spacer()
+                    Button("Done") {
+                        isTranscriptFocused = false
+                    }
+                    .accessibilityIdentifier("voice-transcript-keyboard-done-button")
+                }
+            }
         }
 
         if let draft {
-            VoiceDraftConfirmation(draft: draft) {
-                appState.recordVoiceDraft(draft)
+            VoiceDraftConfirmation(draft: draft) { confirmedDraft in
+                appState.recordVoiceDraft(confirmedDraft)
                 transcript = ""
+                isTranscriptFocused = false
                 self.draft = nil
             } discard: {
                 self.draft = nil
@@ -642,8 +659,21 @@ struct LogVoiceForm: View {
 
 struct VoiceDraftConfirmation: View {
     let draft: VoiceLogDraft
-    let save: () -> Void
+    let save: (VoiceLogDraft) -> Void
     let discard: () -> Void
+    @State private var editableFields: [String: String]
+    @FocusState private var focusedField: String?
+
+    init(
+        draft: VoiceLogDraft,
+        save: @escaping (VoiceLogDraft) -> Void,
+        discard: @escaping () -> Void
+    ) {
+        self.draft = draft
+        self.save = save
+        self.discard = discard
+        _editableFields = State(initialValue: draft.fields)
+    }
 
     var body: some View {
         FormCard(title: "Confirm before saving", label: draft.confidence.rawValue.uppercased()) {
@@ -653,6 +683,7 @@ struct VoiceDraftConfirmation: View {
                     Text(draft.type.rawValue.capitalized)
                         .font(DS.sans(15, weight: .medium))
                         .foregroundColor(.fgPrimary)
+                        .accessibilityIdentifier("voice-draft-type")
                     Text("Voice-derived health data is never auto-saved.")
                         .font(DS.sans(12))
                         .foregroundColor(.fgDim)
@@ -660,21 +691,24 @@ struct VoiceDraftConfirmation: View {
             }
 
             if !draft.fields.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(draft.fields.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
-                        HStack {
+                VStack(spacing: 10) {
+                    ForEach(draft.fields.keys.sorted(), id: \.self) { key in
+                        VStack(alignment: .leading, spacing: 6) {
                             Text(key.replacingOccurrences(of: "_", with: " ").capitalized)
                                 .font(DS.sans(13))
                                 .foregroundColor(.fgDim)
-                            Spacer()
-                            Text(value)
-                                .font(DS.mono(12))
+                            TextField("Review value", text: binding(for: key))
+                                .font(DS.sans(14))
                                 .foregroundColor(.fgPrimary)
+                                .padding(10)
+                                .background(Color.bgCard)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .accessibilityIdentifier("voice-field-\(slug(for: key))")
+                                .focused($focusedField, equals: key)
                         }
-                        .padding(.vertical, 8)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(12)
                 .background(Color.bgInset)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -686,9 +720,48 @@ struct VoiceDraftConfirmation: View {
                     .lineSpacing(2)
             }
 
-            PrimaryButton(title: "Save confirmed log", action: save)
+            PrimaryButton(title: "Save confirmed log") {
+                save(confirmedDraft)
+            }
+            .accessibilityIdentifier("voice-save-confirmed-button")
             GhostButton(title: "Discard draft", action: discard)
+                .accessibilityIdentifier("voice-discard-draft-button")
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                if focusedField != nil {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil
+                    }
+                    .accessibilityIdentifier("voice-field-keyboard-done-button")
+                }
+            }
+        }
+    }
+
+    private var confirmedDraft: VoiceLogDraft {
+        VoiceLogDraft(
+            type: draft.type,
+            confidence: draft.confidence,
+            fields: editableFields,
+            safetyFlags: draft.safetyFlags
+        )
+    }
+
+    private func binding(for key: String) -> Binding<String> {
+        Binding(
+            get: { editableFields[key] ?? "" },
+            set: { editableFields[key] = $0 }
+        )
+    }
+
+    private func slug(for text: String) -> String {
+        text
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
     }
 }
 

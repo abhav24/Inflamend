@@ -245,6 +245,40 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testVoiceTranscriptCanBeEditedBeforeSavingSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-voice"], in: app)
+
+        let transcriptField = app.descendants(matching: .any)["voice-transcript-field"]
+        XCTAssertTrue(transcriptField.waitForExistence(timeout: 5))
+        transcriptField.tap()
+        transcriptField.typeText("I ate rice for dinner")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["voice-parse-button"], in: app)
+
+        XCTAssertTrue(app.staticTexts["Confirm before saving"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["voice-draft-type"].label.contains("Meal"))
+
+        let descriptionField = app.descendants(matching: .any)["voice-field-description"]
+        XCTAssertTrue(descriptionField.waitForExistence(timeout: 5))
+        tapCenterWhenVisible(descriptionField, in: app)
+        descriptionField.typeText(" with carrots")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["voice-save-confirmed-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let voiceEntry = app.descendants(matching: .any)["timeline-entry-voice"]
+        XCTAssertTrue(voiceEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(voiceEntry.label.contains("Voice meal confirmed"))
+        XCTAssertTrue(voiceEntry.label.contains("with carrots"))
+        XCTAssertTrue(voiceEntry.label.contains("meal type: dinner"))
+    }
+
+    @MainActor
     private func openFreshOnboardedHome(displayName: String, email: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--inflamend-reset-state"]
@@ -305,16 +339,21 @@ final class InflamendUITests: XCTestCase {
 
         if app.buttons["Done"].waitForExistence(timeout: 1) {
             app.buttons["Done"].tap()
-            return
+            if app.keyboards.firstMatch.waitForNonExistence(timeout: 1) {
+                return
+            }
         }
 
         if app.buttons["Return"].waitForExistence(timeout: 1) {
             app.buttons["Return"].tap()
-            return
+            if app.keyboards.firstMatch.waitForNonExistence(timeout: 1) {
+                return
+            }
         }
 
         guard app.keyboards.firstMatch.exists else { return }
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+        _ = app.keyboards.firstMatch.waitForNonExistence(timeout: 1)
     }
 
     @MainActor
@@ -359,21 +398,74 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    private func tapCenterWhenVisible(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let screenFrame = app.windows.firstMatch.frame
+
+        for _ in 0..<6 {
+            if element.exists {
+                let frame = element.frame
+                let center = CGPoint(x: frame.midX, y: frame.midY)
+
+                if !frame.isEmpty && screenFrame.contains(center) {
+                    let normalizedPoint = CGVector(
+                        dx: (center.x - screenFrame.minX) / screenFrame.width,
+                        dy: (center.y - screenFrame.minY) / screenFrame.height
+                    )
+                    app.coordinate(withNormalizedOffset: normalizedPoint).tap()
+                    return
+                }
+            }
+
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28))
+            start.press(forDuration: 0.01, thenDragTo: end)
+        }
+
+        XCTFail("Element center was not visible: \(element)", file: file, line: line)
+    }
+
+    @MainActor
     private func tapHorizontalWhenVisible(
         _ element: XCUIElement,
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        for _ in 0..<6 {
-            if element.exists && element.isHittable {
-                element.tap()
-                return
+        let screenFrame = app.windows.firstMatch.frame
+
+        for _ in 0..<8 {
+            if element.exists {
+                let frame = element.frame
+                let center = CGPoint(x: frame.midX, y: frame.midY)
+
+                if !frame.isEmpty && screenFrame.contains(center) {
+                    element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                    return
+                }
             }
 
-            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.20))
-            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.20))
-            start.press(forDuration: 0.01, thenDragTo: end)
+            let tabStrip = app.scrollViews["log-tab-strip"]
+            if tabStrip.exists {
+                tabStrip.swipeLeft()
+            } else {
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.88, dy: 0.16))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.10, dy: 0.16))
+                start.press(forDuration: 0.01, thenDragTo: end)
+            }
+        }
+
+        if element.exists {
+            let frame = element.frame
+            let center = CGPoint(x: frame.midX, y: frame.midY)
+            if !frame.isEmpty && screenFrame.contains(center) {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                return
+            }
         }
 
         XCTFail("Element was not hittable: \(element)", file: file, line: line)
