@@ -5,6 +5,7 @@ struct ProfileView: View {
     @State private var preparedExport: ProfilePreparedExport?
     @State private var pendingConfirmation: ProfileConfirmation?
     @State private var showingSyncDetails = false
+    @State private var showingMedicationReminders = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -78,8 +79,13 @@ struct ProfileView: View {
                             appState.showToast("Report export failed")
                         }
                     }
-                    ProfileRow(icon: "bell", label: "Medication reminders", sub: "Requires notification setup") {
-                        appState.showToast("Notification setup required")
+                    ProfileRow(
+                        icon: "bell",
+                        label: "Medication reminders",
+                        sub: appState.medicationReminderSummary,
+                        accessibilityID: "profile-medication-reminders-row"
+                    ) {
+                        showingMedicationReminders = true
                     }
                     ProfileRow(icon: "calendar", label: "Flare history", sub: "Scaffolded") {
                         appState.showToast("Flare history scaffolded")
@@ -188,6 +194,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showingSyncDetails) {
             SyncStatusDetailSheet(appState: appState)
         }
+        .sheet(isPresented: $showingMedicationReminders) {
+            MedicationReminderSettingsSheet(appState: appState)
+        }
         .sheet(item: $preparedExport) { export in
             switch export {
             case .doctorReport(let report):
@@ -225,6 +234,166 @@ struct ProfileView: View {
             appState.clearAIHistory()
         case .deleteDataAccount:
             appState.requestAccountDeletionScaffold()
+        }
+    }
+}
+
+private struct MedicationReminderSettingsSheet: View {
+    var appState: AppState
+
+    private var settings: MedicationReminderSettings {
+        appState.medicationReminderSettings
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "bell", color: .amber)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Medication reminders")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("medication-reminders-title")
+                        Text(settings.summary)
+                            .font(DS.sans(13))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("medication-reminders-status")
+                    }
+                    Spacer()
+                }
+
+                Toggle(
+                    isOn: Binding(
+                        get: { settings.isEnabled },
+                        set: { appState.setMedicationRemindersEnabled($0) }
+                    )
+                ) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Reminder preference")
+                            .font(DS.sans(15, weight: .medium))
+                            .foregroundColor(.fgPrimary)
+                        Text(settings.detail)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
+                    }
+                }
+                .toggleStyle(.switch)
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .accessibilityIdentifier("medication-reminders-enabled-toggle")
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Lead time")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+
+                    HStack(spacing: 8) {
+                        ForEach(MedicationReminderSettings.allowedAdvanceNoticeMinutes, id: \.self) { minutes in
+                            ReminderLeadTimeButton(
+                                minutes: minutes,
+                                isSelected: settings.advanceNoticeMinutes == minutes
+                            ) {
+                                appState.setMedicationReminderAdvanceNotice(minutes: minutes)
+                            }
+                        }
+                    }
+                }
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Scheduled doses")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+
+                    ForEach(appState.medicationDoses) { dose in
+                        HStack(spacing: 10) {
+                            AppIcon(name: "pill", size: 14, color: .fgDim)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(dose.name)
+                                    .font(DS.sans(13, weight: .medium))
+                                    .foregroundColor(.fgPrimary)
+                                Text("\(dose.dose) · \(dose.time)")
+                                    .font(DS.sans(12))
+                                    .foregroundColor(.fgFaint)
+                            }
+                            Spacer()
+                            Text(dose.status.label)
+                                .font(DS.sans(12, weight: .medium))
+                                .foregroundColor(dose.status.color)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                HStack(alignment: .top, spacing: 10) {
+                    AppIcon(name: "shield", size: 15, color: .fgDim)
+                    Text("Notification setup required before iOS alerts are scheduled. Your preference is saved locally and included in data export.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                        .accessibilityIdentifier("medication-reminders-setup-status")
+                }
+                .padding(14)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct ReminderLeadTimeButton: View {
+    let minutes: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    private var label: String {
+        switch minutes {
+        case 0:
+            return "At time"
+        case 60:
+            return "1 hr"
+        default:
+            return "\(minutes)m"
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(DS.sans(13, weight: .medium))
+                .foregroundColor(isSelected ? .darkText : .fgDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(isSelected ? Color.sage : Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(PressableButtonStyle(scale: 0.97))
+        .accessibilityIdentifier("medication-reminder-lead-\(minutes)-button")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+    }
+}
+
+private extension MedicationDoseStatus {
+    var color: Color {
+        switch self {
+        case .pending:
+            return .fgFaint
+        case .taken:
+            return .sage
+        case .skipped:
+            return .amber
+        case .missed:
+            return .clay
         }
     }
 }

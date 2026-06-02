@@ -12,6 +12,7 @@ supabase/
     0001_init.sql
     0002_rls_policies.sql
     0003_seed_dev_data.sql
+    0004_medication_reminder_settings.sql
   functions/
     ai-chat/
     voice-parse/
@@ -93,5 +94,7 @@ Never put provider keys or Supabase service role keys in the iOS app.
 
 ## Current Blockers
 
+- Supabase CLI is not installed in the current environment.
 - No real Supabase project credentials are available in this repo.
 - Hosted migrations, deployed functions, email auth, and production RLS verification are externally blocked until the project is created.
+- `0004_medication_reminder_settings.sql` adds the lead-time column for local medication reminder preferences; it still needs Supabase CLI reset/hosted migration verification.

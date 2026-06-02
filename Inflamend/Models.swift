@@ -13,6 +13,7 @@ struct AppSnapshot: Codable, Equatable {
     var medsTaken: Int
     var medsTotal: Int
     var medicationDoses: [MedEntry]
+    var medicationReminderSettings: MedicationReminderSettings
     var latestSafetyMessage: String?
     var aiMemoryEnabled: Bool
     var voiceTranscriptStorageEnabled: Bool
@@ -30,6 +31,7 @@ struct AppSnapshot: Codable, Equatable {
         medsTaken: Int,
         medsTotal: Int,
         medicationDoses: [MedEntry] = [],
+        medicationReminderSettings: MedicationReminderSettings = .disabled,
         latestSafetyMessage: String?,
         aiMemoryEnabled: Bool,
         voiceTranscriptStorageEnabled: Bool,
@@ -46,6 +48,7 @@ struct AppSnapshot: Codable, Equatable {
         self.medsTaken = medsTaken
         self.medsTotal = medsTotal
         self.medicationDoses = medicationDoses
+        self.medicationReminderSettings = medicationReminderSettings
         self.latestSafetyMessage = latestSafetyMessage
         self.aiMemoryEnabled = aiMemoryEnabled
         self.voiceTranscriptStorageEnabled = voiceTranscriptStorageEnabled
@@ -64,6 +67,7 @@ struct AppSnapshot: Codable, Equatable {
         case medsTaken
         case medsTotal
         case medicationDoses
+        case medicationReminderSettings
         case latestSafetyMessage
         case aiMemoryEnabled
         case voiceTranscriptStorageEnabled
@@ -83,6 +87,10 @@ struct AppSnapshot: Codable, Equatable {
         medsTaken = try container.decodeIfPresent(Int.self, forKey: .medsTaken) ?? 0
         medsTotal = max(1, try container.decodeIfPresent(Int.self, forKey: .medsTotal) ?? 4)
         medicationDoses = try container.decodeIfPresent([MedEntry].self, forKey: .medicationDoses) ?? []
+        medicationReminderSettings = try container.decodeIfPresent(
+            MedicationReminderSettings.self,
+            forKey: .medicationReminderSettings
+        ) ?? .disabled
         latestSafetyMessage = try container.decodeIfPresent(String.self, forKey: .latestSafetyMessage)
         aiMemoryEnabled = try container.decodeIfPresent(Bool.self, forKey: .aiMemoryEnabled) ?? false
         voiceTranscriptStorageEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceTranscriptStorageEnabled) ?? false
@@ -142,6 +150,56 @@ enum SyncNetworkStatus: String, Codable, Equatable {
         case .offline:
             return "Sync replay waits until network connectivity returns."
         }
+    }
+}
+
+struct MedicationReminderSettings: Codable, Equatable {
+    var isEnabled: Bool
+    var advanceNoticeMinutes: Int
+    var notificationSetupRequired: Bool
+    var updatedAt: Date?
+
+    static let disabled = MedicationReminderSettings(
+        isEnabled: false,
+        advanceNoticeMinutes: 10,
+        notificationSetupRequired: true,
+        updatedAt: nil
+    )
+
+    static let allowedAdvanceNoticeMinutes = [0, 10, 30, 60]
+
+    var summary: String {
+        isEnabled ? "On · \(advanceNoticeLabel) · setup needed" : "Off · setup pending"
+    }
+
+    var detail: String {
+        if isEnabled {
+            return "Local reminder preference saved. System notifications still require app notification setup."
+        }
+        return "Reminder preference is off. System notifications are not scheduled."
+    }
+
+    var advanceNoticeLabel: String {
+        switch advanceNoticeMinutes {
+        case 0:
+            return "At dose time"
+        case 60:
+            return "1 hour before"
+        default:
+            return "\(advanceNoticeMinutes) min before"
+        }
+    }
+
+    func normalized(updatedAt: Date? = nil) -> MedicationReminderSettings {
+        var copy = self
+        if !Self.allowedAdvanceNoticeMinutes.contains(copy.advanceNoticeMinutes) {
+            copy.advanceNoticeMinutes = 10
+        }
+        copy.notificationSetupRequired = true
+        if let updatedAt {
+            copy.updatedAt = updatedAt
+        }
+        return copy
     }
 }
 
@@ -574,6 +632,7 @@ class AppState {
     var medsTaken: Int = 2
     var medsTotal: Int = 4
     var medicationDoses: [MedEntry] = MedicationDefaults.defaultDoses
+    var medicationReminderSettings: MedicationReminderSettings = .disabled
     var latestSafetyMessage: String? = nil
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
@@ -704,6 +763,10 @@ class AppState {
             return "Next automatic retry after \(nextAutomaticSyncRetryAt.formatted(date: .abbreviated, time: .shortened))."
         }
         return "Automatic retry starts after a retry attempt sets backoff."
+    }
+
+    var medicationReminderSummary: String {
+        medicationReminderSettings.summary
     }
 
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
@@ -1173,6 +1236,39 @@ class AppState {
         showToast("Transcript storage \(enabled ? "on" : "off")")
     }
 
+    func setMedicationRemindersEnabled(_ enabled: Bool) {
+        guard medicationReminderSettings.isEnabled != enabled else { return }
+        var settings = medicationReminderSettings
+        settings.isEnabled = enabled
+        updateMedicationReminderSettings(
+            settings,
+            summary: enabled ? "Medication reminders enabled" : "Medication reminders disabled",
+            toast: enabled ? "Reminder preference saved" : "Medication reminders off"
+        )
+    }
+
+    func setMedicationReminderAdvanceNotice(minutes: Int) {
+        guard medicationReminderSettings.advanceNoticeMinutes != minutes else { return }
+        var settings = medicationReminderSettings
+        settings.advanceNoticeMinutes = minutes
+        updateMedicationReminderSettings(
+            settings,
+            summary: "Medication reminders \(settings.normalized().advanceNoticeLabel)",
+            toast: "Reminder timing saved"
+        )
+    }
+
+    private func updateMedicationReminderSettings(
+        _ settings: MedicationReminderSettings,
+        summary: String,
+        toast: String
+    ) {
+        medicationReminderSettings = settings.normalized(updatedAt: Date())
+        enqueueSync(kind: .privacyPreference, localRecordId: "medication-reminders", summary: summary)
+        persist()
+        showToast(toast)
+    }
+
     func addChatMessage(role: ChatRole, content: String) {
         let message = ChatMessage(role: role, content: content)
         chatMessages.append(message)
@@ -1354,6 +1450,7 @@ class AppState {
             medsTaken: medsTaken,
             medsTotal: medsTotal,
             medicationDoses: medicationDoses,
+            medicationReminderSettings: medicationReminderSettings,
             latestSafetyMessage: latestSafetyMessage,
             aiMemoryEnabled: aiMemoryEnabled,
             voiceTranscriptStorageEnabled: voiceTranscriptStorageEnabled,
@@ -1372,6 +1469,7 @@ class AppState {
         medsTaken = snapshot.medsTaken
         medsTotal = snapshot.medsTotal
         medicationDoses = snapshot.medicationDoses.isEmpty ? MedicationDefaults.defaultDoses : snapshot.medicationDoses
+        medicationReminderSettings = snapshot.medicationReminderSettings.normalized()
         latestSafetyMessage = snapshot.latestSafetyMessage
         aiMemoryEnabled = snapshot.aiMemoryEnabled
         voiceTranscriptStorageEnabled = snapshot.voiceTranscriptStorageEnabled

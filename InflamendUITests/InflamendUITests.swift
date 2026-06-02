@@ -186,6 +186,27 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileMedicationReminderSettingsSmoke() {
+        let app = openSeededProfile()
+
+        let reminderRow = app.buttons["profile-medication-reminders-row"]
+        waitForLabel(reminderRow, contains: "Off")
+        tapWhenVisible(reminderRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["medication-reminders-title"].waitForExistence(timeout: 5))
+        let status = app.staticTexts["medication-reminders-status"]
+        waitForLabel(status, contains: "Off")
+
+        let reminderToggle = app.descendants(matching: .any)["medication-reminders-enabled-toggle"]
+        tapWhenVisible(reminderToggle, in: app)
+        waitForLabel(status, contains: "On")
+
+        tapWhenVisible(app.buttons["medication-reminder-lead-30-button"], in: app)
+        waitForLabel(status, contains: "30 min before")
+        waitForLabel(app.staticTexts["medication-reminders-setup-status"], contains: "Notification setup required")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",

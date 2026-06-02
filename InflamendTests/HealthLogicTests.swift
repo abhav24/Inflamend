@@ -147,6 +147,44 @@ final class HealthLogicTests: XCTestCase {
         store.delete()
     }
 
+    @MainActor
+    func testMedicationReminderSettingsPersistExportAndQueuePreference() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-medication-reminders-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.signUp(email: "reminders@example.com", displayName: "Reminder Patient")
+
+        appState.setMedicationRemindersEnabled(true)
+        appState.setMedicationReminderAdvanceNotice(minutes: 30)
+
+        XCTAssertTrue(appState.medicationReminderSettings.isEnabled)
+        XCTAssertEqual(appState.medicationReminderSettings.advanceNoticeMinutes, 30)
+        XCTAssertTrue(appState.medicationReminderSettings.notificationSetupRequired)
+        XCTAssertTrue(appState.medicationReminderSummary.contains("30 min before"))
+
+        let reminderMutation = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .privacyPreference && $0.localRecordId == "medication-reminders"
+        })
+        XCTAssertTrue(reminderMutation.summary.contains("Medication reminders"))
+
+        let restored = AppState(store: store, reachabilityMonitor: nil)
+        XCTAssertTrue(restored.medicationReminderSettings.isEnabled)
+        XCTAssertEqual(restored.medicationReminderSettings.advanceNoticeMinutes, 30)
+
+        let export = try restored.prepareUserDataExport()
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(UserDataExportPayload.self, from: Data(export.content.utf8))
+        XCTAssertTrue(decoded.snapshot.medicationReminderSettings.isEnabled)
+        XCTAssertEqual(decoded.snapshot.medicationReminderSettings.advanceNoticeMinutes, 30)
+
+        try? FileManager.default.removeItem(at: export.fileURL.deletingLastPathComponent())
+        store.delete()
+    }
+
     func testReportSummaryUsesPossiblePatternLanguage() {
         let report = ReportSummaryGenerator.plainText(
             ReportSummaryInput(

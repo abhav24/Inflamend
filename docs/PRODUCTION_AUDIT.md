@@ -1374,7 +1374,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: `MedEntry` is now codable with stable IDs and pending/taken/skipped/missed status. Dose changes update the protected snapshot, refresh adherence counts, and queue structured medication log payloads for future replay.
-- Required fixes: Add backend medication schedule tables/replay wiring, server IDs, conflict handling, and reminder scheduling once credentials and notification setup exist.
+- Required fixes: Add backend medication schedule tables/replay wiring, server IDs, conflict handling, and real iOS notification scheduling once credentials and notification setup exist.
 - Status: Accept local persistence checkpoint.
 
 Privacy, Security, and Medical Safety Reviewer:
@@ -1389,6 +1389,38 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with medication schedule management, reminder setup, backend sync, and manual accessibility QA.
+
+## Medication Reminder Settings Audit
+
+### Feature Audit: Local Reminder Preference Scaffold
+
+Product Simplicity Reviewer:
+- Findings: The previous Profile placeholder is now a focused settings sheet. Users can enable or disable reminder intent and choose a lead time without being told that notifications are already active.
+- Required fixes: Add schedule editing before reminder configuration can cover real medication plans.
+- Status: Accept local preference checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sheet uses native toggle behavior, compact segmented lead-time buttons, visible setup status, and a short scheduled-dose preview without adding a complex notification center.
+- Required fixes: Manually verify the sheet at large Dynamic Type and with VoiceOver, especially the toggle, lead-time selection order, and setup-status announcement.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `MedicationReminderSettings` persists in `AppSnapshot`, restores with a legacy default, exports in local JSON, normalizes unsupported lead times, queues a future `privacyPreference` replay mutation for `public.user_settings`, and has a Supabase migration scaffold for `medication_reminder_lead_time_minutes`.
+- Required fixes: Add backend settings serialization, returned server IDs/receipts, conflict handling, notification permission state, and schedule-linked notification identifiers once Supabase and iOS notification setup are available.
+- Status: Accept local data contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Reminder settings are treated as user health-adjacent preferences in the local snapshot/export. The UI states that notification setup is still required and does not imply medical advice or guaranteed dosing compliance.
+- Required fixes: Review push-token handling, notification content privacy, lock-screen wording, and delete/export behavior before enabling real notifications.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for persistence, restore, export decode, and queued replay; focused Profile UI smoke coverage passed for opening the sheet, enabling reminders, selecting 30 minutes, and setup copy. Full unit target passed with 48 tests and clean build passed.
+- Required fixes: Add authorization-denied, notification scheduling/canceling, schedule-edit, backend sync, and manual accessibility tests when real notifications are implemented.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with notification authorization/scheduling, medication schedule editing, backend settings sync, and manual accessibility QA.
 
 ## Timeline Delete Undo Audit
 
