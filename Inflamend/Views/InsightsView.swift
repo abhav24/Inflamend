@@ -5,7 +5,10 @@ struct InsightsView: View {
     @State private var range = "Recent"
 
     private var summary: InsightSummary {
-        InsightSummaryBuilder.build(logs: appState.logs, limit: range == "Recent" ? 7 : nil)
+        if range == "Recent" {
+            return InsightSummaryBuilder.build(logs: appState.logs, recentDays: 7)
+        }
+        return InsightSummaryBuilder.build(logs: appState.logs)
     }
 
     private var chartSeries: [(data: [Double], color: Color)] {

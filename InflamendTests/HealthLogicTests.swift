@@ -132,8 +132,8 @@ final class HealthLogicTests: XCTestCase {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let generatedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2)))
         let logs = [
-            LogEntry(type: .food, title: "Dinner", sub: "Dairy", time: "7:00pm"),
-            LogEntry(type: .bowel, title: "Bristol 6 · urgency 7/10", sub: "visible blood", time: "9:00am")
+            LogEntry(type: .food, title: "Dinner", sub: "Dairy", time: "7:00pm", loggedAt: generatedAt),
+            LogEntry(type: .bowel, title: "Bristol 6 · urgency 7/10", sub: "visible blood", time: "9:00am", loggedAt: generatedAt)
         ]
 
         let report = DoctorReportExporter.buildPlainTextReport(
@@ -146,12 +146,42 @@ final class HealthLogicTests: XCTestCase {
         )
 
         XCTAssertTrue(report.contains("Prepared for: Soham"))
-        XCTAssertTrue(report.contains("Range: Recent local logs exported 2026-06-02"))
+        XCTAssertTrue(report.contains("Range: Last 30 days (2026-05-04 to 2026-06-02)"))
         XCTAssertTrue(report.contains("Bowel movements logged: 1"))
         XCTAssertTrue(report.contains("Blood flags: 1"))
         XCTAssertTrue(report.contains("Dairy appeared in 1 food log; frequency only, not a trigger claim."))
         XCTAssertFalse(report.contains("caused"))
         XCTAssertEqual(DoctorReportExporter.fileName(generatedAt: generatedAt, calendar: calendar), "Inflamend-Doctor-Report-2026-06-02.txt")
+    }
+
+    func testDoctorReportExporterUsesLastThirtyDayLoggedAtRange() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let generatedAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2, hour: 12)))
+        let recentDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 5, day: 20, hour: 8)))
+        let oldDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 4, day: 15, hour: 8)))
+        let logs = [
+            LogEntry(type: .food, title: "Old coffee", sub: "Coffee", loggedAt: oldDate),
+            LogEntry(type: .food, title: "Dinner", sub: "Dairy", loggedAt: recentDate),
+            LogEntry(type: .bowel, title: "Bristol 6 · urgency 7/10", sub: "visible blood", loggedAt: recentDate)
+        ]
+
+        let report = DoctorReportExporter.buildPlainTextReport(
+            logs: logs,
+            medsTaken: 3,
+            medsTotal: 4,
+            displayName: "Soham",
+            generatedAt: generatedAt,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(report.contains("Range: Last 30 days (2026-05-04 to 2026-06-02)"))
+        XCTAssertTrue(report.contains("Local logs included: 2"))
+        XCTAssertTrue(report.contains("Bowel movements logged: 1"))
+        XCTAssertTrue(report.contains("Blood flags: 1"))
+        XCTAssertTrue(report.contains("Dairy appeared in 1 food log; frequency only, not a trigger claim."))
+        XCTAssertFalse(report.contains("Coffee appeared"))
+        XCTAssertFalse(report.contains("Old coffee"))
     }
 
     func testUserDataExporterBuildsLocalJSONSnapshot() throws {
@@ -259,6 +289,39 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Dairy" })
         XCTAssertTrue(summary.foodPatterns.contains { $0.label == "Spicy food" })
         XCTAssertEqual(summary.confidenceLabel, "Early local data")
+    }
+
+    func testInsightSummaryRecentRangeUsesLoggedAtDates() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let endingAt = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 2, hour: 12)))
+        let recentDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 8)))
+        let oldDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 5, day: 10, hour: 8)))
+        let logs = [
+            LogEntry(type: .bowel, title: "Bristol 6 · urgency 4/10", sub: "no blood", loggedAt: recentDate),
+            LogEntry(type: .symptom, title: "Pain 2/10 · fatigue 3/10", sub: "Mood 6/10", loggedAt: recentDate),
+            LogEntry(type: .food, title: "Dinner", sub: "Dairy", loggedAt: oldDate),
+            LogEntry(type: .checkin, title: "Flare check-in · pain 9/10", sub: "Fatigue 9/10 · urgency 8/10 · stool 6", loggedAt: oldDate)
+        ]
+
+        let recentSummary = InsightSummaryBuilder.build(
+            logs: logs,
+            recentDays: 7,
+            endingAt: endingAt,
+            calendar: calendar
+        )
+        let allSummary = InsightSummaryBuilder.build(logs: logs)
+
+        XCTAssertEqual(recentSummary.logCount, 2)
+        XCTAssertEqual(recentSummary.painValues, [2])
+        XCTAssertEqual(recentSummary.averagePain ?? -1, 2.0, accuracy: 0.001)
+        XCTAssertEqual(recentSummary.bowelLogCount, 1)
+        XCTAssertEqual(recentSummary.flareMentionCount, 0)
+        XCTAssertFalse(recentSummary.foodPatterns.contains { $0.label == "Dairy" })
+        XCTAssertEqual(allSummary.logCount, 4)
+        XCTAssertEqual(allSummary.averagePain ?? -1, 5.5, accuracy: 0.001)
+        XCTAssertEqual(allSummary.flareMentionCount, 1)
+        XCTAssertTrue(allSummary.foodPatterns.contains { $0.label == "Dairy" })
     }
 
     func testValidationHelpers() {

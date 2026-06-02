@@ -1325,3 +1325,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with typed per-log payloads, date-range filtering, live Supabase replay wiring, and manual accessibility QA.
+
+## Date-Windowed Insights and Reports Audit
+
+### Feature Audit: Local Date Windows for Summaries and Reports
+
+Product Simplicity Reviewer:
+- Findings: The existing `Recent` and `All` Insights controls now have clearer behavior without adding a new date-picker surface. Doctor reports now describe a concrete 30-day range instead of a vague recent-log export.
+- Required fixes: Add custom ranges only when the export and analytics UI can make those controls obvious and testable.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The Insights visible layout is unchanged, so there is no new density or hit-target risk. The report sheet continues to use the existing Profile export path.
+- Required fixes: Manually verify future range controls with Dynamic Type and VoiceOver before exposing them.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `HealthLogDateRange` centralizes 7-day and 30-day filtering over `loggedAt`, reducing drift between Insights and reports. Tests verify older records are excluded while all-range summaries still include them.
+- Required fixes: Replace timeline-text parsing with typed health-log payloads, wire `loggedAt` to backend date fields, and add server-side summary parity once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Date-windowed reports avoid causal trigger claims and use local event timestamps as health metadata. No cloud or AI data path was added.
+- Required fixes: Re-check report/export wording and AI context construction before sending dated health logs to live services.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused date-range unit tests passed. Full unit, full app test, and clean build checks passed with 53 total tests: 32 unit tests and 21 UI smoke tests.
+- Required fixes: Add UI coverage for custom ranges and CSV/PDF/backend export paths when those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with typed per-log payloads, custom ranges, live Supabase sync/query parity, and manual accessibility QA.

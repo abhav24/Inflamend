@@ -303,9 +303,51 @@ struct InsightSummary: Equatable {
     }
 }
 
+enum HealthLogDateRange {
+    static func interval(last days: Int, endingAt: Date = Date(), calendar: Calendar = .current) -> DateInterval {
+        let dayCount = max(1, days)
+        let endDayStart = calendar.startOfDay(for: endingAt)
+        let start = calendar.date(byAdding: .day, value: -(dayCount - 1), to: endDayStart) ?? endDayStart
+        let end = calendar.dateInterval(of: .day, for: endingAt)?.end ?? endingAt
+        return DateInterval(start: start, end: end)
+    }
+
+    static func filter(
+        _ logs: [LogEntry],
+        last days: Int,
+        endingAt: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [LogEntry] {
+        let range = interval(last: days, endingAt: endingAt, calendar: calendar)
+        return logs.filter { log in
+            log.loggedAt >= range.start && log.loggedAt < range.end
+        }
+    }
+
+    static func description(last days: Int, endingAt: Date = Date(), calendar: Calendar = .current) -> String {
+        let range = interval(last: days, endingAt: endingAt, calendar: calendar)
+        return "Last \(max(1, days)) days (\(dateString(range.start, calendar: calendar)) to \(dateString(endingAt, calendar: calendar)))"
+    }
+
+    private static func dateString(_ date: Date, calendar: Calendar) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1
+        )
+    }
+}
+
 enum InsightSummaryBuilder {
-    static func build(logs: [LogEntry], limit: Int? = nil) -> InsightSummary {
-        let scopedLogs = limit.map { Array(logs.prefix($0)) } ?? logs
+    static func build(logs: [LogEntry], limit: Int? = nil, dateInterval: DateInterval? = nil) -> InsightSummary {
+        let dateScopedLogs = dateInterval.map { range in
+            logs.filter { log in
+                log.loggedAt >= range.start && log.loggedAt < range.end
+            }
+        } ?? logs
+        let scopedLogs = limit.map { Array(dateScopedLogs.prefix($0)) } ?? dateScopedLogs
         let chronologicalLogs = scopedLogs.reversed()
         let painValues = chronologicalLogs.compactMap { extractScore(label: "pain", from: $0.searchableText) }
         let fatigueValues = chronologicalLogs.compactMap { extractScore(label: "fatigue", from: $0.searchableText) }
@@ -328,6 +370,18 @@ enum InsightSummaryBuilder {
             foodPatterns: foodPatterns(from: scopedLogs),
             bowelLogCount: scopedLogs.filter { $0.type == .bowel }.count,
             flareMentionCount: flareMentionCount
+        )
+    }
+
+    static func build(
+        logs: [LogEntry],
+        recentDays days: Int,
+        endingAt: Date = Date(),
+        calendar: Calendar = .current
+    ) -> InsightSummary {
+        build(
+            logs: logs,
+            dateInterval: HealthLogDateRange.interval(last: days, endingAt: endingAt, calendar: calendar)
         )
     }
 
@@ -764,7 +818,7 @@ enum DoctorReportExporter {
         generatedAt: Date,
         calendar: Calendar
     ) -> ReportSummaryInput {
-        let recentLogs = Array(logs.prefix(30))
+        let recentLogs = HealthLogDateRange.filter(logs, last: 30, endingAt: generatedAt, calendar: calendar)
         let insightSummary = InsightSummaryBuilder.build(logs: recentLogs)
         let bloodCount = recentLogs.filter { log in
             let text = "\(log.title) \(log.sub)".lowercased()
@@ -777,13 +831,9 @@ enum DoctorReportExporter {
             let detail = log.sub.isEmpty ? "" : " - \(log.sub)"
             return "\(log.type.rawValue.capitalized): \(log.title)\(detail)"
         }
-        let date = fileName(generatedAt: generatedAt, calendar: calendar)
-            .replacingOccurrences(of: "Inflamend-Doctor-Report-", with: "")
-            .replacingOccurrences(of: ".txt", with: "")
-
         return ReportSummaryInput(
             preparedFor: displayName,
-            rangeDescription: "Recent local logs exported \(date)",
+            rangeDescription: HealthLogDateRange.description(last: 30, endingAt: generatedAt, calendar: calendar),
             daysLogged: recentLogs.count,
             bowelMovementCount: insightSummary.bowelLogCount,
             bloodEventCount: bloodCount,

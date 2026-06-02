@@ -32,5 +32,6 @@
 - Local auth scaffold stores an email/display name session but never stores the password field.
 - The local snapshot is a production scaffold, not a substitute for final encrypted storage and Keychain-backed live auth tokens.
 - Timeline logs include a structured `loggedAt` event timestamp plus a display `time`; both are included in local snapshots and local user-data exports.
+- Local Insights and doctor reports use `loggedAt` for 7-day and 30-day health-log windows, so event dates must be treated as health metadata in exports, backend sync, and AI-context review.
 - Sync idempotency keys are generated from mutation type and local IDs, not health text; queued mutation summaries still need sanitization before any production diagnostics or telemetry.
 - Profile can create a local user-data JSON export from the current protected snapshot. Cloud export receipts and backend export jobs still require production Supabase credentials.
