@@ -265,6 +265,38 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testCheckInLogCanBeEditedFromTimelineSmoke() {
+        let app = openSeededHome()
+
+        let initialSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        XCTAssertTrue(initialSummary.waitForExistence(timeout: 5))
+        XCTAssertTrue(initialSummary.label.contains("Meds 1 of 2"))
+
+        tapWhenVisible(app.buttons["home-start-checkin-button"], in: app)
+        XCTAssertTrue(app.staticTexts["checkin-sheet-title"].waitForExistence(timeout: 5))
+        tapWhenVisible(app.buttons["checkin-save-button"], in: app)
+
+        let checkInEntry = app.descendants(matching: .any)["timeline-entry-checkin"]
+        waitForLabel(checkInEntry, contains: "Okay check-in · pain 3/10")
+
+        let updatedSummary = app.descendants(matching: .any)["home-meds-summary-row"]
+        waitForLabel(updatedSummary, contains: "Meds 2 of 2")
+
+        tapWhenVisible(app.buttons["timeline-edit-checkin"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        for _ in 0..<5 {
+            tapWhenVisible(app.buttons["timeline-edit-checkin-pain-increment"], in: app)
+        }
+        tapWhenVisible(app.buttons["timeline-edit-checkin-medication-taken"], in: app)
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedCheckInEntry = app.descendants(matching: .any)["timeline-entry-checkin"]
+        waitForLabel(editedCheckInEntry, contains: "Okay check-in · pain 8/10")
+        waitForLabel(editedCheckInEntry, contains: "medication not taken")
+        waitForLabel(updatedSummary, contains: "Meds 1 of 2")
+    }
+
+    @MainActor
     func testTimelineEntryDeleteRequiresConfirmationSmoke() {
         let app = openSeededHome()
 

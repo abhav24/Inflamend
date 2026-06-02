@@ -600,6 +600,10 @@ private struct TimelineEditSheet: View {
                         .accessibilityIdentifier("timeline-edit-detail-field")
                 }
 
+                if let checkInPayloadBinding {
+                    TimelineCheckInPayloadFields(payload: checkInPayloadBinding)
+                }
+
                 if let foodPayloadBinding {
                     TimelineFoodPayloadFields(payload: foodPayloadBinding)
                 }
@@ -660,6 +664,24 @@ private struct TimelineEditSheet: View {
         )
     }
 
+    private var checkInPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .checkIn else { return nil }
+        return Binding(
+            get: {
+                payload ?? entry.payload ?? HealthLogPayload.checkIn(
+                    status: .ok,
+                    pain: 3,
+                    fatigue: 5,
+                    urgency: 3,
+                    stoolCount: 2,
+                    bloodPresent: false,
+                    medicationTaken: true
+                )
+            },
+            set: { payload = $0 }
+        )
+    }
+
     private var bowelPayloadBinding: Binding<HealthLogPayload>? {
         guard payload?.kind == .bowel else { return nil }
         return Binding(
@@ -679,6 +701,8 @@ private struct TimelineEditSheet: View {
 
     private var titleForSave: String {
         switch payload?.kind {
+        case .checkIn:
+            return payload?.checkInDisplayTitle ?? title
         case .bowel:
             return payload?.bowelDisplayTitle ?? title
         case .symptom:
@@ -696,6 +720,8 @@ private struct TimelineEditSheet: View {
 
     private var detailForSave: String {
         switch payload?.kind {
+        case .checkIn:
+            return payload?.checkInDisplayDetails ?? detail
         case .food:
             let tags = payload?.foodTags ?? []
             return tags.isEmpty ? "Food pattern tracking" : tags.sorted().joined(separator: " · ")
@@ -749,6 +775,101 @@ private struct TimelineEditSheet: View {
             get: { payload ?? entry.payload ?? HealthLogPayload.weight(value: 62.4, unit: "kg") },
             set: { payload = $0 }
         )
+    }
+}
+
+private struct TimelineCheckInPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Overall")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    ForEach(MoodOption.allCases, id: \.self) { option in
+                        PillToggle(label: option.label, isActive: payload.status == option, color: option.color) {
+                            payload.status = option
+                        }
+                        .accessibilityIdentifier("timeline-edit-checkin-status-\(option.rawValue)")
+                    }
+
+                    PillToggle(label: "Skipped", isActive: payload.status == nil, color: .fgDim) {
+                        payload.status = nil
+                    }
+                    .accessibilityIdentifier("timeline-edit-checkin-status-skipped")
+                }
+            }
+
+            TimelineScoreStepper(
+                title: "Pain",
+                value: Binding(
+                    get: { payload.painScore ?? 0 },
+                    set: { payload.painScore = $0 }
+                ),
+                color: .clay,
+                identifier: "timeline-edit-checkin-pain"
+            )
+
+            TimelineScoreStepper(
+                title: "Fatigue",
+                value: Binding(
+                    get: { payload.fatigueScore ?? 0 },
+                    set: { payload.fatigueScore = $0 }
+                ),
+                color: .amber,
+                identifier: "timeline-edit-checkin-fatigue"
+            )
+
+            TimelineScoreStepper(
+                title: "Urgency",
+                value: Binding(
+                    get: { payload.urgencyScore ?? 0 },
+                    set: { payload.urgencyScore = $0 }
+                ),
+                color: .sage,
+                identifier: "timeline-edit-checkin-urgency"
+            )
+
+            TimelineCountStepper(
+                title: "Stool count",
+                value: Binding(
+                    get: { payload.stoolCount ?? 0 },
+                    set: { payload.stoolCount = $0 }
+                ),
+                range: 0...20,
+                color: .ink,
+                identifier: "timeline-edit-checkin-stool-count"
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Flags")
+                    .dsLabel()
+                FlowLayout(spacing: 6) {
+                    PillToggle(label: "Blood present", isActive: bloodPresent, color: .clay) {
+                        payload.blood = bloodPresent ? BloodAmount.none : .visible
+                    }
+                    .accessibilityIdentifier("timeline-edit-checkin-blood-present")
+
+                    PillToggle(label: "Medication taken", isActive: medicationTaken, color: .sage) {
+                        payload.medicationTaken = !medicationTaken
+                    }
+                    .accessibilityIdentifier("timeline-edit-checkin-medication-taken")
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var bloodPresent: Bool {
+        guard let blood = payload.blood else { return false }
+        return blood != BloodAmount.none
+    }
+
+    private var medicationTaken: Bool {
+        payload.medicationTaken ?? true
     }
 }
 
@@ -1123,6 +1244,51 @@ private struct TimelineWeightPayloadFields: View {
         let roundedValue = ((currentValue + delta) * 10).rounded() / 10
         payload.weightValue = min(999.9, max(0.1, roundedValue))
         payload.weightUnit = payload.weightUnit ?? "kg"
+    }
+}
+
+private struct TimelineCountStepper: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let color: Color
+    let identifier: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .dsLabel()
+                Text("\(value)")
+                    .font(DS.mono(22, weight: .semibold))
+                    .foregroundColor(.fgPrimary)
+                    .accessibilityIdentifier("\(identifier)-value")
+            }
+
+            Spacer()
+
+            Button {
+                value = max(range.lowerBound, value - 1)
+            } label: {
+                AppIcon(name: "minus", size: 16, color: value > range.lowerBound ? color : .fgFaint)
+                    .frame(width: 38, height: 38)
+                    .background(Color.bgPrimary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("\(identifier)-decrement")
+
+            Button {
+                value = min(range.upperBound, value + 1)
+            } label: {
+                AppIcon(name: "plus", size: 16, color: value < range.upperBound ? color : .fgFaint)
+                    .frame(width: 38, height: 38)
+                    .background(Color.bgPrimary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("\(identifier)-increment")
+        }
     }
 }
 

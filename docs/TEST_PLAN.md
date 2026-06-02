@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 42 unit tests in HealthLogicTests plus 25 UI smoke tests in InflamendUITests.
+Coverage: 43 unit tests in HealthLogicTests plus 26 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 67 tests.
+Result: TEST SUCCEEDED with 69 tests.
 ```
 
 ## Unit Test Priorities
@@ -97,12 +97,12 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Legacy queued mutations without replay payload snapshots decode safely.
 - Structured log timestamps persist and legacy timeline logs without `loggedAt` decode safely.
 - Typed local log payloads persist and legacy timeline logs without `payload` decode safely.
-- Home timeline text edits preserve existing typed payloads for display-only changes, food timeline edits can replace typed meal/tag payloads, bowel timeline edits can replace typed Bristol/blood/pain fields and publish safety guidance, symptom timeline edits can replace typed pain/fatigue/mood fields and publish safety guidance, sleep timeline edits can replace typed quality/wake fields, weight timeline edits can replace typed value/unit fields, medication timeline edits can replace typed dose status fields and reconcile adherence state, while generic model edits can still clear stale typed payloads until broader type-specific edit forms exist.
+- Home timeline text edits preserve existing typed payloads for display-only changes, food timeline edits can replace typed meal/tag payloads, bowel timeline edits can replace typed Bristol/blood/pain fields and publish safety guidance, symptom timeline edits can replace typed pain/fatigue/mood fields and publish safety guidance, sleep timeline edits can replace typed quality/wake fields, weight timeline edits can replace typed value/unit fields, medication timeline edits can replace typed dose status fields and reconcile adherence state, check-in timeline edits can replace typed status/pain/fatigue/urgency/stool/blood/medication-taken fields and refresh mood/risk/safety/adherence state, while generic model edits can still clear stale typed payloads until broader type-specific edit forms exist.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -137,10 +137,10 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Fresh install shows welcome/auth or Today depending on session scaffold. Status: started; fresh local sign-up UI smoke coverage exists.
 - Sign up/sign in with mock service. Status: started; local sign-up and sign-in UI smoke coverage exists.
 - Onboarding can be completed or skipped for sensitive fields. Status: started; default onboarding completion UI smoke coverage exists.
-- Today check-in can be saved in under 30 seconds. Status: covered by UI smoke test.
+- Today check-in can be saved in under 30 seconds and corrected from the timeline. Status: covered by UI smoke tests.
 - Timeline log deletion requires confirmation. Status: covered by UI smoke test.
 - Timeline log deletion can be undone before the toast expires. Status: covered by UI smoke test.
-- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test, including structured food retagging plus structured bowel, symptom, sleep, weight, and medication correction through the timeline edit sheet.
+- Timeline log editing updates a local row without changing entry count. Status: covered by UI smoke test, including structured food retagging plus structured bowel, symptom, sleep, weight, medication, and check-in correction through the timeline edit sheet.
 - Bowel movement log with blood shows safety guidance. Status: covered by UI smoke test, including timeline correction from significant blood to no blood plus mucus.
 - Food log saves as pattern tracking, not nutrition claims. Status: covered by UI smoke test, including timeline retagging from Dairy to Rice.
 - Symptom log saves and structured pain/fatigue/mood edits are visible from Home. Status: covered by UI smoke test, including pain edit to 8/10 and safety card verification.
@@ -180,8 +180,8 @@ When Supabase CLI and credentials are available:
 | Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh auth UI smoke tests |
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
-| Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
-| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; Home timeline edits preserve typed payloads and replay snapshots for display-only changes; food timeline edits can update meal/tags; bowel timeline edits can update Bristol/blood/pain fields and safety guidance; symptom timeline edits can update pain/fatigue/mood fields and safety guidance; sleep timeline edits can update quality/wake fields; weight timeline edits can update value/unit fields; medication timeline edits can update dose status and adherence state; generic model edits can still clear payloads; broader type-specific edit forms and backend update replay are pending |
+| Today | Check-in saved and corrected | Today, risk score, safety state, mood, and adherence update | Implemented locally and covered by UI smoke tests |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; Home timeline edits preserve typed payloads and replay snapshots for display-only changes; food timeline edits can update meal/tags; bowel timeline edits can update Bristol/blood/pain fields and safety guidance; symptom timeline edits can update pain/fatigue/mood fields and safety guidance; sleep timeline edits can update quality/wake fields; weight timeline edits can update value/unit fields; medication timeline edits can update dose status and adherence state; check-in timeline edits can update status, pain, fatigue, urgency, stool count, blood, medication-taken state, and derived mood/risk/safety/adherence state; generic model edits can still clear payloads; backend update replay is pending |
 | Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay planned but not connected |
 | Logging | Undo timeline deletion | Recently deleted local row is restored and pending sync mutations are restored/coalesced safely | Implemented locally and covered by unit plus UI smoke tests; backend delete/update replay still pending |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test, including structured timeline bowel editing |
@@ -202,7 +202,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -246,6 +246,7 @@ When Supabase CLI and credentials are available:
 - `testUpdateLogCanReplaceSleepPayloadAndReplaySnapshot`
 - `testUpdateLogCanReplaceWeightPayloadAndReplaySnapshot`
 - `testUpdateLogCanReplaceMedicationPayloadAndReconcileAdherence`
+- `testUpdateLogCanReplaceCheckInPayloadAndRefreshDerivedState`
 - `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
 - `testSyncReplayPlanCarriesHealthLogPayloadSnapshots`
 - `testUndoDeleteRestoresLogAndPendingMutations`
@@ -263,6 +264,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testLocalSignInReachesOnboardingSmoke`
 - `InflamendUITests.testMedicationDoseUpdatesHomeSummarySmoke`
 - `InflamendUITests.testMedicationLogCanBeEditedFromTimelineSmoke`
+- `InflamendUITests.testCheckInLogCanBeEditedFromTimelineSmoke`
 - `InflamendUITests.testProfileDoctorReportExportSheetSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`

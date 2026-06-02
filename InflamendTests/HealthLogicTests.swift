@@ -836,6 +836,77 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceCheckInPayloadAndRefreshDerivedState() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-checkin-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-checkin@example.com", displayName: "Update Checkin")
+        appState.medsTaken = 0
+        appState.medsTotal = 2
+        appState.recordCheckIn(
+            status: .ok,
+            pain: 3,
+            fatigue: 5,
+            urgency: 3,
+            stoolCount: 2,
+            bloodPresent: false,
+            medicationTaken: true,
+            notes: ""
+        )
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertEqual(createdLog.title, "Okay check-in · pain 3/10")
+        XCTAssertEqual(appState.mood, .ok)
+        XCTAssertEqual(appState.medsTaken, 1)
+
+        var editedPayload = try XCTUnwrap(createdLog.payload)
+        editedPayload.status = .flare
+        editedPayload.painScore = 9
+        editedPayload.fatigueScore = 8
+        editedPayload.urgencyScore = 8
+        editedPayload.stoolCount = 6
+        editedPayload.blood = .visible
+        editedPayload.medicationTaken = false
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: editedPayload.checkInDisplayTitle ?? "Check-in updated",
+            sub: editedPayload.checkInDisplayDetails ?? "",
+            preservePayload: true,
+            payload: editedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Flare check-in · pain 9/10")
+        XCTAssertEqual(appState.logs[0].sub, "Fatigue 8/10 · urgency 8/10 · stool 6 · blood present · medication not taken")
+        XCTAssertEqual(appState.logs[0].payload?.status, .flare)
+        XCTAssertEqual(appState.logs[0].payload?.painScore, 9)
+        XCTAssertEqual(appState.logs[0].payload?.medicationTaken, false)
+        XCTAssertEqual(appState.mood, .flare)
+        XCTAssertEqual(appState.medsTaken, 0)
+        XCTAssertEqual(appState.riskScore, 100)
+        XCTAssertNotNil(appState.latestSafetyMessage)
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Flare check-in · pain 9/10")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.status, .flare)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.painScore, 9)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.medicationTaken, false)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.status, .flare)
+        XCTAssertEqual(restored.logs.first?.payload?.painScore, 9)
+        XCTAssertEqual(restored.medsTaken, 0)
+        XCTAssertEqual(restored.riskScore, 100)
+
+        store.delete()
+    }
+
+    @MainActor
     func testUpdateLogCanReplaceBowelPayloadAndPublishSafety() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-update-bowel-payload-\(UUID().uuidString).json")

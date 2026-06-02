@@ -1486,6 +1486,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
 
+## Check-In Timeline Structured Edit Audit
+
+### Feature Audit: Check-In Field Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Today check-ins now support correcting status, pain, fatigue, urgency, stool count, blood, and medication-taken state directly from Home. This removes the need to delete and recreate a high-frequency daily entry.
+- Required fixes: Keep future check-in expansion focused on trend history and clear risk-factor explanations before adding more daily questionnaire fields.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet uses compact mood pills, score steppers, a bounded stool-count stepper, and boolean flags, matching the existing timeline edit controls without adding keyboard-heavy form work.
+- Required fixes: Manually verify the expanded edit sheet at large Dynamic Type and with VoiceOver focus order before release.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: Check-in timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, keep pending create/update replay snapshots aligned with the corrected row, refresh mood/risk/safety state, and reconcile local adherence when medication-taken changes.
+- Required fixes: Add live backend update replay, conflict handling, and backend serialization tests for payload-bearing check-in edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category was added. Edited check-in fields can affect local risk and safety guidance, and the safety publication path remains emergency-framed rather than diagnostic.
+- Required fixes: Avoid logging check-in replay payloads in diagnostics and verify server-side safety parity before enabling live backend/AI integrations.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement check-in payload persistence, mood/risk/safety refresh, adherence reconciliation, replay snapshots, and local restore. Focused check-in UI smoke coverage passed after saving a check-in, editing pain to 8/10, toggling medication taken off, and verifying both the row and Home adherence summary. Full unit tests pass with 43 tests, full scheme tests pass with 69 tests, and `xcodebuild clean build` passes. The initial focused unit assertion expected risk 95, but the deterministic scorer correctly capped the high-risk edited check-in at 100; the assertion was corrected.
+- Required fixes: Add backend replay and conflict coverage once live sync is connected.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with backend update replay, conflict handling, richer risk explanations, and manual accessibility QA.
+
 ## Medication Timeline Structured Edit Audit
 
 ### Feature Audit: Medication Status Editing From Timeline

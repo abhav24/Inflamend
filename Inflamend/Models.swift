@@ -701,6 +701,8 @@ class AppState {
         logs[index].payload = payload
         if editedPayload?.kind == .medication {
             reconcileMedicationAdherence(from: previousPayload, to: payload)
+        } else if editedPayload?.kind == .checkIn {
+            reconcileCheckInDerivedState(from: previousPayload, to: payload)
         }
 
         let entry = logs[index]
@@ -737,6 +739,8 @@ class AppState {
             publishSafety(RedFlagDetector.assess(text: safetyText, bowelLog: bowelInput))
         } else if let symptomInput = payload?.symptomSafetyInput {
             publishSafety(RedFlagDetector.assess(text: safetyText, symptomLog: symptomInput))
+        } else if let checkInInput = payload?.checkInSafetyInput {
+            publishSafety(RedFlagDetector.assess(text: safetyText, symptomLog: checkInInput))
         }
 
         persist()
@@ -754,7 +758,7 @@ class AppState {
             RiskScoreInput(
                 stoolCountToday: stoolCount,
                 baselineStoolCount: 2,
-                blood: bloodPresent ? .visible : .none,
+                blood: bloodPresent ? .visible : BloodAmount.none,
                 urgencyScore: urgency,
                 painScore: pain,
                 sleepHours: 7,
@@ -775,20 +779,20 @@ class AppState {
         )
         publishSafety(RedFlagDetector.assess(text: notes, symptomLog: symptomLog))
 
-        let statusLabel = status?.label ?? "Skipped status"
+        let payload = HealthLogPayload.checkIn(
+            status: status,
+            pain: pain,
+            fatigue: fatigue,
+            urgency: urgency,
+            stoolCount: stoolCount,
+            bloodPresent: bloodPresent,
+            medicationTaken: medicationTaken
+        )
         addLog(
             type: .checkin,
-            title: "\(statusLabel) check-in · pain \(pain)/10",
-            sub: "Fatigue \(fatigue)/10 · urgency \(urgency)/10 · stool \(stoolCount)",
-            payload: .checkIn(
-                status: status,
-                pain: pain,
-                fatigue: fatigue,
-                urgency: urgency,
-                stoolCount: stoolCount,
-                bloodPresent: bloodPresent,
-                medicationTaken: medicationTaken
-            )
+            title: payload.checkInDisplayTitle ?? "\(status?.label ?? "Skipped status") check-in · pain \(pain)/10",
+            sub: payload.checkInDisplayDetails ?? "Fatigue \(fatigue)/10 · urgency \(urgency)/10 · stool \(stoolCount)",
+            payload: payload
         )
         showToast("Check-in saved")
     }
@@ -1073,6 +1077,27 @@ class AppState {
         status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "taken"
     }
 
+    private func reconcileCheckInDerivedState(from previousPayload: HealthLogPayload?, to currentPayload: HealthLogPayload?) {
+        guard previousPayload?.kind == .checkIn || currentPayload?.kind == .checkIn else { return }
+
+        if previousPayload?.kind == .checkIn {
+            let wasTaken = previousPayload?.medicationTaken == true
+            let isTaken = currentPayload?.medicationTaken == true
+
+            if wasTaken && !isTaken {
+                medsTaken = max(0, medsTaken - 1)
+            } else if !wasTaken && isTaken {
+                medsTaken = min(medsTotal, medsTaken + 1)
+            }
+        }
+
+        guard let currentPayload, currentPayload.kind == .checkIn else { return }
+        mood = currentPayload.status
+        if let riskInput = currentPayload.checkInRiskInput(baselineStoolCount: 2) {
+            riskScore = RiskScoreService.calculate(riskInput).score
+        }
+    }
+
     private func snapshot() -> AppSnapshot {
         AppSnapshot(
             schemaVersion: 1,
@@ -1294,7 +1319,7 @@ struct HealthLogPayload: Codable, Equatable {
             fatigueScore: fatigue,
             urgencyScore: urgency,
             stoolCount: stoolCount,
-            blood: bloodPresent ? .visible : .none,
+            blood: bloodPresent ? .visible : BloodAmount.none,
             medicationTaken: medicationTaken
         )
     }
@@ -1372,6 +1397,54 @@ struct HealthLogPayload: Codable, Equatable {
             break
         }
         return updated
+    }
+
+    var checkInDisplayTitle: String? {
+        guard kind == .checkIn else { return nil }
+        return "\(status?.label ?? "Skipped status") check-in · pain \(painScore ?? 0)/10"
+    }
+
+    var checkInDisplayDetails: String? {
+        guard kind == .checkIn else { return nil }
+        var parts = [
+            "Fatigue \(fatigueScore ?? 0)/10",
+            "urgency \(urgencyScore ?? 0)/10",
+            "stool \(stoolCount ?? 0)"
+        ]
+        if let bloodAmount = blood, bloodAmount != BloodAmount.none {
+            parts.append("blood present")
+        }
+        if medicationTaken == false {
+            parts.append("medication not taken")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    var checkInSafetyInput: SymptomLogInput? {
+        guard kind == .checkIn else { return nil }
+        return SymptomLogInput(
+            painScore: painScore ?? 0,
+            fatigueScore: fatigueScore ?? 0,
+            urgencyScore: urgencyScore ?? 0,
+            fever: false,
+            dehydrationScore: 0,
+            rapidWorsening: status == .flare
+        )
+    }
+
+    func checkInRiskInput(baselineStoolCount: Int) -> RiskScoreInput? {
+        guard kind == .checkIn else { return nil }
+        return RiskScoreInput(
+            stoolCountToday: stoolCount ?? 0,
+            baselineStoolCount: baselineStoolCount,
+            blood: blood ?? BloodAmount.none,
+            urgencyScore: urgencyScore ?? 0,
+            painScore: painScore ?? 0,
+            sleepHours: 7,
+            missedMedication: medicationTaken == false,
+            userMarkedFlare: status == .flare,
+            rapidWorsening: false
+        )
     }
 
     var bowelDisplayTitle: String? {
