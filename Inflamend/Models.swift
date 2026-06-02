@@ -107,6 +107,7 @@ enum SyncMutationStatus: String, Codable, Equatable {
     case blockedNoBackend
     case syncing
     case synced
+    case failedRetryable
     case failedNeedsUser
 }
 
@@ -118,6 +119,133 @@ struct PendingSyncMutation: Identifiable, Codable, Equatable {
     var createdAt = Date()
     var attemptCount = 0
     var status: SyncMutationStatus = .pending
+    var lastAttemptedAt: Date? = nil
+    var lastError: String? = nil
+}
+
+enum SyncReplayAction: String, Codable, Equatable {
+    case authenticate
+    case upsert
+    case insert
+    case update
+    case softDelete
+    case invokeFunction
+}
+
+struct SyncReplayPlanItem: Identifiable, Codable, Equatable {
+    var mutationId: UUID
+    var kind: SyncMutationKind
+    var localRecordId: String
+    var action: SyncReplayAction
+    var target: String
+    var summary: String
+    var requiresReceipt: Bool
+
+    var id: UUID { mutationId }
+}
+
+struct SyncReplayResult: Equatable {
+    var pendingMutations: [PendingSyncMutation]
+    var replayPlan: [SyncReplayPlanItem]
+    var statusMessage: String
+    var toastMessage: String
+}
+
+struct LocalSyncReplayWorker: Equatable {
+    var supabaseConfigured = false
+
+    func plan(for mutations: [PendingSyncMutation]) -> [SyncReplayPlanItem] {
+        mutations
+            .filter { $0.status != .synced }
+            .map(Self.planItem)
+    }
+
+    func retry(_ mutations: [PendingSyncMutation], attemptedAt: Date = Date()) -> SyncReplayResult {
+        let replayPlan = plan(for: mutations)
+        guard !replayPlan.isEmpty else {
+            return SyncReplayResult(
+                pendingMutations: mutations,
+                replayPlan: [],
+                statusMessage: "Nothing pending",
+                toastMessage: "Nothing pending"
+            )
+        }
+
+        guard supabaseConfigured else {
+            let planByMutation = Dictionary(uniqueKeysWithValues: replayPlan.map { ($0.mutationId, $0) })
+            let updatedMutations = mutations.map { mutation in
+                guard mutation.status != .synced else { return mutation }
+                var copy = mutation
+                let planItem = planByMutation[mutation.id] ?? Self.planItem(for: mutation)
+                copy.attemptCount += 1
+                copy.status = .blockedNoBackend
+                copy.lastAttemptedAt = attemptedAt
+                copy.lastError = "Supabase not configured for \(planItem.action.rawValue) \(planItem.target)"
+                return copy
+            }
+            return SyncReplayResult(
+                pendingMutations: updatedMutations,
+                replayPlan: replayPlan,
+                statusMessage: "Sync blocked: Supabase not configured",
+                toastMessage: "Backend setup required"
+            )
+        }
+
+        let updatedMutations = mutations.map { mutation in
+            guard mutation.status != .synced else { return mutation }
+            var copy = mutation
+            let planItem = replayPlan.first { $0.mutationId == mutation.id } ?? Self.planItem(for: mutation)
+            copy.attemptCount += 1
+            copy.status = .failedRetryable
+            copy.lastAttemptedAt = attemptedAt
+            copy.lastError = "Replay client not implemented for \(planItem.action.rawValue) \(planItem.target)"
+            return copy
+        }
+        return SyncReplayResult(
+            pendingMutations: updatedMutations,
+            replayPlan: replayPlan,
+            statusMessage: "Sync worker scaffolded; network client pending",
+            toastMessage: "Sync worker scaffolded"
+        )
+    }
+
+    private static func planItem(for mutation: PendingSyncMutation) -> SyncReplayPlanItem {
+        let route = route(for: mutation.kind)
+        return SyncReplayPlanItem(
+            mutationId: mutation.id,
+            kind: mutation.kind,
+            localRecordId: mutation.localRecordId,
+            action: route.action,
+            target: route.target,
+            summary: mutation.summary,
+            requiresReceipt: route.requiresReceipt
+        )
+    }
+
+    private static func route(for kind: SyncMutationKind) -> (action: SyncReplayAction, target: String, requiresReceipt: Bool) {
+        switch kind {
+        case .authSession:
+            return (.authenticate, "supabase.auth.session", false)
+        case .onboardingProfile:
+            return (.upsert, "public.onboarding_responses", false)
+        case .healthLog:
+            return (.upsert, "public.log_notes", false)
+        case .healthLogUpdate:
+            return (.update, "public.log_notes", false)
+        case .healthLogDeletion:
+            return (.softDelete, "public.log_notes.deleted_at", true)
+        case .chatMessage:
+            return (.insert, "public.chat_messages", false)
+        case .privacyPreference:
+            return (.upsert, "public.user_settings", false)
+        case .safetyNotice:
+            return (.insert, "public.audit_events", false)
+        case .reportExport:
+            return (.invokeFunction, "functions/export-report", true)
+        case .accountDeletion:
+            return (.invokeFunction, "functions/account-delete", true)
+        }
+    }
 }
 
 private enum AppDefaults {
@@ -218,6 +346,7 @@ private extension JSONDecoder {
 @Observable
 class AppState {
     @ObservationIgnored private let store: AppSnapshotStore
+    @ObservationIgnored private let syncReplayWorker: LocalSyncReplayWorker
 
     var authSession: AuthSession? = nil
     var onboardingProfile: OnboardingProfile? = nil
@@ -237,8 +366,9 @@ class AppState {
     var toast: String? = nil
     private var toastTask: Task<Void, Never>? = nil
 
-    init(store: AppSnapshotStore = .live) {
+    init(store: AppSnapshotStore = .live, syncReplayWorker: LocalSyncReplayWorker = LocalSyncReplayWorker()) {
         self.store = store
+        self.syncReplayWorker = syncReplayWorker
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--inflamend-reset-state") {
             store.delete()
@@ -284,7 +414,22 @@ class AppState {
         if pendingSyncCount == 0 {
             return lastSyncStatus
         }
-        return "\(pendingSyncCount) pending · \(lastSyncStatus)"
+        var statusPieces = ["\(pendingSyncCount) pending"]
+        let blockedCount = pendingSyncMutations.filter { $0.status == .blockedNoBackend }.count
+        if blockedCount > 0 {
+            statusPieces.append("\(blockedCount) blocked")
+        }
+        let failedCount = pendingSyncMutations.filter {
+            $0.status == .failedRetryable || $0.status == .failedNeedsUser
+        }.count
+        if failedCount > 0 {
+            statusPieces.append("\(failedCount) failed")
+        }
+        return "\(statusPieces.joined(separator: " · ")) · \(lastSyncStatus)"
+    }
+
+    var pendingSyncReplayPlan: [SyncReplayPlanItem] {
+        syncReplayWorker.plan(for: pendingSyncMutations)
     }
 
     func showToast(_ message: String) {
@@ -318,6 +463,9 @@ class AppState {
                 $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
             }
         } else {
+            pendingSyncMutations.removeAll {
+                $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
+            }
             enqueueSync(
                 kind: .healthLogDeletion,
                 localRecordId: localRecordId,
@@ -351,6 +499,16 @@ class AppState {
             pendingSyncMutations[pendingCreateIndex].summary = "\(entry.type.rawValue): \(cleanedTitle)"
             pendingSyncMutations[pendingCreateIndex].status = .pending
             pendingSyncMutations[pendingCreateIndex].attemptCount = 0
+            pendingSyncMutations[pendingCreateIndex].lastAttemptedAt = nil
+            pendingSyncMutations[pendingCreateIndex].lastError = nil
+        } else if let pendingUpdateIndex = pendingSyncMutations.firstIndex(where: {
+            $0.kind == .healthLogUpdate && $0.localRecordId == localRecordId && $0.status != .synced
+        }) {
+            pendingSyncMutations[pendingUpdateIndex].summary = "Updated \(entry.type.rawValue): \(cleanedTitle)"
+            pendingSyncMutations[pendingUpdateIndex].status = .pending
+            pendingSyncMutations[pendingUpdateIndex].attemptCount = 0
+            pendingSyncMutations[pendingUpdateIndex].lastAttemptedAt = nil
+            pendingSyncMutations[pendingUpdateIndex].lastError = nil
         } else {
             enqueueSync(
                 kind: .healthLogUpdate,
@@ -591,15 +749,11 @@ class AppState {
             showToast("Nothing pending")
             return
         }
-        pendingSyncMutations = pendingSyncMutations.map { mutation in
-            var copy = mutation
-            copy.attemptCount += 1
-            copy.status = .blockedNoBackend
-            return copy
-        }
-        lastSyncStatus = "Sync blocked: Supabase not configured"
+        let result = syncReplayWorker.retry(pendingSyncMutations)
+        pendingSyncMutations = result.pendingMutations
+        lastSyncStatus = result.statusMessage
         persist(updateSyncTimestamp: false)
-        showToast("Backend setup required")
+        showToast(result.toastMessage)
     }
 
     private func publishSafety(_ assessment: RedFlagAssessment) {

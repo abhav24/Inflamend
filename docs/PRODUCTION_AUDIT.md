@@ -1197,3 +1197,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with type-specific structured records, undo, sync-worker implementation, and manual accessibility QA.
+
+## Sync Replay Planner and Blocked Error Metadata Audit
+
+### Feature Audit: Local Sync Replay Contract
+
+Product Simplicity Reviewer:
+- Findings: Profile sync retry still gives a plain blocked message when Supabase is unavailable, while the app now keeps the detailed replay information out of the daily logging path.
+- Required fixes: Add a compact sync detail view only when blocked/failed records need user action.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The visible Profile row remains stable and now includes blocked counts through the existing row label instead of adding a new modal or settings screen.
+- Required fixes: Manually verify longer blocked/failed sync summaries with Dynamic Type and VoiceOver.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `LocalSyncReplayWorker` maps pending auth, onboarding, health log create/update/delete, privacy, chat, safety, export, and deletion mutations to explicit future Supabase targets/actions. Retry records `lastAttemptedAt` and `lastError` per mutation, repeated updates coalesce, and edit-then-delete removes redundant update replay.
+- Required fixes: Connect the planner to a real Supabase client, server IDs, idempotency keys, receipts, retry backoff, reachability, and conflict handling once credentials exist.
+- Status: Accept local contract.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Backend-blocked errors do not include PHI beyond the existing local mutation summaries, and the UI still avoids implying cloud sync, deletion, or export has completed.
+- Required fixes: Re-check mutation summaries before live telemetry/logging and add user-visible receipts for cloud export/delete.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused replay-plan and adjacent queue/edit/delete unit tests pass; Profile sync retry UI still passes. Full `xcodebuild test` passes with 47 tests: 27 unit tests and 20 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add tests for live replay success/failure, network retry, conflict resolution, and server receipt persistence once Supabase is available.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay wiring, server IDs, structured records, and manual accessibility QA.

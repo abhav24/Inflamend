@@ -402,10 +402,78 @@ final class HealthLogicTests: XCTestCase {
         let syncedLikeEntry = LogEntry(type: .food, title: "Existing food", sub: "Local copy", time: "8:00am")
         appState.logs = [syncedLikeEntry]
         XCTAssertTrue(appState.updateLog(id: syncedLikeEntry.id, title: "Existing food edited", sub: "Dinner detail"))
+        XCTAssertTrue(appState.updateLog(id: syncedLikeEntry.id, title: "Existing food edited again", sub: "Second dinner detail"))
         XCTAssertTrue(appState.pendingSyncMutations.contains {
-            $0.kind == .healthLogUpdate && $0.localRecordId == syncedLikeEntry.id.uuidString && $0.summary.contains("Existing food edited")
+            $0.kind == .healthLogUpdate && $0.localRecordId == syncedLikeEntry.id.uuidString && $0.summary.contains("Existing food edited again")
         })
+        XCTAssertEqual(appState.pendingSyncMutations.filter {
+            $0.kind == .healthLogUpdate && $0.localRecordId == syncedLikeEntry.id.uuidString
+        }.count, 1)
         XCTAssertFalse(appState.updateLog(id: syncedLikeEntry.id, title: "   ", sub: "Blank title"))
+
+        store.delete()
+    }
+
+    @MainActor
+    func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "sync-plan@example.com", displayName: "Sync Plan")
+        appState.completeOnboarding(
+            diagnosis: "Ulcerative colitis",
+            primaryGoal: "Track flares",
+            baselineStoolCount: 2,
+            hasFlarePlan: false
+        )
+        appState.addLog(type: .note, title: "Create note", sub: "Replay me")
+
+        let existingEntry = LogEntry(type: .food, title: "Existing food", sub: "Local copy", time: "8:00am")
+        appState.logs.insert(existingEntry, at: 0)
+        XCTAssertTrue(appState.updateLog(id: existingEntry.id, title: "Existing food edited", sub: "Dinner detail"))
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+
+        appState.deleteLog(id: existingEntry.id)
+        XCTAssertFalse(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogUpdate && $0.localRecordId == existingEntry.id.uuidString
+        })
+        XCTAssertTrue(appState.pendingSyncMutations.contains {
+            $0.kind == .healthLogDeletion && $0.localRecordId == existingEntry.id.uuidString
+        })
+
+        appState.setAIMemoryEnabled(true)
+        appState.addChatMessage(role: .user, content: "Sync this consented Care message")
+
+        let plan = appState.pendingSyncReplayPlan
+        XCTAssertTrue(plan.contains { $0.kind == .authSession && $0.action == .authenticate && $0.target == "supabase.auth.session" })
+        XCTAssertTrue(plan.contains { $0.kind == .onboardingProfile && $0.action == .upsert && $0.target == "public.onboarding_responses" })
+        XCTAssertTrue(plan.contains { $0.kind == .healthLog && $0.action == .upsert && $0.target == "public.log_notes" })
+        XCTAssertTrue(plan.contains { $0.kind == .healthLogDeletion && $0.action == .softDelete && $0.requiresReceipt })
+        XCTAssertTrue(plan.contains { $0.kind == .privacyPreference && $0.action == .upsert && $0.target == "public.user_settings" })
+        XCTAssertTrue(plan.contains { $0.kind == .chatMessage && $0.action == .insert && $0.target == "public.chat_messages" })
+
+        appState.retryPendingSyncScaffold()
+        XCTAssertTrue(appState.syncSummary.contains("blocked"))
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.status == .blockedNoBackend })
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.lastAttemptedAt != nil })
+        XCTAssertTrue(appState.pendingSyncMutations.allSatisfy { $0.lastError?.contains("Supabase not configured") == true })
+
+        let blockedDeletion = appState.pendingSyncMutations.first {
+            $0.kind == .healthLogDeletion && $0.localRecordId == existingEntry.id.uuidString
+        }
+        XCTAssertEqual(blockedDeletion?.attemptCount, 1)
+        XCTAssertTrue(blockedDeletion?.lastError?.contains("softDelete public.log_notes.deleted_at") == true)
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.pendingSyncCount, appState.pendingSyncCount)
+        XCTAssertTrue(restored.pendingSyncMutations.contains {
+            $0.kind == .healthLogDeletion && $0.lastError?.contains("public.log_notes.deleted_at") == true
+        })
 
         store.delete()
     }

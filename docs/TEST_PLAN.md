@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 26 unit tests in HealthLogicTests plus 20 UI smoke tests in InflamendUITests.
+Coverage: 27 unit tests in HealthLogicTests plus 20 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 46 tests.
+Result: TEST SUCCEEDED with 47 tests.
 ```
 
 ## Unit Test Priorities
@@ -88,11 +88,13 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Retry state blocked by missing backend setup.
 - Local deletion coalesces unreplayed health-log creates and queues deletion mutations for existing records.
 - Local edits coalesce into unreplayed health-log creates or queue update mutations for existing records.
+- Replay plan routes each pending mutation to a future Supabase table/function action.
+- Backend-blocked retries store per-record attempt timestamps and error details.
 - Conflict state.
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, pending queue persistence, local log edit/delete queue behavior, backend-blocked retry, Profile sync blocked-state UI, legacy decode, and corrupt snapshot fallback are covered. Network replay and conflict behavior are pending.
+Status: local snapshot restore, pending queue persistence, local log edit/delete queue behavior, deterministic replay planning, per-record backend-blocked errors, Profile sync blocked-state UI, legacy decode, and corrupt snapshot fallback are covered. Network replay, server IDs, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -138,7 +140,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test.
-- Profile sync status shows pending/backend-blocked state. Status: pending local queue and blocked retry state covered by UI smoke test; backend replay pending.
+- Profile sync status shows pending/backend-blocked state. Status: pending local queue and blocked retry state covered by UI smoke test; backend network replay pending.
 - Privacy controls expose export/delete/AI memory/transcript toggles. Status: covered for local export/delete confirmations plus AI memory and voice transcript toggles by UI smoke tests; backend enforcement pending.
 - Dark mode, Dynamic Type, and VoiceOver labels for major screens.
 
@@ -164,8 +166,8 @@ When Supabase CLI and credentials are available:
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved | Today and risk score update | Implemented locally and covered by UI smoke test |
-| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; backend update replay pending |
-| Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay pending |
+| Logging | Edit timeline entry | Local title/details update without changing entry count | Implemented locally and covered by UI smoke test; backend update replay planned but not connected |
+| Logging | Delete timeline entry | Confirmation appears before a local log is removed | Implemented locally and covered by UI smoke test; backend delete replay planned but not connected |
 | Logging | BM with blood | Log saves and red-flag guidance appears | Implemented locally and covered by UI smoke test |
 | Logging | Meal log | Food pattern entry saves without nutrition claims | Implemented locally and covered by UI smoke test |
 | Medications | Dose taken | Adherence state updates | Implemented locally and covered by UI smoke test |
@@ -181,7 +183,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot and pending queue implemented; Profile sync blocked retry covered by UI smoke test; backend replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, pending queue, replay planning, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 
@@ -213,6 +215,7 @@ When Supabase CLI and credentials are available:
 - `testInsightSummaryUsesLocalLogsWithoutDemoData`
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
+- `testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors`
 
 ## Current UI Test List
 

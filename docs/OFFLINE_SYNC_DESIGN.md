@@ -21,8 +21,8 @@ Users must be able to log important health data even with poor connectivity, wit
 | `syncing` | In flight |
 | `synced` | Confirmed by backend |
 | `blockedNoBackend` | Retry attempted but Supabase is not configured |
-| `failed_retryable` | Network/server temporary failure |
-| `failed_needs_user` | Validation/auth/conflict needs action |
+| `failedRetryable` | Network/server temporary failure |
+| `failedNeedsUser` | Validation/auth/conflict needs action |
 
 ## UI States
 
@@ -41,18 +41,20 @@ Implemented:
 - iOS file protection is applied to the snapshot file.
 - Session scaffold, onboarding profile, logs, chat, privacy preferences, risk, meds, mood, and safety state restore across app launches.
 - Log actions save locally before any backend exists.
-- `PendingSyncMutation` records local mutations with kind, local record ID, summary, attempt count, and status.
-- Profile exposes pending sync count and lets users retry, which currently marks queued records as blocked because Supabase is not configured.
+- `PendingSyncMutation` records local mutations with kind, local record ID, summary, attempt count, status, last attempted timestamp, and last error.
+- `SyncReplayPlanItem` and `LocalSyncReplayWorker` turn pending mutations into deterministic future actions against Supabase Auth, public tables, soft-delete fields, or Edge Functions.
+- Profile exposes pending sync count and lets users retry, which currently marks queued records as blocked with per-record errors because Supabase is not configured.
+- Local health-log edits coalesce into unreplayed creates when possible, existing-record edits reuse one pending update mutation, and edit-then-delete removes redundant pending updates.
 - Chat messages are only queued for backend replay when AI memory is explicitly enabled.
 - Snapshot decode tolerates older snapshot files that do not contain the queue.
 - Corrupt snapshots fall back to a clean state with a visible local status string.
 
 Not implemented:
 
-- Backend sync worker.
+- Live Supabase network replay client.
 - Network reachability state.
 - Conflict handling.
-- Per-record sync status.
+- User-visible per-record sync detail screens.
 - Supabase Auth token refresh.
 
-Next app-layer work is to move the queue behind a repository/sync-worker protocol and implement real Supabase replay once credentials are available.
+Next app-layer work is to connect the replay worker to a real Supabase client, add server IDs and receipts, then implement backoff, reachability, and conflict handling once credentials are available.
