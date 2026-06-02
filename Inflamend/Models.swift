@@ -1731,7 +1731,7 @@ class AppState {
             .joined(separator: " ")
     }
 
-    private nonisolated static func isValidEmail(_ email: String) -> Bool {
+    nonisolated static func isValidEmail(_ email: String) -> Bool {
         let parts = email.split(separator: "@")
         guard parts.count == 2 else { return false }
         return parts[1].contains(".")

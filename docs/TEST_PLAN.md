@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 53 unit tests in HealthLogicTests plus 35 UI smoke tests in InflamendUITests.
+Coverage: 53 unit tests in HealthLogicTests plus 36 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -75,6 +75,9 @@ Result: TEST SUCCEEDED with 1 UI smoke test.
 
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testInsightsRangeToggleUpdatesSummarySmoke
 Result: TEST SUCCEEDED with 1 UI smoke test after explicitly booting the iPhone 17 simulator.
+
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testInvalidAuthEmailShowsInlineErrorSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
 
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED with 53 unit tests.
@@ -209,7 +212,8 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 ## UI Test Priorities
 
 - Fresh install shows welcome/auth or Today depending on session scaffold. Status: started; fresh local sign-up UI smoke coverage exists.
-- Sign up/sign in with mock service. Status: started; local sign-up and sign-in UI smoke coverage exists.
+- Sign up/sign in with mock service. Status: started; local sign-up, sign-in, and invalid email inline-error UI smoke coverage exists.
+- Invalid auth input stays on the auth gate with clear feedback. Status: covered by UI smoke test for invalid email.
 - Onboarding can be completed or skipped for sensitive fields. Status: started; default onboarding completion UI smoke coverage exists.
 - Today check-in can be saved in under 30 seconds and corrected from the timeline. Status: covered by UI smoke tests.
 - Timeline log deletion requires confirmation. Status: covered by UI smoke test.
@@ -258,6 +262,7 @@ When Supabase CLI and credentials are available:
 | Install | Fresh install | Starts without crash | Pending |
 | Install | App icon | SpringBoard/home screen icon is visible, opaque, and legible at small sizes | App icon asset exists and clean build accepts it; manual device/simulator visual QA pending |
 | Auth | Logged out | Shows welcome/sign in/up scaffold | Implemented and covered by fresh auth UI smoke tests |
+| Auth | Invalid email | Inline error appears and onboarding does not start | Implemented locally and covered by UI smoke test |
 | Auth | Sign out | Session clears, no stale PHI visible | Implemented locally and covered by UI smoke test |
 | Onboarding | Sensitive questions skipped | App remains usable | Implemented and covered by default onboarding UI smoke test |
 | Today | Check-in saved and corrected | Today, risk score, safety state, mood, and adherence update | Implemented locally and covered by UI smoke tests |
@@ -355,6 +360,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke`
 - `InflamendUITests.testFoodLogSavesPatternEntrySmoke`
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
+- `InflamendUITests.testInvalidAuthEmailShowsInlineErrorSmoke`
 - `InflamendUITests.testInsightsEmptyStateAvoidsDemoClaimsSmoke`
 - `InflamendUITests.testInsightsPopulatedSummaryUsesLocalLogsSmoke`
 - `InflamendUITests.testInsightsRangeToggleUpdatesSummarySmoke`

@@ -55,6 +55,31 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testInvalidAuthEmailShowsInlineErrorSmoke() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--inflamend-reset-state"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Your IBD day, organized."].waitForExistence(timeout: 8))
+
+        app.textFields["auth-email-field"].tap()
+        app.textFields["auth-email-field"].typeText("not-an-email")
+
+        app.secureTextFields["auth-password-field"].tap()
+        app.secureTextFields["auth-password-field"].typeText("localpass")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["auth-primary-button"], in: app)
+
+        let errorMessage = app.staticTexts["auth-error-message"]
+        XCTAssertTrue(errorMessage.waitForExistence(timeout: 5))
+        XCTAssertTrue(errorMessage.label.contains("Enter a valid email"))
+
+        XCTAssertFalse(app.staticTexts["Make Inflamend fit your day"].waitForExistence(timeout: 1))
+        XCTAssertTrue(app.buttons["auth-primary-button"].exists)
+    }
+
+    @MainActor
     func testInsightsEmptyStateAvoidsDemoClaimsSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Insights",

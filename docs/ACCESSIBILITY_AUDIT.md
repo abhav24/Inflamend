@@ -8,7 +8,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 | Screen | VoiceOver | Dynamic Type | Contrast | Tap Targets | Non-color Cues | Status |
 |---|---|---|---|---|---|---|
-| Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt; keyboard Done and sign-in mode paths verified | Text labels on mode buttons | In progress |
+| Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt; keyboard Done, sign-in mode, and invalid-email paths verified | Text labels on mode buttons; inline validation error uses text | In progress |
 | Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in, timeline edit, timeline delete confirmation, and delete undo paths verified | Safety card, edit sheet, delete confirmation, and undo toast use text | In progress |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save, food save, medication dose row, voice confirmation, and voice permission fallback paths verified | Voice permission fallback, voice confirmation, blood choices, food tags, and medication rows use text | In progress |
@@ -22,6 +22,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added auth keyboard focus management and a keyboard toolbar Done action so the primary local sign-up button is not trapped behind the software keyboard.
 - Added UI smoke coverage for fresh local sign-up, auth keyboard dismissal, default onboarding completion, and arrival on the Home tab.
 - Added stable identifiers and UI smoke coverage for switching to local sign-in, submitting the auth form, and reaching onboarding.
+- Added inline invalid-email auth validation copy with a stable identifier and UI smoke coverage that verifies users remain on the auth gate.
 - Added stable identifiers and UI smoke coverage for the Care composer and red-flag safety message.
 - Added UI smoke coverage for the Care medication-change refusal branch through the visible assistant message.
 - Added stable identifiers and UI smoke coverage for opening the Today check-in sheet, saving the default check-in, and verifying the new timeline row.
@@ -68,8 +69,8 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Add manual VoiceOver notes for the timeline edit sheet, weight unit controls, medication dose status rows, and row action order.
 - Add manual VoiceOver notes for the timeline delete undo toast and action order.
 - Add manual VoiceOver notes for privacy toggles, the Insights range selector, the Profile edit sheet, the Profile sync detail sheet including network and automatic retry status, the medication reminder settings sheet, the Profile Preferences sheet, the Profile Flare history sheet, the Profile Care Plan sheet, the Profile IBD Library sheet, and the voice permission fallback state.
-- Add labels/hints for auth mode selection and onboarding pill selections.
+- Add labels/hints for auth mode selection, auth validation error announcement, and onboarding pill selections.
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights range selector, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile edit, Profile sign-out, Profile sync status/detail including offline and automatic retry state, Profile privacy toggles, Profile medication reminder settings, Profile preferences, Profile flare history, Profile Care Plan, Profile IBD Library, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding plus invalid-email feedback, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights range selector, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile edit, Profile sign-out, Profile sync status/detail including offline and automatic retry state, Profile privacy toggles, Profile medication reminder settings, Profile preferences, Profile flare history, Profile Care Plan, Profile IBD Library, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

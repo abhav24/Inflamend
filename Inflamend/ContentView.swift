@@ -132,6 +132,7 @@ struct AuthGateView: View {
     @State private var email = ""
     @State private var displayName = ""
     @State private var password = ""
+    @State private var authError: String?
     @FocusState private var focusedField: AuthField?
 
     private enum AuthField: Hashable {
@@ -196,6 +197,18 @@ struct AuthGateView: View {
                         .foregroundColor(.fgFaint)
                         .lineSpacing(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let authError {
+                        Text(authError)
+                            .font(DS.sans(12, weight: .medium))
+                            .foregroundColor(.clay)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.clay.opacity(0.12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.clay.opacity(0.35), lineWidth: 0.5))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .accessibilityIdentifier("auth-error-message")
+                    }
                 }
                 .padding(16)
                 .background(Color.bgCard)
@@ -224,16 +237,28 @@ struct AuthGateView: View {
                 .accessibilityIdentifier("auth-keyboard-done-button")
             }
         }
+        .onChange(of: email) { _, _ in
+            authError = nil
+        }
     }
 
     private func submitAuth() {
         focusedField = nil
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        guard AppState.isValidEmail(trimmedEmail) else {
+            authError = "Enter a valid email"
+            appState.showToast("Enter a valid email")
+            return
+        }
 
         switch mode {
         case .signUp:
-            appState.signUp(email: email, displayName: displayName)
+            authError = nil
+            appState.signUp(email: trimmedEmail, displayName: displayName)
         case .signIn:
-            appState.signIn(email: email)
+            authError = nil
+            appState.signIn(email: trimmedEmail)
         }
     }
 
@@ -242,6 +267,7 @@ struct AuthGateView: View {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
                 mode = target
                 focusedField = nil
+                authError = nil
             }
         } label: {
             Text(title)

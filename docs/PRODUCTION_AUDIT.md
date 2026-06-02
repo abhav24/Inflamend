@@ -1166,6 +1166,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with backend range parity, export range controls, partial Insights scenarios, and manual accessibility QA.
 
+## Auth Invalid Email Feedback Audit
+
+### Feature Audit: Inline Local Auth Validation
+
+Product Simplicity Reviewer:
+- Findings: Invalid local auth email now gets a short inline error and stays on the auth gate, avoiding a silent failed tap or a transient-only toast.
+- Required fixes: Keep production Supabase auth errors equally direct and avoid blocking urgent logging behind complex account setup.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The validation message uses the existing card layout, a stable identifier, and text rather than color alone. The UI test verifies the user remains in context after the failed submit.
+- Required fixes: Manually verify Dynamic Type wrapping, VoiceOver announcement order, and focus behavior when validation appears.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AuthGateView` now calls the shared `AppState.isValidEmail` helper before local scaffold sign-up/sign-in, keeping visible validation aligned with the existing AppState guard.
+- Required fixes: Replace the scaffold with Supabase Auth validation, server-backed errors, Keychain sessions, and token refresh handling before production.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The error copy does not echo the entered email, password, or health context. Password scaffold copy still states that the password is accepted only for flow testing and is not stored.
+- Required fixes: Verify production auth diagnostics do not log credentials, email/password mistakes, or PHI.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused invalid-auth UI smoke coverage passed and clean build passed. The first test attempt overfit to the transient toast; the final test asserts durable inline feedback and no onboarding transition.
+- Required fixes: Add production auth error tests once Supabase Auth replaces the local scaffold.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with Supabase Auth integration, server-backed error handling, Keychain session storage, and manual accessibility QA.
+
 ## Populated Insights UI Coverage Audit
 
 ### Feature Audit: Local-Log Summary and Food Frequency UI
