@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "serve": "deno run --allow-env --allow-net index.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}

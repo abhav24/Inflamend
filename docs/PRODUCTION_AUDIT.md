@@ -173,3 +173,35 @@ Final decision:
 3. Add config examples, `.gitignore` secret exclusions, privacy manifest, and safety/privacy docs.
 4. Add test target plus deterministic logic services for risk score, red flags, voice parsing, medication schedules, and report summaries.
 5. Refactor app state toward production models/services and implement durable core flows incrementally.
+
+## Backend and Safety Scaffold Audit
+
+### Feature Audit: Supabase Schema, RLS, Edge Functions, and Privacy Docs
+
+Product Simplicity Reviewer:
+- Findings: Backend tables reflect core logging/report/privacy needs without modeling nutrition or advanced claims as if they were complete.
+- Required fixes: Connect these models to a simpler iOS flow rather than exposing every table directly.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No visual UI change yet. Future screens need explicit setup states for unavailable backend credentials.
+- Required fixes: Add non-silent disabled/setup states in Profile, Care, and export flows.
+- Status: Defer with documentation.
+
+Backend and Data Integrity Reviewer:
+- Findings: User-owned tables, indexes, RLS policies, and seed data now exist. Edge Functions verify JWT and do not trust client `user_id`.
+- Required fixes: Supabase CLI verification is blocked because the CLI is not installed; same-user foreign-key checks should be strengthened.
+- Status: Accept checkpoint with documented blocker.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: `.gitignore` excludes secrets, config examples contain placeholders, AI keys are server-only, privacy manifest exists, and red-flag scaffolds exist.
+- Required fixes: Add Swift UI safety path and account export/delete controls.
+- Status: Revise in next product pass.
+
+QA and Regression Reviewer:
+- Findings: `plutil` passed, Xcode build passed, but `supabase` and `deno` commands are unavailable locally.
+- Required fixes: Install tooling or run checks in CI; add Swift tests.
+- Status: Accept checkpoint with documented blocker.
+
+Final decision:
+- Ship now as a safe backend/privacy scaffold; continue immediately with test target and iOS logic.

@@ -33,3 +33,12 @@ Carthage/Build/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Local app configuration and secrets
+Config/Debug.xcconfig
+Config/Release.xcconfig
+*.local.xcconfig
+.env
+.env.local
+supabase/.branches/
+supabase/.temp/

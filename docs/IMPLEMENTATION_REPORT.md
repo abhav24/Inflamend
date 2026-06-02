@@ -33,7 +33,41 @@ What remains:
 - Re-run build/test after each meaningful implementation pass.
 
 What was committed:
-- Pending. This file is part of the first baseline audit checkpoint.
+- `5637994 Document baseline production audit`
+
+## Current Checkpoint: Backend, Privacy, and Safety Scaffold
+
+What changed:
+- Added Supabase migrations for core IBD health tables, indexes, update triggers, and seed data.
+- Added RLS policies for every user-owned table.
+- Added Supabase Edge Function scaffolds for AI chat, voice parsing, report export, and risk score.
+- Added secret-safe config examples and `.gitignore` exclusions.
+- Added `PrivacyInfo.xcprivacy` and included it in the Xcode app resources.
+- Added backend, RLS, Edge Function, medical safety, AI safety, privacy inventory, security, accessibility, offline/sync, report, App Store, StoreKit, CI, performance, error handling, UX, and Apple Health docs.
+
+What was tested:
+- `plutil -lint Inflamend/PrivacyInfo.xcprivacy`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `supabase --version`
+- `deno fmt --check supabase/functions`
+
+What passed:
+- Privacy manifest plist lint passed.
+- Xcode build passed and copied `PrivacyInfo.xcprivacy` into the app bundle.
+
+What failed or was blocked:
+- `supabase --version` failed because the Supabase CLI is not installed.
+- `deno fmt --check supabase/functions` failed because Deno is not installed.
+- Hosted migration/RLS/Edge Function execution remains blocked until Supabase tooling and project credentials exist.
+
+What remains:
+- Add the iOS service layer that calls these backend scaffolds.
+- Add local test target and tests for deterministic safety/product logic.
+- Verify SQL migrations and Edge Functions once Supabase CLI/Deno are available.
+- Add rate limiting and persistence writes inside Edge Functions before production.
+
+What was committed:
+- Pending for this checkpoint.
 
 ## Command Log
 
@@ -69,8 +103,8 @@ Result: failed because scheme is not currently configured for the test action.
 
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
-| Pass 1 | Baseline audit, build stabilization, documentation, architecture review | In progress | `docs/PRODUCTION_AUDIT.md`, this report, `docs/TEST_PLAN.md`; build succeeded on iPhone 17 |
-| Pass 2 | Core product/backend/UX implementation | Not started | Pending |
+| Pass 1 | Baseline audit, build stabilization, documentation, architecture review | In progress | Baseline docs; build succeeded on iPhone 17; backend/privacy docs added |
+| Pass 2 | Core product/backend/UX implementation | Started | Supabase schema/RLS/functions scaffolded |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -96,9 +130,9 @@ Result: failed because scheme is not currently configured for the test action.
 | Voice logging confirmation | Missing | No voice UI | Add confirmation flow with manual edit |
 | Insights | Demo | Static chart arrays | Add deterministic risk/insight services |
 | Risk score | Demo | Hardcoded `riskScore` | Add deterministic risk service and tests |
-| AI assistant backend scaffold | Missing | Client-side canned responses | Add Edge Function scaffold and safe client states |
-| Red-flag safety handling | Missing | No detector | Add detector and tests |
-| Doctor report/export | Toast-only | Profile export row | Add report model/export scaffold |
+| AI assistant backend scaffold | Scaffolded | `supabase/functions/ai-chat` | Wire iOS service and live provider setup |
+| Red-flag safety handling | Scaffolded backend | Edge functions detect several red flags | Add Swift detector, UI safety card, tests |
+| Doctor report/export | Scaffolded backend | `supabase/functions/export-report`; Profile export row still toast-only | Add iOS report model/export UI |
 | Profile/settings | Demo | `ProfileView.swift` | Add privacy controls, export/delete scaffolds |
 | Privacy controls | Missing | No controls/docs/manifest | Add controls and docs |
 | Data export/delete | Missing/toast-only | Export toast only | Add service scaffold and UI states |
@@ -148,8 +182,38 @@ Stop condition is not satisfied.
 - Tests: blocked by missing test action/test target.
 - Improvement passes completed: baseline audit only, pass 1 still in progress.
 - Core flows: many missing or demo-only.
-- Backend: missing.
-- Safety/privacy/App Store readiness: missing or undocumented beyond baseline audit.
-- Git checkpoints: baseline commit pending.
+- Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
+- Safety/privacy/App Store readiness: foundational docs and privacy manifest added; iOS UI implementation still pending.
+- Git checkpoints: baseline commit exists; backend scaffold commit pending.
 
 Continue working.
+
+## Feature Audit: Backend, Privacy, and Safety Scaffold
+
+Product Simplicity Reviewer:
+- Findings: The backend model now maps to core user flows without adding fragile advanced features first.
+- Required fixes: Keep iOS UI focused on Today, Log, Insights, Care, Profile as services are connected.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: No UI surface changed except packaging the privacy manifest, so visual risk is low.
+- Required fixes: Add visible privacy/safety controls in the next UI pass.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: Core tables, indexes, RLS policies, seed data, and Edge Function boundaries exist. Cross-reference same-user validation still needs service/database reinforcement.
+- Required fixes: Verify migrations with Supabase CLI; add same-user reference checks before production.
+- Status: Accept with documented tooling blocker.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Secrets are excluded, AI keys are server-only, privacy inventory exists, and red-flag scaffolds are present. Live safety behavior is not yet in iOS.
+- Required fixes: Add Swift red-flag detector, safety UI, and privacy controls.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Build still passes and privacy manifest lints. Supabase/Deno checks are blocked by missing local tooling.
+- Required fixes: Add test target and backend verification once tooling is installed.
+- Status: Accept with documented blocker.
+
+Final decision:
+- Ship this checkpoint, then continue with testable iOS logic and services.
