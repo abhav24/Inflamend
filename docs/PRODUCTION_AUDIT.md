@@ -1550,6 +1550,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with editable/bookmarkable education notes, external source links, backend content/version sync, and manual accessibility QA.
 
+## Local Profile Editing Audit
+
+### Feature Audit: Profile Edit Sheet
+
+Product Simplicity Reviewer:
+- Findings: The Profile header Edit action now handles the core correction workflow users expect after onboarding: display name, diagnosis, primary goal, baseline stool count, and clinician flare-plan status. It does not expand into a broad settings screen.
+- Required fixes: Keep profile editing focused until backend profile replay and conflict handling exist.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet uses grouped controls, stable option buttons, explicit baseline count controls, a keyboard Done action, and visible backend-sync framing.
+- Required fixes: Manually verify text-field focus, option wrapping, count controls, and save action at large Dynamic Type and VoiceOver.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppState.updateProfile` preserves the local user ID, persists the updated session/profile, clamps baseline stool count, and queues future auth/onboarding sync mutations only when values change.
+- Required fixes: Add Supabase profile update replay, returned receipts, server conflict handling, and stale-edit recovery once live backend credentials exist.
+- Status: Accept local persistence checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Profile edits are stored in protected local snapshots and include diagnosis and baseline stool count, so the privacy inventory now treats queued mutation summaries as health-adjacent account/profile data. The UI states edits do not change medical care instructions.
+- Required fixes: Review backend diagnostics and telemetry before replaying profile edits so diagnosis text is not logged as production PHI.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for persistence, clamping, user ID preservation, restored snapshot values, and queued sync intent. Focused UI smoke coverage passed for editing the header fields and verifying saved Profile labels. Full unit target passed with 53 tests, and clean build passed.
+- Required fixes: Add invalid-name UI coverage, backend replay tests, conflict tests, and manual accessibility once those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with Supabase profile replay, conflict handling, receipts, invalid-input UI coverage, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

@@ -559,6 +559,48 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(library.safetyNote.contains("does not diagnose, triage, or recommend treatment changes"))
     }
 
+    @MainActor
+    func testProfileEditPersistsSessionProfileAndQueuesSync() throws {
+        let storeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-profile-edit-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: storeURL)
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.signUp(email: "profile-edit@example.com", displayName: "Profile Original")
+        appState.completeOnboarding(
+            diagnosis: "Ulcerative colitis",
+            primaryGoal: "Track flare risk",
+            baselineStoolCount: 2,
+            hasFlarePlan: false
+        )
+        let originalUserId = try XCTUnwrap(appState.authSession?.userId)
+
+        let didSave = appState.updateProfile(
+            displayName: " Profile Updated ",
+            diagnosis: "Crohn's disease",
+            primaryGoal: "Remember meds",
+            baselineStoolCount: 25,
+            hasFlarePlan: true
+        )
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(appState.authSession?.userId, originalUserId)
+        XCTAssertEqual(appState.displayName, "Profile Updated")
+        XCTAssertEqual(appState.onboardingProfile?.diagnosis, "Crohn's disease")
+        XCTAssertEqual(appState.onboardingProfile?.primaryGoal, "Remember meds")
+        XCTAssertEqual(appState.onboardingProfile?.baselineStoolCount, 20)
+        XCTAssertEqual(appState.onboardingProfile?.hasFlarePlan, true)
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .authSession && $0.summary == "Profile name updated" })
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .onboardingProfile && $0.summary == "Profile updated: Crohn's disease" })
+
+        let restored = AppState(store: store, reachabilityMonitor: nil)
+        XCTAssertEqual(restored.displayName, "Profile Updated")
+        XCTAssertEqual(restored.onboardingProfile?.diagnosis, "Crohn's disease")
+        XCTAssertEqual(restored.onboardingProfile?.baselineStoolCount, 20)
+        XCTAssertEqual(restored.onboardingProfile?.hasFlarePlan, true)
+
+        try? FileManager.default.removeItem(at: storeURL)
+    }
+
     func testInsightSummaryPrefersTypedPayloadOverDisplayText() {
         let logs = [
             LogEntry(

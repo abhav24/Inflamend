@@ -1298,6 +1298,62 @@ class AppState {
         )
     }
 
+    @discardableResult
+    func updateProfile(
+        displayName: String,
+        diagnosis: String,
+        primaryGoal: String,
+        baselineStoolCount: Int,
+        hasFlarePlan: Bool
+    ) -> Bool {
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            showToast("Enter a display name")
+            return false
+        }
+
+        let cleanedDiagnosis = diagnosis.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Prefer not to say"
+            : diagnosis.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedGoal = primaryGoal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Track symptoms"
+            : primaryGoal.trimmingCharacters(in: .whitespacesAndNewlines)
+        let updatedProfile = OnboardingProfile(
+            diagnosis: cleanedDiagnosis,
+            primaryGoal: cleanedGoal,
+            baselineStoolCount: max(0, min(20, baselineStoolCount)),
+            hasFlarePlan: hasFlarePlan,
+            skippedSensitiveQuestions: cleanedDiagnosis.localizedCaseInsensitiveContains("prefer not"),
+            completedAt: onboardingProfile?.completedAt ?? Date()
+        )
+
+        var didChange = false
+        if var session = authSession, session.displayName != trimmedName {
+            session.displayName = trimmedName
+            authSession = session
+            enqueueSync(kind: .authSession, localRecordId: session.userId.uuidString, summary: "Profile name updated")
+            didChange = true
+        }
+
+        if onboardingProfile != updatedProfile {
+            onboardingProfile = updatedProfile
+            enqueueSync(
+                kind: .onboardingProfile,
+                localRecordId: authSession?.userId.uuidString ?? "local-onboarding",
+                summary: "Profile updated: \(cleanedDiagnosis)"
+            )
+            didChange = true
+        }
+
+        if didChange {
+            persist()
+            showToast("Profile updated")
+        } else {
+            showToast("No profile changes")
+        }
+        return true
+    }
+
     func setAIMemoryEnabled(_ enabled: Bool) {
         aiMemoryEnabled = enabled
         enqueueSync(kind: .privacyPreference, localRecordId: "ai-memory", summary: enabled ? "AI memory on" : "AI memory off")

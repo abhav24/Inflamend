@@ -289,6 +289,30 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileEditUpdatesLocalHeaderSmoke() {
+        let app = openSeededProfile()
+
+        tapWhenVisible(app.buttons["profile-edit-button"], in: app)
+        XCTAssertTrue(app.staticTexts["profile-edit-title"].waitForExistence(timeout: 5))
+
+        let nameField = app.textFields["profile-edit-display-name-field"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText(" Edited")
+        dismissKeyboard(in: app)
+
+        tapWhenVisible(app.buttons["profile-edit-diagnosis-crohns-disease-button"], in: app)
+        tapWhenVisible(app.buttons["profile-edit-goal-remember-meds-button"], in: app)
+        tapWhenVisible(app.buttons["profile-edit-baseline-increment-button"], in: app)
+        waitForLabel(app.descendants(matching: .any)["profile-edit-baseline-status"], contains: "3")
+        tapWhenVisible(app.buttons["profile-edit-flare-plan-toggle"], in: app)
+        tapWhenVisible(app.buttons["profile-edit-save-button"], in: app)
+
+        waitForLabel(app.staticTexts["profile-display-name"], contains: "UI Test Edited")
+        waitForLabel(app.staticTexts["profile-diagnosis-label"], contains: "Crohn's disease")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",
@@ -835,6 +859,12 @@ final class InflamendUITests: XCTestCase {
         let timelineEditDoneButton = app.buttons["timeline-edit-keyboard-done-button"].firstMatch
         if timelineEditDoneButton.waitForExistence(timeout: 1) {
             timelineEditDoneButton.tap()
+            return
+        }
+
+        let profileEditDoneButton = app.buttons["profile-edit-keyboard-done-button"].firstMatch
+        if profileEditDoneButton.waitForExistence(timeout: 1) {
+            profileEditDoneButton.tap()
             return
         }
 

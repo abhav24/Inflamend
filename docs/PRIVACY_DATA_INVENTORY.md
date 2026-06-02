@@ -33,6 +33,7 @@
 - Voice transcript storage defaults off in the current UI.
 - Local auth scaffold stores an email/display name session but never stores the password field.
 - The local snapshot is a production scaffold, not a substitute for final encrypted storage and Keychain-backed live auth tokens.
+- Local Profile edits can change display name, diagnosis, primary goal, baseline stool count, and flare-plan status. These edits are stored in the protected local snapshot and queue future auth/onboarding sync records, so backend replay and diagnostics must treat mutation summaries as health-adjacent account/profile data.
 - Timeline logs include a structured `loggedAt` event timestamp plus a display `time`; both are included in local snapshots and local user-data exports.
 - Local Insights and doctor reports use `loggedAt` for 7-day and 30-day health-log windows, so event dates must be treated as health metadata in exports, backend sync, and AI-context review.
 - Local flare history is derived from existing flare-marked timeline logs and check-ins. It does not add a new storage category, but the derived view still exposes sensitive health timing and should be handled as health data.

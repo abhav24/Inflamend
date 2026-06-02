@@ -4,6 +4,7 @@ struct ProfileView: View {
     var appState: AppState
     @State private var preparedExport: ProfilePreparedExport?
     @State private var pendingConfirmation: ProfileConfirmation?
+    @State private var showingProfileEdit = false
     @State private var showingSyncDetails = false
     @State private var showingMedicationReminders = false
     @State private var showingPreferences = false
@@ -33,12 +34,14 @@ struct ProfileView: View {
                             .font(DS.sans(18))
                             .foregroundColor(.fgPrimary)
                             .tracking(-0.15)
+                            .accessibilityIdentifier("profile-display-name")
                         Text(appState.diagnosisLabel)
                             .font(DS.sans(13))
                             .foregroundColor(.fgDim)
+                            .accessibilityIdentifier("profile-diagnosis-label")
                     }
                     Spacer()
-                    Button { appState.showToast("Profile editing scaffolded") } label: {
+                    Button { showingProfileEdit = true } label: {
                         Text("Edit")
                             .font(DS.sans(13, weight: .medium))
                             .foregroundColor(.fgPrimary)
@@ -48,6 +51,7 @@ struct ProfileView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(PressableButtonStyle())
+                    .accessibilityIdentifier("profile-edit-button")
                 }
                 .card()
                 .padding(.horizontal, 20)
@@ -216,6 +220,9 @@ struct ProfileView: View {
             }
         }
         .background(Color.bgPrimary)
+        .sheet(isPresented: $showingProfileEdit) {
+            ProfileEditSheet(appState: appState)
+        }
         .sheet(isPresented: $showingSyncDetails) {
             SyncStatusDetailSheet(appState: appState)
         }
@@ -272,6 +279,286 @@ struct ProfileView: View {
         case .deleteDataAccount:
             appState.requestAccountDeletionScaffold()
         }
+    }
+}
+
+private struct ProfileEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var appState: AppState
+    @State private var displayName: String
+    @State private var diagnosis: String
+    @State private var primaryGoal: String
+    @State private var baselineStoolCount: Int
+    @State private var hasFlarePlan: Bool
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case displayName
+    }
+
+    private let diagnoses = ["Ulcerative colitis", "Crohn's disease", "IBD unclassified", "Prefer not to say"]
+    private let goals = ["Track flare risk", "Prepare doctor reports", "Remember meds", "Find possible patterns"]
+
+    init(appState: AppState) {
+        self.appState = appState
+        let profile = appState.onboardingProfile
+        _displayName = State(initialValue: appState.displayName == "there" ? "" : appState.displayName)
+        _diagnosis = State(initialValue: profile?.diagnosis ?? "Prefer not to say")
+        _primaryGoal = State(initialValue: profile?.primaryGoal ?? "Track symptoms")
+        _baselineStoolCount = State(initialValue: profile?.baselineStoolCount ?? 2)
+        _hasFlarePlan = State(initialValue: profile?.hasFlarePlan ?? false)
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "user", color: .sage)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Edit profile")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("profile-edit-title")
+                        Text("Saved locally; backend profile sync waits for Supabase.")
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgFaint)
+                    }
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        AppIcon(name: "close", size: 15, color: .fgDim)
+                            .frame(width: 36, height: 36)
+                            .background(Color.bgInset)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
+                    .accessibilityLabel("Close profile editor")
+                    .accessibilityIdentifier("profile-edit-close-button")
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Display name")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    TextField("Name", text: $displayName)
+                        .font(DS.sans(15))
+                        .foregroundColor(.fgPrimary)
+                        .textContentType(.name)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .focused($focusedField, equals: .displayName)
+                        .padding(12)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("profile-edit-display-name-field")
+                }
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                ProfileEditChoiceGroup(
+                    title: "Diagnosis",
+                    options: diagnoses,
+                    selected: diagnosis,
+                    color: .sage,
+                    identifierPrefix: "profile-edit-diagnosis"
+                ) { diagnosis = $0 }
+
+                ProfileEditChoiceGroup(
+                    title: "Primary goal",
+                    options: goals,
+                    selected: primaryGoal,
+                    color: .amber,
+                    identifierPrefix: "profile-edit-goal"
+                ) { primaryGoal = $0 }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Usual stool count")
+                        .font(DS.sans(13, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    HStack(spacing: 12) {
+                        ProfileEditStepperButton(
+                            icon: "minus",
+                            isEnabled: baselineStoolCount > 0,
+                            identifier: "profile-edit-baseline-decrement-button"
+                        ) {
+                            baselineStoolCount = max(0, baselineStoolCount - 1)
+                        }
+
+                        VStack(spacing: 2) {
+                            Text("\(baselineStoolCount)")
+                                .font(DS.serif(30))
+                                .foregroundColor(.fgPrimary)
+                            Text("on a typical day")
+                                .font(DS.sans(12))
+                                .foregroundColor(.fgDim)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(baselineStoolCount) stools on a typical day")
+                        .accessibilityIdentifier("profile-edit-baseline-status")
+
+                        ProfileEditStepperButton(
+                            icon: "plus",
+                            isEnabled: baselineStoolCount < 20,
+                            identifier: "profile-edit-baseline-increment-button"
+                        ) {
+                            baselineStoolCount = min(20, baselineStoolCount + 1)
+                        }
+                    }
+                }
+                .padding(14)
+                .background(Color.bgCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                Button {
+                    hasFlarePlan.toggle()
+                } label: {
+                    HStack(spacing: 10) {
+                        AppIcon(name: hasFlarePlan ? "check" : "note", size: 15, color: hasFlarePlan ? .darkText : .fgDim)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Clinician flare plan")
+                                .font(DS.sans(14, weight: .semibold))
+                                .foregroundColor(hasFlarePlan ? .darkText : .fgPrimary)
+                            Text(hasFlarePlan ? "Saved in local profile" : "Not saved yet")
+                                .font(DS.sans(12))
+                                .foregroundColor(hasFlarePlan ? .darkText.opacity(0.72) : .fgDim)
+                        }
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(hasFlarePlan ? Color.sage : Color.bgCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(PressableButtonStyle(scale: 0.97))
+                .accessibilityIdentifier("profile-edit-flare-plan-toggle")
+                .accessibilityValue(hasFlarePlan ? "Saved" : "Not saved")
+
+                HStack(alignment: .top, spacing: 10) {
+                    AppIcon(name: "shield", size: 15, color: .fgDim)
+                    Text("Profile edits update this device and queue future backend sync. They do not change medical care instructions.")
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                        .accessibilityIdentifier("profile-edit-safety-note")
+                }
+                .padding(14)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                PrimaryButton(title: "Save profile") {
+                    if appState.updateProfile(
+                        displayName: displayName,
+                        diagnosis: diagnosis,
+                        primaryGoal: primaryGoal,
+                        baselineStoolCount: baselineStoolCount,
+                        hasFlarePlan: hasFlarePlan
+                    ) {
+                        dismiss()
+                    }
+                }
+                .accessibilityIdentifier("profile-edit-save-button")
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.large])
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                }
+                .accessibilityIdentifier("profile-edit-keyboard-done-button")
+            }
+        }
+    }
+}
+
+private struct ProfileEditChoiceGroup: View {
+    let title: String
+    let options: [String]
+    let selected: String
+    let color: Color
+    let identifierPrefix: String
+    let action: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(DS.sans(13, weight: .semibold))
+                .foregroundColor(.fgPrimary)
+            FlowLayout(spacing: 6) {
+                ForEach(options, id: \.self) { option in
+                    ProfileEditChoiceButton(
+                        label: option,
+                        isSelected: selected == option,
+                        color: color,
+                        identifier: "\(identifierPrefix)-\(option.profileEditIdentifierSlug)-button"
+                    ) {
+                        action(option)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct ProfileEditChoiceButton: View {
+    let label: String
+    let isSelected: Bool
+    let color: Color
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(DS.sans(13, weight: .medium))
+                .foregroundColor(isSelected ? color : .fgDim)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(isSelected ? color.opacity(0.15) : Color.bgInset)
+                .overlay(Capsule().stroke(isSelected ? color : Color.clear, lineWidth: 1))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(PressableButtonStyle(scale: 0.97))
+        .accessibilityIdentifier(identifier)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+    }
+}
+
+private struct ProfileEditStepperButton: View {
+    let icon: String
+    let isEnabled: Bool
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            AppIcon(name: icon, size: 16, color: isEnabled ? .fgPrimary : .fgFaint)
+                .frame(width: 40, height: 40)
+                .background(Color.bgInset)
+                .clipShape(Circle())
+        }
+        .buttonStyle(PressableButtonStyle(scale: isEnabled ? 0.94 : 1))
+        .disabled(!isEnabled)
+        .accessibilityIdentifier(identifier)
+    }
+}
+
+private extension String {
+    var profileEditIdentifierSlug: String {
+        lowercased()
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "/", with: "-")
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
     }
 }
 

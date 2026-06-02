@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 52 unit tests in HealthLogicTests plus 33 UI smoke tests in InflamendUITests.
+Coverage: 53 unit tests in HealthLogicTests plus 34 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -67,8 +67,14 @@ Result: TEST SUCCEEDED with 1 focused unit test.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileIBDLibraryShowsSourceFramedGuidesSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testProfileEditPersistsSessionProfileAndQueuesSync
+Result: TEST SUCCEEDED with 1 focused unit test.
+
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileEditUpdatesLocalHeaderSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
+
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 52 unit tests.
+Result: TEST SUCCEEDED with 53 unit tests.
 
 xcodebuild clean build -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -157,6 +163,14 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 
 Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, retry backoff metadata, automatic due-retry execution, reachability-aware offline retry pause, per-record backend-blocked errors, Profile sync blocked/offline-state detail UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, auth refresh, and conflict behavior are pending.
 
+Profile edits:
+- Display name edits preserve the local user ID.
+- Diagnosis, primary goal, baseline stool count, and clinician flare-plan status persist locally.
+- Baseline stool count is clamped to valid range.
+- Future auth/profile sync mutations are queued.
+
+Status: started. Local persistence, restore, sync-queue intent, and Profile edit UI smoke coverage are implemented; backend replay, conflict handling, and receipts are pending.
+
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
 - Required fields for save actions.
@@ -208,6 +222,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Profile flare history shows local flare marks. Status: typed flare-history builder and Profile sheet smoke coverage exist.
 - Profile Care Plan shows local visit-preparation questions. Status: Care Plan builder and Profile sheet smoke coverage exist, including non-treatment safety copy.
 - Profile IBD Library shows local source-attributed education guides. Status: education library builder and Profile sheet smoke coverage exist, including source attribution, nutrition caution, and non-diagnostic safety copy.
+- Profile Edit updates saved local profile details. Status: display-name, diagnosis, goal, baseline stool count, and flare-plan changes are covered by unit and UI smoke tests.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
@@ -252,6 +267,7 @@ When Supabase CLI and credentials are available:
 | Logging | Weight log | Weight value saves and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Medications | Dose taken/status corrected/reminder preference changed | Adherence state updates and reminder intent persists | Implemented locally with persisted dose statuses and reminder settings; covered by unit/UI smoke tests for dose taken, skipped persistence, Profile reminder settings, and timeline status correction |
 | Preferences | Weight unit changed | New Weight logs use selected unit | Implemented locally with persisted/exported `AppPreferences`, Profile preferences UI, LB weight-log smoke coverage, and default KG weight edit regression coverage |
+| Profile | Edit profile | Display name and onboarding profile fields update locally | Implemented locally with `AppState.updateProfile`, queued sync intent, snapshot restore coverage, and UI smoke coverage |
 | Profile | Flare history | Local flare-marked logs appear in a Profile sheet | Implemented locally with typed payload-aware `FlareHistoryBuilder` and UI smoke coverage after saving a rapid flare marker |
 | Profile | Care plan | Local GI-visit questions appear with non-treatment framing | Implemented locally with `CarePlanBuilder` and UI smoke coverage from seeded Profile |
 | Profile | IBD library | Source-attributed education guides appear with non-treatment framing | Implemented locally with `PatientEducationLibraryBuilder` and UI smoke coverage from seeded Profile |
@@ -301,6 +317,7 @@ When Supabase CLI and credentials are available:
 - `testClearAIHistoryLeavesLocalConfirmationMessage`
 - `testAccountDeletionRequestQueuesAndLogsScaffold`
 - `testPrepareUserDataExportCreatesLocalFileAndAuditLog`
+- `testProfileEditPersistsSessionProfileAndQueuesSync`
 - `testCorruptSnapshotFallsBackToCleanState`
 - `testLegacySnapshotWithoutQueueStillDecodes`
 - `testInsightSummaryReturnsEmptyStateForNoLogs`
@@ -342,6 +359,7 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testProfileDoctorReportExportSheetSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
+- `InflamendUITests.testProfileEditUpdatesLocalHeaderSmoke`
 - `InflamendUITests.testProfileMedicationReminderSettingsSmoke`
 - `InflamendUITests.testProfilePreferencesWeightUnitDrivesWeightLogSmoke`
 - `InflamendUITests.testProfileFlareHistoryShowsLocalFlareMarksSmoke`
