@@ -581,6 +581,33 @@ What remains:
 What was committed:
 - Commit message: `Add bowel red-flag UI smoke test`
 
+## Current Checkpoint: Care Medication-Refusal UI Coverage
+
+What changed:
+- Added a UI smoke test that opens seeded state, navigates to Care, asks whether to stop mesalamine, and verifies the assistant refuses starting/stopping/skipping/increasing/decreasing prescription medication guidance.
+- Verified the non-red-flag medication-change branch does not show the urgent safety-message card while still pointing users to their GI clinician or pharmacist.
+
+What was tested:
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke`
+- `xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+- `xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'`
+
+What passed:
+- Focused Care medication-change refusal UI smoke test passed.
+- Full test run passed with 33 tests: 24 unit tests and 9 UI tests.
+- Clean app build passed on the available `iPhone 17` simulator.
+
+What failed during the loop:
+- No implementation failures in this checkpoint.
+
+What remains:
+- Add UI coverage for report/share flows, Insights empty states, and medication logging.
+- Route Care through Supabase Edge Functions with the same refusal and red-flag policy once credentials and provider keys are available.
+- Add manual VoiceOver and Dynamic Type verification for Care messages and composer behavior.
+
+What was committed:
+- Commit message: `Add Care medication refusal UI smoke test`
+
 ## Command Log
 
 ```text
@@ -738,6 +765,15 @@ Result after bowel red-flag UI pass: TEST SUCCEEDED with 32 tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result after bowel red-flag UI pass: BUILD SUCCEEDED.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke
+Result after Care medication-refusal UI pass: TEST SUCCEEDED with 1 UI test.
+
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Care medication-refusal UI pass: TEST SUCCEEDED with 33 tests.
+
+xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result after Care medication-refusal UI pass: BUILD SUCCEEDED.
 ```
 
 ## Pass Progress
@@ -745,7 +781,7 @@ Result after bowel red-flag UI pass: BUILD SUCCEEDED.
 | Pass | Scope | Status | Evidence |
 |---|---|---|---|
 | Pass 1 | Baseline audit, build stabilization, documentation, architecture review | Completed | Baseline docs; build succeeded on iPhone 17; architecture and backend gaps documented |
-| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in and bowel red-flag UI smoke coverage, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses with red-flag UI smoke coverage, destructive-action confirmations, voice confirmation, privacy controls, and Profile sign-out/export/destructive UI smoke tests wired |
+| Pass 2 | Core product/backend/UX implementation | In progress | Supabase schema/RLS/functions scaffolded; auth sign-up/sign-in/onboarding UI smoke coverage, session restore/local persistence, local pending sync queue, core logging with Today check-in and bowel red-flag UI smoke coverage, data-backed Insights, local doctor-report export, local user-data export, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations, voice confirmation, privacy controls, and Profile sign-out/export/destructive UI smoke tests wired |
 | Pass 3 | Re-audit, polish, regression fixes, safety/privacy/accessibility/App Store readiness | Not started | Pending |
 
 ## Core Flow Status
@@ -772,7 +808,7 @@ Result after bowel red-flag UI pass: BUILD SUCCEEDED.
 | Voice logging confirmation | Scaffolded | `LogVoiceForm`, `VoiceDraftConfirmation` | Add microphone/Speech integration and editable parsed fields |
 | Insights | Implemented locally | Local logs drive trend summaries, bowel chart, pain heatmap, food frequency rows, and empty states | Add structured dated records, UI tests, and export/share integration |
 | Risk score | Wired and locally persisted | `RiskScoreService`, `recordCheckIn`, `recordBowel`, `AppSnapshotStore` | Persist trend history and explain factors |
-| AI assistant backend scaffold | Scaffolded, with local safety mirror and UI smoke coverage | `supabase/functions/ai-chat`, `CareResponseService`, `ChatView`, Care red-flag UI smoke test | Wire live provider setup and Supabase iOS service |
+| AI assistant backend scaffold | Scaffolded, with local safety mirror and UI smoke coverage | `supabase/functions/ai-chat`, `CareResponseService`, `ChatView`, `testCareRedFlagPromptShowsSafetyGuidanceSmoke`, `testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke` | Wire live provider setup and Supabase iOS service |
 | Red-flag safety handling | Wired in UI with Care and Log smoke coverage | Care safety card, Today safety card, log/check-in detectors, `testCareRedFlagPromptShowsSafetyGuidanceSmoke`, `testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke` | Add server parity checks and broader UI tests |
 | Doctor report/export | Implemented locally | Profile report row writes a protected local text file and presents `ShareLink` | Add CSV/PDF output, structured ranges, backend export jobs, and UI tests |
 | Profile/settings | Partial | Profile reflects restored session/profile and local stats | Connect notifications and backend profile |
@@ -821,12 +857,12 @@ Final decision:
 Stop condition is not satisfied.
 
 - Build: passes on available iPhone 17 simulator.
-- Tests: passing with 24 unit tests through `InflamendTests` and 8 UI smoke tests through `InflamendUITests`.
+- Tests: passing with 24 unit tests through `InflamendTests` and 9 UI smoke tests through `InflamendUITests`.
 - Improvement passes completed: pass 1 is complete; pass 2 is in progress.
-- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
+- Core flows: auth sign-up/sign-in/onboarding with UI smoke coverage, Profile sign-out with UI smoke coverage, Today check-in with UI smoke coverage, bowel red-flag logging with UI smoke coverage, session restore, local persistence, pending sync queue, logging, local-log Insights, local text report export, local user-data JSON export with Profile UI smoke coverage, local Care safety responses with red-flag and medication-refusal UI smoke coverage, destructive-action confirmations with UI smoke coverage, safety, privacy, voice confirmation, and report scaffolds improved; live Supabase auth/sync/backend integration remains incomplete.
 - Backend: scaffolded with migrations, RLS policies, seed data, and Edge Functions; live verification blocked by missing Supabase CLI/credentials.
-- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Today check-in UI smoke coverage, Log bowel red-flag UI smoke coverage, Care red-flag UI smoke coverage, Profile export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
-- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, and bowel red-flag UI checkpoints exist.
+- Safety/privacy/App Store readiness: foundational docs, privacy manifest, Swift red-flag logic, visible safety/privacy UI, auth sign-up/sign-in/onboarding UI smoke coverage, Profile sign-out UI smoke coverage, Today check-in UI smoke coverage, Log bowel red-flag UI smoke coverage, Care red-flag UI smoke coverage, Care medication-refusal UI smoke coverage, Profile export UI smoke coverage, and destructive confirmation UI smoke coverage now exist; broader UI tests and final release checks remain.
+- Git checkpoints: baseline, backend scaffold, health logic tests, core UX, auth/persistence, sync queue, Insights, report export, Care safety, privacy confirmation, user-data export, UI smoke target, destructive confirmation UI, auth/onboarding UI, Care red-flag UI, Today check-in UI, Profile sign-out UI, local sign-in UI, bowel red-flag UI, and Care medication-refusal UI checkpoints exist.
 
 Continue working.
 

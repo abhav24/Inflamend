@@ -749,3 +749,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with Care refusal and reporting UI coverage.
+
+## Care Medication-Refusal UI Coverage Audit
+
+### Feature Audit: Care Prescription-Change Refusal Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The Care surface now has UI coverage for a common medication-change question, and the response sends users to a clinician/pharmacist instead of pretending to manage prescriptions.
+- Required fixes: Add UI coverage for normal non-red-flag education prompts and report/share flows.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The existing Care composer and assistant-message identifiers support deterministic UI coverage for the medication-refusal branch without adding extra UI chrome.
+- Required fixes: Run manual Dynamic Type and VoiceOver checks for long assistant messages and keyboard/composer behavior.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The smoke test exercises local `CareResponseService` medication-change detection, but live AI routing and server-side post-processing remain blocked by missing Supabase/provider credentials.
+- Required fixes: Mirror or centralize this refusal policy in the Supabase Edge Function before any live provider response reaches users.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The UI test verifies that Inflamend does not recommend starting, stopping, skipping, increasing, or decreasing prescription medication and points to a GI clinician or pharmacist.
+- Required fixes: Verify the same refusal policy in report/export summaries and any future AI memory context.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Care medication-refusal UI test passes. `xcodebuild test` now passes with 33 tests: 24 unit tests and 9 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to report/share flows, Insights empty states, and medication logging.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with reporting, Insights, and medication logging coverage.

@@ -108,6 +108,27 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testCareMedicationChangePromptRefusesPrescriptionAdviceSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-chat"].tap()
+        XCTAssertTrue(app.staticTexts["CARE · SAFETY"].waitForExistence(timeout: 5))
+
+        let prompt = "Should I stop mesalamine if my flare feels bad?"
+        app.textFields["care-input-field"].tap()
+        app.textFields["care-input-field"].typeText(prompt)
+        app.textFields["care-input-field"].typeText("\n")
+
+        XCTAssertTrue(app.staticTexts[prompt].waitForExistence(timeout: 5))
+        let refusal = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS %@", "I can't recommend starting, stopping"))
+            .firstMatch
+        XCTAssertTrue(refusal.waitForExistence(timeout: 8))
+        XCTAssertTrue(refusal.label.contains("GI clinician or pharmacist"))
+        XCTAssertFalse(app.staticTexts["care-safety-message"].exists)
+    }
+
+    @MainActor
     func testTodayCheckInSavesToTimelineSmoke() {
         let app = openSeededHome()
 

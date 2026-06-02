@@ -13,7 +13,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in action path verified | Safety card uses text | In progress |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save path verified | Voice confirmation and blood choices use text | In progress |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
-| Care/Chat | Partial | Unverified | Likely acceptable | Composer and submit path verified by UI smoke test | Safety copy visible and identifier-backed | In progress |
+| Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
 | Profile | Partial | Unverified | Likely acceptable | Rows OK; export, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
 
 ## Latest Improvements
@@ -23,6 +23,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added UI smoke coverage for fresh local sign-up, auth keyboard dismissal, default onboarding completion, and arrival on the Home tab.
 - Added stable identifiers and UI smoke coverage for switching to local sign-in, submitting the auth form, and reaching onboarding.
 - Added stable identifiers and UI smoke coverage for the Care composer and red-flag safety message.
+- Added UI smoke coverage for the Care medication-change refusal branch through the visible assistant message.
 - Added stable identifiers and UI smoke coverage for opening the Today check-in sheet, saving the default check-in, and verifying the new timeline row.
 - Refactored Profile rows so actionable rows use a concrete `Button(action:)` and an explicit rectangular hit target.
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
@@ -44,4 +45,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Log bowel red-flag, Care red-flag, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Log bowel red-flag, Care red-flag, Care medication-refusal, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
