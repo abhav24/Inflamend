@@ -13,7 +13,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt | Safety card uses text | Needs work |
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
-| Care/Chat | Partial | Unverified | Likely acceptable | Composer OK | Safety copy visible | Needs work |
+| Care/Chat | Partial | Unverified | Likely acceptable | Composer and submit path verified by UI smoke test | Safety copy visible and identifier-backed | In progress |
 | Profile | Partial | Unverified | Likely acceptable | Rows OK; export and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
 
 ## Latest Improvements
@@ -21,6 +21,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable accessibility identifiers for auth fields, auth primary action, onboarding completion, tab buttons, Profile data export row, and user-data export sheet actions.
 - Added auth keyboard focus management and a keyboard toolbar Done action so the primary local sign-up button is not trapped behind the software keyboard.
 - Added UI smoke coverage for fresh local sign-up, auth keyboard dismissal, default onboarding completion, and arrival on the Home tab.
+- Added stable identifiers and UI smoke coverage for the Care composer and red-flag safety message.
 - Refactored Profile rows so actionable rows use a concrete `Button(action:)` and an explicit rectangular hit target.
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
@@ -39,4 +40,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth/onboarding, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth/onboarding, Care red-flag, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

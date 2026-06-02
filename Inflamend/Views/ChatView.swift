@@ -48,6 +48,7 @@ struct ChatView: View {
                         .font(DS.sans(12, weight: .medium))
                         .foregroundColor(.clay)
                         .lineSpacing(2)
+                        .accessibilityIdentifier("care-safety-message")
                 }
             }
             .padding(14)
@@ -134,7 +135,9 @@ struct ChatView: View {
                         .font(DS.sans(15))
                         .foregroundColor(.fgPrimary)
                         .focused($isInputFocused)
+                        .submitLabel(.send)
                         .onSubmit { send(nil) }
+                        .accessibilityIdentifier("care-input-field")
                         .padding(.leading, 18)
                         .padding(.vertical, 10)
 
@@ -155,6 +158,7 @@ struct ChatView: View {
                     }
                     .buttonStyle(PressableButtonStyle(scale: 0.9))
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .accessibilityIdentifier("care-send-button")
                     .padding(.trailing, 6)
                 }
                 .background(Color.bgCard)
@@ -221,6 +225,7 @@ struct ChatBubble: View {
             if !isUser { Spacer(minLength: 60) }
         }
         .padding(.horizontal, 20)
+        .accessibilityIdentifier(isUser ? "care-user-message" : "care-assistant-message")
     }
 }
 

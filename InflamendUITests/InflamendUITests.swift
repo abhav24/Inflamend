@@ -59,7 +59,25 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
-    private func openSeededProfile() -> XCUIApplication {
+    func testCareRedFlagPromptShowsSafetyGuidanceSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-chat"].tap()
+        XCTAssertTrue(app.staticTexts["CARE · SAFETY"].waitForExistence(timeout: 5))
+
+        let prompt = "I have severe abdominal pain and lots of blood"
+        app.textFields["care-input-field"].tap()
+        app.textFields["care-input-field"].typeText(prompt)
+        app.textFields["care-input-field"].typeText("\n")
+
+        XCTAssertTrue(app.staticTexts[prompt].waitForExistence(timeout: 5))
+        let safetyMessage = app.staticTexts["care-safety-message"]
+        XCTAssertTrue(safetyMessage.waitForExistence(timeout: 5))
+        XCTAssertTrue(safetyMessage.label.contains("cannot diagnose or triage emergencies"))
+    }
+
+    @MainActor
+    private func openSeededHome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--inflamend-reset-state",
@@ -68,6 +86,13 @@ final class InflamendUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.staticTexts["How are you feeling?"].waitForExistence(timeout: 8))
+
+        return app
+    }
+
+    @MainActor
+    private func openSeededProfile() -> XCUIApplication {
+        let app = openSeededHome()
 
         app.buttons["tab-profile"].tap()
         XCTAssertTrue(app.staticTexts["YOUR ACCOUNT"].waitForExistence(timeout: 5))

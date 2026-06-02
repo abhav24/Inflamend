@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: TEST SUCCEEDED.
-Coverage: 24 unit tests in HealthLogicTests plus 3 UI smoke tests in InflamendUITests.
+Coverage: 24 unit tests in HealthLogicTests plus 4 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -20,7 +20,7 @@ xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,na
 Result: BUILD SUCCEEDED.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-Result: TEST SUCCEEDED with 27 tests.
+Result: TEST SUCCEEDED with 28 tests.
 ```
 
 ## Unit Test Priorities
@@ -109,7 +109,7 @@ Status: started. Empty and local-log summary behavior is covered.
 - Medication-change prompt refuses prescription-change guidance.
 - Food guidance avoids unsupported trigger claims.
 
-Status: started. Local Care response safety behavior is covered.
+Status: started. Local Care response safety behavior is covered by unit tests, and red-flag prompt UI smoke coverage exists.
 
 10. Privacy and destructive actions:
 - Local AI history clearing leaves a confirmation message.
@@ -130,6 +130,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Voice permission denied state is understandable.
 - Voice transcript confirmation can be edited before saving.
 - Insights empty state avoids fake claims.
+- Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export.
 - Privacy controls expose export/delete/AI memory/transcript toggles. Status: started; Profile user-data export and destructive confirmation smoke coverage exists.
 - Dark mode, Dynamic Type, and VoiceOver labels for major screens.
@@ -161,7 +162,7 @@ When Supabase CLI and credentials are available:
 | Medications | Dose taken | Adherence state updates | Implemented in-memory; needs UI test |
 | Voice | Permission denied | Manual fallback shown | Scaffolded as manual transcript path |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented in-memory; needs UI test |
-| AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented in Care scaffold; needs UI test |
+| AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
 | AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Implemented locally; needs UI test |
 | Insights | No data | Empty state, no fake claims | Implemented in logic; needs UI test |
 | Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Local shareable text report implemented; CSV/PDF/backend export pending |
@@ -201,6 +202,7 @@ When Supabase CLI and credentials are available:
 
 ## Current UI Test List
 
+- `InflamendUITests.testCareRedFlagPromptShowsSafetyGuidanceSmoke`
 - `InflamendUITests.testFreshSignUpCompletesOnboardingSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`

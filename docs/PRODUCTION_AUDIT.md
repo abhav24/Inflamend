@@ -589,3 +589,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with broader UI coverage and production Supabase auth integration.
+
+## Care Red-Flag UI Coverage Audit
+
+### Feature Audit: Care Safety Prompt Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The Care tab now has UI smoke coverage for the most important safety contract: severe symptoms produce urgent safety guidance instead of routine chat.
+- Required fixes: Add coverage for common non-red-flag prompts and medication-change refusal so Care remains useful without over-answering.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Stable identifiers now exist for the Care composer, send action, safety message, and chat bubbles. The test validates keyboard submit behavior through the visible composer flow.
+- Required fixes: Add Dynamic Type and VoiceOver checks for the safety message and long chat bubbles.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI test exercises the local `CareResponseService` red-flag branch while live AI/provider integration remains blocked by missing credentials.
+- Required fixes: Route Care through Supabase Edge Functions with the same red-flag policy and post-processing once backend credentials and provider keys are available.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The tested safety copy explicitly says Inflamend cannot diagnose or triage emergencies and points users toward urgent medical care, emergency services, or a clinician.
+- Required fixes: Add server parity tests so live AI cannot bypass this safety copy.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The focused Care red-flag UI test passes. `xcodebuild test` now passes with 28 tests: 24 unit tests and 4 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to sign-in/sign-out, logging, report/share flows, and Care medication-change refusal.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with broader Care coverage and live backend safety parity.
