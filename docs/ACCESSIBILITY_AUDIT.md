@@ -14,7 +14,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save, food save, medication dose row, voice confirmation, and voice permission fallback paths verified | Voice permission fallback, voice confirmation, blood choices, food tags, and medication rows use text | In progress |
 | Insights | Partial | Unverified | Mixed chart colors | Mostly OK; empty and populated summary paths plus chart containers are identifier-backed and smoke-tested | Empty and populated summaries use explanatory text; populated trend, bowel, and heatmap charts expose summary labels | In progress |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer, submit, red-flag, and medication-refusal paths verified by UI smoke tests | Safety copy visible and identifier-backed | In progress |
-| Profile | Partial | Unverified | Likely acceptable | Rows OK; sync status, medication reminders, preferences, flare history, Care Plan, report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Sync blocked state, reminder setup state, preferences setup state, flare history empty/count states, Care Plan safety state, and destructive actions use visible text | In progress |
+| Profile | Partial | Unverified | Likely acceptable | Rows OK; sync status, medication reminders, preferences, flare history, Care Plan, IBD Library, report export, data export, privacy toggles, sign-out, and destructive rows verified by UI smoke tests | Sync blocked state, reminder setup state, preferences setup state, flare history empty/count states, Care Plan safety state, IBD Library source/safety state, and destructive actions use visible text | In progress |
 
 ## Latest Improvements
 
@@ -47,6 +47,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for the Profile Preferences row, weight-unit buttons, device-timezone state, and unit-aware Weight logging path.
 - Added stable identifiers and UI smoke coverage for the Profile Flare history row, sheet summary, empty state, and local flare event rows.
 - Added stable identifiers and UI smoke coverage for the Profile Care Plan row, question list, and non-treatment safety note.
+- Added stable identifiers and UI smoke coverage for the Profile IBD Library row, source-attributed article rows, source labels, and non-diagnostic safety note.
 - Added stable identifiers and UI smoke coverage for Log voice permission-denied fallback copy and the manual transcript entry path.
 - Added stable identifiers and UI smoke coverage for Home timeline delete buttons, destructive confirmation, and empty-timeline feedback.
 - Added stable identifiers, keyboard Done control, and UI smoke coverage for Home timeline edit buttons, the edit sheet, and updated timeline row feedback.
@@ -64,9 +65,9 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Add manual VoiceOver notes for timeline delete confirmation dialogs.
 - Add manual VoiceOver notes for the timeline edit sheet, weight unit controls, medication dose status rows, and row action order.
 - Add manual VoiceOver notes for the timeline delete undo toast and action order.
-- Add manual VoiceOver notes for privacy toggles, the Profile sync detail sheet including network and automatic retry status, the medication reminder settings sheet, the Profile Preferences sheet, the Profile Flare history sheet, the Profile Care Plan sheet, and the voice permission fallback state.
+- Add manual VoiceOver notes for privacy toggles, the Profile sync detail sheet including network and automatic retry status, the medication reminder settings sheet, the Profile Preferences sheet, the Profile Flare history sheet, the Profile Care Plan sheet, the Profile IBD Library sheet, and the voice permission fallback state.
 - Add labels/hints for auth mode selection and onboarding pill selections.
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status/detail including offline and automatic retry state, Profile privacy toggles, Profile medication reminder settings, Profile preferences, Profile flare history, Profile Care Plan, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, timeline edit, timeline delete confirmation, timeline delete undo, Insights empty and populated summary states, Insights populated chart summaries, Log bowel red-flag, Log food, Log medication dose, Log voice confirmation, Log voice permission fallback, Care red-flag, Care medication-refusal, Profile sign-out, Profile sync status/detail including offline and automatic retry state, Profile privacy toggles, Profile medication reminder settings, Profile preferences, Profile flare history, Profile Care Plan, Profile IBD Library, Profile doctor-report export, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

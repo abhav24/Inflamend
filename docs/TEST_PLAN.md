@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 51 unit tests in HealthLogicTests plus 32 UI smoke tests in InflamendUITests.
+Coverage: 52 unit tests in HealthLogicTests plus 33 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -61,8 +61,14 @@ Result: TEST SUCCEEDED with 1 UI smoke test.
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileCarePlanShowsLocalQuestionsSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testPatientEducationLibraryUsesSourceFramedNonTreatmentCopy
+Result: TEST SUCCEEDED with 1 focused unit test.
+
+xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileIBDLibraryShowsSourceFramedGuidesSmoke
+Result: TEST SUCCEEDED with 1 UI smoke test.
+
 xcodebuild test -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 51 unit tests.
+Result: TEST SUCCEEDED with 52 unit tests.
 
 xcodebuild clean build -quiet -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -172,8 +178,9 @@ Status: started. Empty, local-log, typed-payload, and 7-day recent summary behav
 - Medication-change prompt refuses prescription-change guidance.
 - Food guidance avoids unsupported trigger claims.
 - Care Plan questions remain visit-preparation prompts, not treatment advice.
+- IBD Library education copy remains source-attributed and does not recommend treatment or diet changes.
 
-Status: started. Local Care response safety behavior is covered by unit tests, Care Plan question generation is covered by unit tests, and red-flag, medication-change refusal, plus Profile Care Plan UI smoke coverage exists.
+Status: started. Local Care response safety behavior is covered by unit tests, Care Plan question generation is covered by unit tests, IBD Library source attribution and non-treatment copy are covered by unit tests, and red-flag, medication-change refusal, Profile Care Plan, plus Profile IBD Library UI smoke coverage exists.
 
 10. Privacy and destructive actions:
 - Local AI history clearing leaves a confirmation message.
@@ -200,6 +207,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Profile preferences drive logging units. Status: preferred LB setting persists locally, exports in JSON, queues a future user-settings replay, and drives a new Weight log in UI smoke coverage.
 - Profile flare history shows local flare marks. Status: typed flare-history builder and Profile sheet smoke coverage exist.
 - Profile Care Plan shows local visit-preparation questions. Status: Care Plan builder and Profile sheet smoke coverage exist, including non-treatment safety copy.
+- Profile IBD Library shows local source-attributed education guides. Status: education library builder and Profile sheet smoke coverage exist, including source attribution, nutrition caution, and non-diagnostic safety copy.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
@@ -246,6 +254,7 @@ When Supabase CLI and credentials are available:
 | Preferences | Weight unit changed | New Weight logs use selected unit | Implemented locally with persisted/exported `AppPreferences`, Profile preferences UI, LB weight-log smoke coverage, and default KG weight edit regression coverage |
 | Profile | Flare history | Local flare-marked logs appear in a Profile sheet | Implemented locally with typed payload-aware `FlareHistoryBuilder` and UI smoke coverage after saving a rapid flare marker |
 | Profile | Care plan | Local GI-visit questions appear with non-treatment framing | Implemented locally with `CarePlanBuilder` and UI smoke coverage from seeded Profile |
+| Profile | IBD library | Source-attributed education guides appear with non-treatment framing | Implemented locally with `PatientEducationLibraryBuilder` and UI smoke coverage from seeded Profile |
 | Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
@@ -273,6 +282,8 @@ When Supabase CLI and credentials are available:
 - `testVoiceParserParsesWeight`
 - `testMedicationScheduleCalculatesTwiceDailyDoses`
 - `testMedicationDoseStatusPersistsAndQueuesStructuredLog`
+- `testMedicationReminderSettingsPersistExportAndQueuePreference`
+- `testAppPreferencesPersistExportAndWeightLoggingUsesPreferredUnit`
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`
 - `testDoctorReportExporterUsesLastThirtyDayLoggedAtRange`
@@ -296,6 +307,9 @@ When Supabase CLI and credentials are available:
 - `testInsightSummaryUsesLocalLogsWithoutDemoData`
 - `testInsightSummaryRecentRangeUsesLoggedAtDates`
 - `testInsightSummaryPrefersTypedPayloadOverDisplayText`
+- `testFlareHistoryBuilderUsesTypedFlareLogs`
+- `testCarePlanBuilderCreatesPreparationQuestionsWithoutTreatmentAdvice`
+- `testPatientEducationLibraryUsesSourceFramedNonTreatmentCopy`
 - `testDeleteLogRemovesEntryAndCoalescesPendingCreate`
 - `testUpdateLogPersistsAndCoalescesPendingCreate`
 - `testUpdateLogCanPreserveTypedPayloadsForTimelineEdits`
@@ -328,6 +342,11 @@ When Supabase CLI and credentials are available:
 - `InflamendUITests.testProfileDoctorReportExportSheetSmoke`
 - `InflamendUITests.testProfileUserDataExportSheetSmoke`
 - `InflamendUITests.testProfileDestructiveActionsRequireConfirmation`
+- `InflamendUITests.testProfileMedicationReminderSettingsSmoke`
+- `InflamendUITests.testProfilePreferencesWeightUnitDrivesWeightLogSmoke`
+- `InflamendUITests.testProfileFlareHistoryShowsLocalFlareMarksSmoke`
+- `InflamendUITests.testProfileCarePlanShowsLocalQuestionsSmoke`
+- `InflamendUITests.testProfileIBDLibraryShowsSourceFramedGuidesSmoke`
 - `InflamendUITests.testProfilePrivacyTogglesUpdateVisibleStateSmoke`
 - `InflamendUITests.testProfileSignOutReturnsToAuthGateSmoke`
 - `InflamendUITests.testProfileSyncRetryShowsBackendBlockedSmoke`

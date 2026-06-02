@@ -840,6 +840,10 @@ class AppState {
         )
     }
 
+    var ibdEducationLibrary: PatientEducationLibrary {
+        PatientEducationLibraryBuilder.defaultLibrary
+    }
+
     func setSyncNetworkStatus(_ status: SyncNetworkStatus) {
         syncNetworkStatus = status
         if status == .online {

@@ -9,6 +9,7 @@ struct ProfileView: View {
     @State private var showingPreferences = false
     @State private var showingFlareHistory = false
     @State private var showingCarePlan = false
+    @State private var showingEducationLibrary = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -129,8 +130,13 @@ struct ProfileView: View {
                     ) {
                         showingPreferences = true
                     }
-                    ProfileRow(icon: "book", label: "IBD library", sub: "Guided articles") {
-                        appState.showToast("Education library scaffolded")
+                    ProfileRow(
+                        icon: "book",
+                        label: "IBD library",
+                        sub: appState.ibdEducationLibrary.profileSummary,
+                        accessibilityID: "profile-ibd-library-row"
+                    ) {
+                        showingEducationLibrary = true
                     }
                     ProfileRow(icon: "logout", label: "Sign out", isDanger: true, isLast: true, accessibilityID: "profile-sign-out-row") {
                         appState.signOut()
@@ -224,6 +230,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingCarePlan) {
             CarePlanSheet(summary: appState.carePlanSummary)
+        }
+        .sheet(isPresented: $showingEducationLibrary) {
+            IBDEducationLibrarySheet(library: appState.ibdEducationLibrary)
         }
         .sheet(item: $preparedExport) { export in
             switch export {
@@ -416,6 +425,111 @@ private struct CarePlanQuestionRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("care-plan-question-\(index)")
+    }
+}
+
+private struct IBDEducationLibrarySheet: View {
+    let library: PatientEducationLibrary
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "book", color: .ink)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("IBD library")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("ibd-library-title")
+                        Text(library.profileSummary)
+                            .font(DS.sans(13))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("ibd-library-summary")
+                    }
+                    Spacer()
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(Array(library.articles.enumerated()), id: \.element.id) { index, article in
+                        IBDEducationArticleRow(article: article, index: index)
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 10) {
+                    AppIcon(name: "shield", size: 15, color: .fgDim)
+                    Text(library.safetyNote)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                        .accessibilityIdentifier("ibd-library-safety-note")
+                }
+                .padding(14)
+                .background(Color.bgInset)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct IBDEducationArticleRow: View {
+    let article: PatientEducationArticle
+    let index: Int
+
+    private var sourceNames: String {
+        article.sources.map(\.name).joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                IconBadge(name: "book", size: 34, iconSize: 15, color: .ink)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(article.title)
+                        .font(DS.sans(15, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    Text(article.summary)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgDim)
+                        .lineSpacing(3)
+                }
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(article.keyPoints, id: \.self) { keyPoint in
+                    HStack(alignment: .top, spacing: 7) {
+                        Text("-")
+                            .font(DS.sans(12, weight: .semibold))
+                            .foregroundColor(.fgFaint)
+                        Text(keyPoint)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
+                            .lineSpacing(2)
+                    }
+                }
+            }
+
+            Text("Ask: \(article.clinicianPrompt)")
+                .font(DS.sans(12, weight: .medium))
+                .foregroundColor(.fgPrimary)
+                .lineSpacing(2)
+
+            Text("Source: \(sourceNames)")
+                .font(DS.mono(10, weight: .semibold))
+                .foregroundColor(.fgFaint)
+                .textCase(.uppercase)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .accessibilityIdentifier("ibd-library-article-source-\(index)")
+        }
+        .padding(14)
+        .background(Color.bgCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ibd-library-article-\(index)")
     }
 }
 

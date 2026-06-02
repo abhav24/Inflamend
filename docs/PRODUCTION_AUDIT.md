@@ -1518,6 +1518,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with editable care-plan notes, report integration, backend persistence, and manual accessibility QA.
 
+## Local IBD Education Library Audit
+
+### Feature Audit: Profile IBD Library Sheet
+
+Product Simplicity Reviewer:
+- Findings: The previous Profile IBD library placeholder now opens a focused local guide sheet instead of expanding into a large article system. The content is limited to basics, symptom sharing, diagnosis discussion, nutrition discussion, and clinician questions.
+- Required fixes: Add search, bookmarks, and source-link handling only after the core local guide experience remains easy to scan.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sheet uses a clear title, article rows, source labels, and visible safety framing. Profile now shows a concrete guide count rather than placeholder copy.
+- Required fixes: Manually verify long article text, source labels, nutrition copy, and safety-note announcement at large Dynamic Type and VoiceOver.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `PatientEducationLibraryBuilder` is deterministic, local, and has no persistence surface in this checkpoint. Source URLs are stored as structured metadata for future link/version work.
+- Required fixes: Add backend content/version sync, editorial review metadata, cache invalidation, and source-link handling before changing this into remotely updated medical education content.
+- Status: Accept local content checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The library is source-attributed to CDC, NIDDK, and Crohn's & Colitis Foundation public resources and explicitly avoids diagnosis, triage, medication changes, and restrictive diet recommendations. It frames food and symptom content as clinician discussion preparation.
+- Required fixes: Review any future personalization, bookmarks, viewed-article analytics, or education notes as health-adjacent data before sync or telemetry.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for guide count, source metadata, HTTPS URLs, source attribution, and non-prescriptive safety framing. Focused Profile UI smoke coverage passed for guide count, source-framed first article, nutrition caution, and safety note. Full unit target passed with 52 tests, and clean build passed.
+- Required fixes: Add tests for external link handling, article search/filtering, backend content versions, and manual accessibility once those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with editable/bookmarkable education notes, external source links, backend content/version sync, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

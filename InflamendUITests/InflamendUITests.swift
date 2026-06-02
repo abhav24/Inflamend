@@ -268,6 +268,27 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testProfileIBDLibraryShowsSourceFramedGuidesSmoke() {
+        let app = openSeededProfile()
+
+        let libraryRow = app.buttons["profile-ibd-library-row"]
+        waitForLabel(libraryRow, contains: "4 local guides")
+        tapWhenVisible(libraryRow, in: app)
+
+        XCTAssertTrue(app.staticTexts["ibd-library-title"].waitForExistence(timeout: 5))
+        waitForLabel(app.staticTexts["ibd-library-summary"], contains: "4 local guides")
+        waitForLabel(app.descendants(matching: .any)["ibd-library-article-0"], contains: "IBD basics")
+        waitForLabel(app.descendants(matching: .any)["ibd-library-article-0"], contains: "Crohn's disease and ulcerative colitis")
+        waitForLabel(app.staticTexts["ibd-library-article-source-0"], contains: "CDC")
+
+        let nutritionArticle = app.descendants(matching: .any)["ibd-library-article-3"]
+        waitForElement(nutritionArticle, in: app)
+        waitForLabel(nutritionArticle, contains: "restrictive diet")
+        waitForElement(app.staticTexts["ibd-library-safety-note"], in: app)
+        waitForLabel(app.staticTexts["ibd-library-safety-note"], contains: "does not diagnose")
+    }
+
+    @MainActor
     func testProfileSyncRetryShowsBackendBlockedSmoke() {
         let app = openFreshOnboardedHome(
             displayName: "UI Sync",

@@ -533,6 +533,32 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertTrue(summary.safetyNote.contains("not a treatment plan"))
     }
 
+    func testPatientEducationLibraryUsesSourceFramedNonTreatmentCopy() throws {
+        let library = PatientEducationLibraryBuilder.defaultLibrary
+
+        XCTAssertEqual(library.profileSummary, "4 local guides")
+        XCTAssertEqual(library.articles.count, 4)
+        XCTAssertTrue(library.articles.contains { $0.id == "ibd-basics" })
+        XCTAssertTrue(library.articles.contains { $0.id == "nutrition-discussions" })
+
+        let sources = library.articles.flatMap(\.sources)
+        XCTAssertTrue(sources.allSatisfy { $0.url.scheme == "https" })
+        XCTAssertTrue(sources.contains { $0.name.contains("CDC") })
+        XCTAssertTrue(sources.contains { $0.name.contains("NIDDK") })
+        XCTAssertTrue(sources.contains { $0.name.contains("Crohn's & Colitis Foundation") })
+
+        let copy = (
+            library.articles.flatMap { [$0.title, $0.summary, $0.clinicianPrompt] + $0.keyPoints }
+                + [library.safetyNote]
+        ).joined(separator: " ").lowercased()
+
+        XCTAssertFalse(copy.contains("stop your medication"))
+        XCTAssertFalse(copy.contains("change your medication"))
+        XCTAssertFalse(copy.contains("start a restrictive diet"))
+        XCTAssertTrue(library.safetyNote.contains("does not diagnose"))
+        XCTAssertTrue(library.safetyNote.contains("does not diagnose, triage, or recommend treatment changes"))
+    }
+
     func testInsightSummaryPrefersTypedPayloadOverDisplayText() {
         let logs = [
             LogEntry(

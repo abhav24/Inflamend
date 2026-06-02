@@ -356,6 +356,38 @@ struct CarePlanSummary: Equatable {
     }
 }
 
+struct PatientEducationSource: Identifiable, Equatable {
+    var name: String
+    var url: URL
+
+    var id: String { url.absoluteString }
+}
+
+struct PatientEducationArticle: Identifiable, Equatable {
+    var id: String
+    var title: String
+    var summary: String
+    var keyPoints: [String]
+    var clinicianPrompt: String
+    var sources: [PatientEducationSource]
+}
+
+struct PatientEducationLibrary: Equatable {
+    var articles: [PatientEducationArticle]
+    var safetyNote: String
+
+    var profileSummary: String {
+        switch articles.count {
+        case 0:
+            return "No local guides"
+        case 1:
+            return "1 local guide"
+        default:
+            return "\(articles.count) local guides"
+        }
+    }
+}
+
 enum HealthLogDateRange {
     static func interval(last days: Int, endingAt: Date = Date(), calendar: Calendar = .current) -> DateInterval {
         let dayCount = max(1, days)
@@ -647,6 +679,75 @@ enum CarePlanBuilder {
             questions: questions,
             safetyNote: "These questions are for visit preparation and are not a treatment plan. For urgent or worsening symptoms, contact a clinician or urgent care."
         )
+    }
+}
+
+enum PatientEducationLibraryBuilder {
+    static let defaultLibrary = PatientEducationLibrary(
+        articles: [
+            PatientEducationArticle(
+                id: "ibd-basics",
+                title: "IBD basics",
+                summary: "IBD is a lifelong group of inflammatory intestinal conditions. The main types are Crohn's disease and ulcerative colitis, and symptoms can come and go.",
+                keyPoints: [
+                    "Track stool changes, pain, blood, fatigue, appetite, and weight changes.",
+                    "Use local logs to prepare for visits, not to self-diagnose or triage."
+                ],
+                clinicianPrompt: "Which diagnosis details and monitoring plan should I understand before my next visit?",
+                sources: [
+                    source("CDC IBD Basics", "https://www.cdc.gov/inflammatory-bowel-disease/about/index.html")
+                ]
+            ),
+            PatientEducationArticle(
+                id: "crohns-uc-differences",
+                title: "Crohn's and ulcerative colitis",
+                summary: "Crohn's disease can affect any part of the digestive tract. Ulcerative colitis involves inflammation and ulcers in the large intestine lining.",
+                keyPoints: [
+                    "Ask your clinician which parts of the digestive tract are involved in your diagnosis.",
+                    "Keep diagnosis-specific questions separate from medication or surgery decisions."
+                ],
+                clinicianPrompt: "How does my diagnosis change what symptoms, labs, or procedures we monitor?",
+                sources: [
+                    source("CDC Crohn's Disease Basics", "https://www.cdc.gov/inflammatory-bowel-disease/about/crohns-disease-basics.html"),
+                    source("NIDDK Ulcerative Colitis", "https://www.niddk.nih.gov/health-information/digestive-diseases/ulcerative-colitis")
+                ]
+            ),
+            PatientEducationArticle(
+                id: "symptoms-to-share",
+                title: "Symptoms to share",
+                summary: "Duration, severity, and change over time can help clinicians decide what testing or follow-up is needed.",
+                keyPoints: [
+                    "Bring patterns from bowel, pain, fatigue, fever, appetite, and weight logs.",
+                    "Mention symptoms outside the gut, including joint, eye, skin, or mouth symptoms."
+                ],
+                clinicianPrompt: "Which symptoms should prompt same-day advice, urgent care, or routine follow-up?",
+                sources: [
+                    source("NIDDK Crohn's Symptoms", "https://www.niddk.nih.gov/health-information/digestive-diseases/crohns-disease/symptoms-causes"),
+                    source("Crohn's & Colitis Foundation Symptoms", "https://www.crohnscolitisfoundation.org/patientsandcaregivers/what-is-ibd/symptoms")
+                ]
+            ),
+            PatientEducationArticle(
+                id: "nutrition-discussions",
+                title: "Nutrition discussions",
+                summary: "Food tolerance and nutrition needs vary by person, disease activity, and complications. Restrictive diet decisions should be planned with a clinician or IBD-focused dietitian.",
+                keyPoints: [
+                    "Use meal logs to discuss patterns, hydration, appetite, and unplanned weight loss.",
+                    "Avoid starting a restrictive diet from app content or internet advice alone."
+                ],
+                clinicianPrompt: "Do I need an IBD-focused dietitian or a specific nutrition plan for my current symptoms?",
+                sources: [
+                    source("Crohn's & Colitis Foundation Diet Guide", "https://www.crohnscolitisfoundation.org/patientsandcaregivers/diet-and-nutrition/what-should-i-eat")
+                ]
+            )
+        ],
+        safetyNote: "This library is educational and does not diagnose, triage, or recommend treatment changes. Use it to prepare questions; urgent or worsening symptoms need clinician or urgent care guidance."
+    )
+
+    private static func source(_ name: String, _ urlString: String) -> PatientEducationSource {
+        guard let url = URL(string: urlString) else {
+            preconditionFailure("Invalid education source URL: \(urlString)")
+        }
+        return PatientEducationSource(name: name, url: url)
     }
 }
 
