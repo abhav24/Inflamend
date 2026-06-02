@@ -1486,6 +1486,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
 
+## Weight Timeline Structured Edit Audit
+
+### Feature Audit: Weight Field Editing From Timeline
+
+Product Simplicity Reviewer:
+- Findings: Weight logs now support small corrections from Home without making users delete and recreate a recent entry.
+- Required fixes: Keep future expansion focused on unit choice and values used by reports before adding broader body-metric tracking.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The edit sheet uses compact numeric step controls with stable row sizing, so users can make 0.1 kg or 1 kg corrections without keyboard friction.
+- Required fixes: Manually verify the expanded edit sheet at large Dynamic Type and with VoiceOver focus order before release.
+- Status: Accept checkpoint with manual QA follow-up.
+
+Backend and Data Integrity Reviewer:
+- Findings: Weight timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, and keep pending create/update replay snapshots aligned with the corrected row.
+- Required fixes: Add live backend update replay, conflict handling, unit mapping, and backend serialization tests for payload-bearing weight edits once Supabase credentials exist.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: No new data category was added beyond the existing typed weight payload. The UI records a user-entered value without making weight-loss triage or medical causation claims.
+- Required fixes: Avoid logging weight replay payloads in diagnostics and keep any rapid-weight-loss safety logic tied to existing red-flag wording.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit coverage passed for replacement weight payload persistence and replay snapshots. Focused weight UI smoke coverage passed after saving a weight log, editing 62.4 kg to 63.0 kg, and verifying the updated row. Full unit tests pass with 41 tests, full scheme tests pass with 65 tests, and `xcodebuild clean build` passes. The initial parallel focused unit run hit an Xcode build database lock, then passed when rerun serially.
+- Required fixes: Add structured edit coverage for medication and check-in payloads as those controls land.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with additional structured timeline edit cases, backend update replay, conflict handling, and manual accessibility QA.
+
 ## Sleep Timeline Structured Edit Audit
 
 ### Feature Audit: Sleep Field Editing From Timeline

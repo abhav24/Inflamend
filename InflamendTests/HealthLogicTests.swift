@@ -926,6 +926,52 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateLogCanReplaceWeightPayloadAndReplaySnapshot() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-update-weight-payload-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "update-weight@example.com", displayName: "Update Weight")
+        appState.recordWeight(value: 62.4, unit: "kg")
+
+        let createdLog = try XCTUnwrap(appState.logs.first)
+        XCTAssertEqual(createdLog.title, "Weight · 62.4 kg")
+        XCTAssertEqual(createdLog.sub, "Manual entry")
+
+        var editedPayload = try XCTUnwrap(createdLog.payload)
+        editedPayload.weightValue = 63.0
+
+        XCTAssertTrue(appState.updateLog(
+            id: createdLog.id,
+            title: editedPayload.weightDisplayTitle ?? "Weight logged",
+            sub: editedPayload.weightDisplayDetails ?? "",
+            preservePayload: true,
+            payload: editedPayload
+        ))
+
+        XCTAssertEqual(appState.logs[0].title, "Weight · 63.0 kg")
+        XCTAssertEqual(appState.logs[0].sub, "Manual entry")
+        XCTAssertEqual(appState.logs[0].payload?.weightValue, 63.0)
+        XCTAssertEqual(appState.logs[0].payload?.weightUnit, "kg")
+
+        let coalescedCreate = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.localRecordId == createdLog.id.uuidString
+        })
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.title, "Weight · 63.0 kg")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.details, "Manual entry")
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.weightValue, 63.0)
+        XCTAssertEqual(coalescedCreate.payload?.healthLog?.typedPayload?.weightUnit, "kg")
+
+        let restored = AppState(store: store)
+        XCTAssertEqual(restored.logs.first?.payload?.weightValue, 63.0)
+        XCTAssertEqual(restored.logs.first?.payload?.weightUnit, "kg")
+
+        store.delete()
+    }
+
+    @MainActor
     func testSyncReplayPlanRoutesMutationsAndStoresBlockedErrors() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-sync-plan-\(UUID().uuidString).json")

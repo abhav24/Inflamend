@@ -421,6 +421,30 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testWeightLogCanBeEditedFromTimelineSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        tapHorizontalWhenVisible(app.buttons["log-tab-weight"], in: app)
+        tapWhenVisible(app.buttons["weight-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let weightEntry = app.descendants(matching: .any)["timeline-entry-weight"]
+        waitForLabel(weightEntry, contains: "Weight · 62.4 kg")
+
+        tapWhenVisible(app.buttons["timeline-edit-weight"], in: app)
+        XCTAssertTrue(app.staticTexts["timeline-edit-sheet-title"].waitForExistence(timeout: 5))
+        for _ in 0..<6 {
+            tapWhenVisible(app.buttons["timeline-edit-weight-increment-tenth"], in: app)
+        }
+        tapWhenVisible(app.buttons["timeline-save-edit-button"], in: app)
+
+        let editedWeightEntry = app.descendants(matching: .any)["timeline-entry-weight"]
+        waitForLabel(editedWeightEntry, contains: "Weight · 63.0 kg")
+        XCTAssertTrue(editedWeightEntry.label.contains("Manual entry"), editedWeightEntry.label)
+    }
+
+    @MainActor
     func testMedicationDoseUpdatesHomeSummarySmoke() {
         let app = openSeededHome()
 

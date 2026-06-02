@@ -856,6 +856,22 @@ class AppState {
         showToast("Sleep logged")
     }
 
+    func recordWeight(value: Double, unit: String = "kg") {
+        guard HealthLogValidator.isValidWeight(value) else {
+            showToast("Enter a valid weight")
+            return
+        }
+
+        let payload = HealthLogPayload.weight(value: value, unit: unit)
+        addLog(
+            type: .weight,
+            title: payload.weightDisplayTitle ?? "Weight logged",
+            sub: payload.weightDisplayDetails ?? "",
+            payload: payload
+        )
+        showToast(payload.weightDisplayTitle ?? "Weight saved")
+    }
+
     func recordVoiceDraft(_ draft: VoiceLogDraft) {
         let fieldSummary = draft.fields
             .sorted { $0.key < $1.key }
@@ -1389,6 +1405,20 @@ struct HealthLogPayload: Codable, Equatable {
         guard kind == .sleep else { return nil }
         let count = bathroomWakeCount ?? 0
         return "\(count) bathroom \(count == 1 ? "wake" : "wakes")"
+    }
+
+    var weightDisplayTitle: String? {
+        guard kind == .weight, let weightValue else { return nil }
+        return "Weight · \(Self.formattedWeight(weightValue)) \(weightUnit ?? "kg")"
+    }
+
+    var weightDisplayDetails: String? {
+        guard kind == .weight else { return nil }
+        return "Manual entry"
+    }
+
+    static func formattedWeight(_ value: Double) -> String {
+        String(format: "%.1f", value)
     }
 }
 

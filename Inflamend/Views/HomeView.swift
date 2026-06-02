@@ -616,6 +616,10 @@ private struct TimelineEditSheet: View {
                     TimelineSleepPayloadFields(payload: sleepPayloadBinding)
                 }
 
+                if let weightPayloadBinding {
+                    TimelineWeightPayloadFields(payload: weightPayloadBinding)
+                }
+
                 PrimaryButton(title: "Save changes") {
                     if onSave(titleForSave, detailForSave, payload) {
                         dismiss()
@@ -677,6 +681,8 @@ private struct TimelineEditSheet: View {
             return payload?.symptomDisplayTitle ?? title
         case .sleep:
             return payload?.sleepDisplayTitle ?? title
+        case .weight:
+            return payload?.weightDisplayTitle ?? title
         default:
             return title
         }
@@ -693,6 +699,8 @@ private struct TimelineEditSheet: View {
             return payload?.symptomDisplayDetails ?? detail
         case .sleep:
             return payload?.sleepDisplayDetails ?? detail
+        case .weight:
+            return payload?.weightDisplayDetails ?? detail
         default:
             return detail
         }
@@ -710,6 +718,14 @@ private struct TimelineEditSheet: View {
         guard payload?.kind == .sleep else { return nil }
         return Binding(
             get: { payload ?? entry.payload ?? HealthLogPayload.sleep(quality: 7, bathroomWakeCount: 1) },
+            set: { payload = $0 }
+        )
+    }
+
+    private var weightPayloadBinding: Binding<HealthLogPayload>? {
+        guard payload?.kind == .weight else { return nil }
+        return Binding(
+            get: { payload ?? entry.payload ?? HealthLogPayload.weight(value: 62.4, unit: "kg") },
             set: { payload = $0 }
         )
     }
@@ -986,6 +1002,64 @@ private struct TimelineSleepPayloadFields: View {
         .padding(14)
         .background(Color.bgInset)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+private struct TimelineWeightPayloadFields: View {
+    @Binding var payload: HealthLogPayload
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Weight")
+                .dsLabel()
+
+            HStack(spacing: 8) {
+                weightButton(label: "-1", delta: -1.0, identifier: "timeline-edit-weight-decrement-1")
+                weightButton(label: "-0.1", delta: -0.1, identifier: "timeline-edit-weight-decrement-tenth")
+
+                VStack(spacing: 2) {
+                    Text(HealthLogPayload.formattedWeight(payload.weightValue ?? 0))
+                        .font(DS.serif(34))
+                        .foregroundColor(.fgPrimary)
+                        .minimumScaleFactor(0.8)
+                    Text(payload.weightUnit ?? "kg")
+                        .font(DS.mono(11))
+                        .foregroundColor(.fgFaint)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Weight \(HealthLogPayload.formattedWeight(payload.weightValue ?? 0)) \(payload.weightUnit ?? "kg")")
+                .accessibilityIdentifier("timeline-edit-weight-value")
+
+                weightButton(label: "+0.1", delta: 0.1, identifier: "timeline-edit-weight-increment-tenth")
+                weightButton(label: "+1", delta: 1.0, identifier: "timeline-edit-weight-increment-1")
+            }
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func weightButton(label: String, delta: Double, identifier: String) -> some View {
+        Button {
+            adjustWeight(by: delta)
+        } label: {
+            Text(label)
+                .font(DS.mono(12, weight: .semibold))
+                .foregroundColor(.fgPrimary)
+                .frame(width: 48, height: 40)
+                .background(Color.bgPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func adjustWeight(by delta: Double) {
+        let currentValue = payload.weightValue ?? 0
+        let roundedValue = ((currentValue + delta) * 10).rounded() / 10
+        payload.weightValue = min(999.9, max(0.1, roundedValue))
+        payload.weightUnit = payload.weightUnit ?? "kg"
     }
 }
 

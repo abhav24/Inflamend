@@ -545,6 +545,7 @@ struct LogWeightForm: View {
                     .multilineTextAlignment(.trailing)
                     .keyboardType(.decimalPad)
                     .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("weight-value-field")
                 Text("kg")
                     .font(DS.mono(18))
                     .foregroundColor(.fgFaint)
@@ -564,15 +565,14 @@ struct LogWeightForm: View {
 
             PrimaryButton(title: "Save entry") {
                 let trimmedWeight = weight.trimmingCharacters(in: .whitespacesAndNewlines)
-                appState.addLog(
-                    type: .weight,
-                    title: "Weight · \(trimmedWeight) kg",
-                    sub: "Manual entry",
-                    payload: .weight(value: Double(trimmedWeight), unit: "kg")
-                )
-                appState.showToast("Weight · \(weight) kg")
+                guard let weightValue = Double(trimmedWeight.replacingOccurrences(of: ",", with: ".")) else {
+                    appState.showToast("Enter a valid weight")
+                    return
+                }
+                appState.recordWeight(value: weightValue)
             }
             .padding(.top, 14)
+            .accessibilityIdentifier("weight-save-entry-button")
         }
     }
 }
