@@ -260,6 +260,26 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testTimelineEntryDeleteRequiresConfirmationSmoke() {
+        let app = openSeededHome()
+
+        XCTAssertTrue(app.staticTexts["1 entries"].exists)
+        let noteEntry = app.descendants(matching: .any)["timeline-entry-note"]
+        XCTAssertTrue(noteEntry.waitForExistence(timeout: 5))
+        XCTAssertTrue(noteEntry.label.contains("UI test export note"))
+
+        tapWhenVisible(app.buttons["timeline-delete-note"], in: app)
+        XCTAssertTrue(app.staticTexts["Delete log entry?"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Remove UI test export note from local logs on this device."].exists)
+
+        app.buttons.matching(identifier: "timeline-confirm-delete-note-button").firstMatch.tap()
+
+        XCTAssertTrue(app.staticTexts["0 entries"].waitForExistence(timeout: 5))
+        XCTAssertTrue(noteEntry.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["timeline-empty-start-log-button"].exists)
+    }
+
+    @MainActor
     func testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke() {
         let app = openSeededHome()
 

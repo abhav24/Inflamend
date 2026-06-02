@@ -93,6 +93,7 @@ enum SyncMutationKind: String, Codable, Equatable {
     case authSession
     case onboardingProfile
     case healthLog
+    case healthLogDeletion
     case chatMessage
     case privacyPreference
     case safetyNotice
@@ -299,6 +300,32 @@ class AppState {
         logs.insert(entry, at: 0)
         enqueueSync(kind: .healthLog, localRecordId: entry.id.uuidString, summary: "\(type.rawValue): \(title)")
         persist()
+    }
+
+    func deleteLog(id: LogEntry.ID) {
+        guard let entry = logs.first(where: { $0.id == id }) else { return }
+
+        logs.removeAll { $0.id == id }
+
+        let localRecordId = entry.id.uuidString
+        let hasUnreplayedCreate = pendingSyncMutations.contains {
+            $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
+        }
+
+        if hasUnreplayedCreate {
+            pendingSyncMutations.removeAll {
+                $0.kind == .healthLog && $0.localRecordId == localRecordId && $0.status != .synced
+            }
+        } else {
+            enqueueSync(
+                kind: .healthLogDeletion,
+                localRecordId: localRecordId,
+                summary: "Deleted \(entry.type.rawValue): \(entry.title)"
+            )
+        }
+
+        persist()
+        showToast("Log removed")
     }
 
     func recordCheckIn(status: MoodOption?, pain: Int, fatigue: Int, urgency: Int, stoolCount: Int, bloodPresent: Bool, medicationTaken: Bool, notes: String) {

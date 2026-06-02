@@ -628,7 +628,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: The Today tab's primary daily workflow now has visible UI coverage from CTA to saved timeline row, which directly protects the app's core "quick daily check-in" promise.
-- Required fixes: Add edit/delete and structured trend history so the saved check-in remains useful after the initial save.
+- Required fixes: Add edit support, backend deletion replay, and structured trend history so the saved check-in remains useful after the initial save.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -724,7 +724,7 @@ Final decision:
 
 Product Simplicity Reviewer:
 - Findings: The high-risk bowel logging path now has a direct UI smoke test that records significant blood and verifies safety guidance appears on Home.
-- Required fixes: Add edit/delete, backend sync, and broader validation coverage for bowel entries before release.
+- Required fixes: Add edit support, backend deletion replay, backend sync, and broader validation coverage for bowel entries before release.
 - Status: Accept checkpoint.
 
 Apple UI Quality Reviewer:
@@ -904,7 +904,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused Food logging UI test passes. `xcodebuild test` now passes with 37 tests: 24 unit tests and 13 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding UI coverage to voice confirmation, privacy toggles, partial Insights scenarios, and edit/delete flows.
+- Required fixes: Continue expanding UI coverage to voice confirmation, privacy toggles, partial Insights scenarios, and edit flows.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -936,7 +936,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused voice confirmation UI test exposed and fixed offscreen tab navigation, container identifier masking, and keyboard focus issues. The focused test now passes. `xcodebuild test` passes with 38 tests: 24 unit tests and 14 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding UI coverage to privacy toggles, partial Insights scenarios, edit/delete flows, and native permission states.
+- Required fixes: Continue expanding UI coverage to privacy toggles, partial Insights scenarios, edit flows, and native permission states.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -968,7 +968,7 @@ Privacy, Security, and Medical Safety Reviewer:
 
 QA and Regression Reviewer:
 - Findings: The focused Profile privacy-toggle UI test passes. `xcodebuild test` now passes with 39 tests: 24 unit tests and 15 UI smoke tests. `xcodebuild clean build` also passes.
-- Required fixes: Continue expanding coverage to native permission states, partial Insights scenarios, and edit/delete flows.
+- Required fixes: Continue expanding coverage to native permission states, partial Insights scenarios, and edit flows.
 - Status: Accept checkpoint.
 
 Final decision:
@@ -1036,7 +1036,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with sync-worker implementation, partial Insights scenarios, and edit/delete flows.
+- Ship now, then continue with sync-worker implementation, partial Insights scenarios, and edit support.
 
 ## Project Asset Catalog Cleanup Audit
 
@@ -1068,7 +1068,7 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with production artwork, sync-worker implementation, and edit/delete flows.
+- Ship now, then continue with production artwork, sync-worker implementation, and edit support.
 
 ## Populated Insights UI Coverage Audit
 
@@ -1100,4 +1100,36 @@ QA and Regression Reviewer:
 - Status: Accept checkpoint.
 
 Final decision:
-- Ship now, then continue with structured records, chart accessibility summaries, sync-worker implementation, and edit/delete flows.
+- Ship now, then continue with structured records, chart accessibility summaries, sync-worker implementation, and edit support.
+
+## Timeline Log Delete Confirmation Audit
+
+### Feature Audit: Local Log Deletion and Pending Queue Behavior
+
+Product Simplicity Reviewer:
+- Findings: Users can now remove an accidental local timeline entry from Home after a focused confirmation, without adding a separate management screen.
+- Required fixes: Add edit and undo only if they stay fast enough for daily logging.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Timeline rows now expose a 44-point delete control and a native destructive confirmation dialog with stable identifiers for UI coverage.
+- Required fixes: Manually verify VoiceOver order, Dynamic Type wrapping, and the delete button's discoverability on smaller screens.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `AppState.deleteLog(id:)` removes local entries, drops unreplayed create mutations for the same log, and queues `healthLogDeletion` for existing records so future backend replay can distinguish deletes.
+- Required fixes: Replace this scaffold with server IDs, deletion replay, conflict handling, tombstones where needed, and deletion receipts.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Deletion is explicit and local; the UI does not imply cloud deletion or permanent backend erasure before Supabase exists.
+- Required fixes: Add production retention wording, cloud deletion parity, and export/delete receipts before release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused unit and UI tests pass. `xcodebuild test` passes with 44 tests: 25 unit tests and 19 UI smoke tests. `xcodebuild clean build` also passes.
+- Required fixes: Add edit, undo, backend replay, and manual accessibility verification.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with edit support, structured records, and sync-worker implementation.

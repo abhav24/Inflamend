@@ -344,6 +344,36 @@ final class HealthLogicTests: XCTestCase {
     }
 
     @MainActor
+    func testDeleteLogRemovesEntryAndCoalescesPendingCreate() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-delete-log-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store)
+        appState.signUp(email: "delete-log@example.com", displayName: "Delete Log")
+        appState.addLog(type: .note, title: "Mistaken note", sub: "Remove")
+
+        let logID = appState.logs[0].id
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .healthLog && $0.localRecordId == logID.uuidString })
+
+        appState.deleteLog(id: logID)
+
+        XCTAssertFalse(appState.logs.contains { $0.id == logID })
+        XCTAssertFalse(appState.pendingSyncMutations.contains { $0.kind == .healthLog && $0.localRecordId == logID.uuidString })
+        XCTAssertFalse(appState.pendingSyncMutations.contains { $0.kind == .healthLogDeletion && $0.localRecordId == logID.uuidString })
+
+        let syncedLikeEntry = LogEntry(type: .food, title: "Existing backend food", sub: "Local copy", time: "8:00am")
+        appState.logs = [syncedLikeEntry]
+        appState.deleteLog(id: syncedLikeEntry.id)
+
+        XCTAssertTrue(appState.logs.isEmpty)
+        XCTAssertTrue(appState.pendingSyncMutations.contains { $0.kind == .healthLogDeletion && $0.localRecordId == syncedLikeEntry.id.uuidString })
+
+        store.delete()
+    }
+
+    @MainActor
     func testClearAIHistoryLeavesLocalConfirmationMessage() {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("inflamend-clear-ai-\(UUID().uuidString).json")

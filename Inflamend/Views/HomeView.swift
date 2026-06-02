@@ -216,7 +216,9 @@ struct HomeView: View {
                             }
                         } else {
                             ForEach(Array(appState.logs.enumerated()), id: \.element.id) { idx, entry in
-                                TimelineRow(entry: entry, isLast: idx == appState.logs.count - 1)
+                                TimelineRow(entry: entry, isLast: idx == appState.logs.count - 1) {
+                                    appState.deleteLog(id: entry.id)
+                                }
                             }
                         }
                     }
@@ -432,45 +434,79 @@ struct EmptyTimelineRow: View {
         }
         .buttonStyle(PressableButtonStyle(scale: 0.98))
         .accessibilityLabel("Start today's log")
+        .accessibilityIdentifier("timeline-empty-start-log-button")
     }
 }
 
 struct TimelineRow: View {
     let entry: LogEntry
     var isLast: Bool = false
+    var onDelete: () -> Void
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         HStack(spacing: 12) {
-            IconBadge(name: entry.type.iconName, size: 36, iconSize: 15, color: entry.type.color)
+            HStack(spacing: 12) {
+                IconBadge(name: entry.type.iconName, size: 36, iconSize: 15, color: entry.type.color)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.title)
-                    .font(DS.sans(14))
-                    .foregroundColor(.fgPrimary)
-                    .tracking(-0.1)
-                if !entry.sub.isEmpty {
-                    Text(entry.sub)
-                        .font(DS.sans(12))
-                        .foregroundColor(.fgDim)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.title)
+                        .font(DS.sans(14))
+                        .foregroundColor(.fgPrimary)
+                        .tracking(-0.1)
+                    if !entry.sub.isEmpty {
+                        Text(entry.sub)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgDim)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(entry.time)
+                    .font(DS.mono(11))
+                    .tracking(0.4)
+                    .foregroundColor(.fgFaint)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(entry.title). \(entry.sub). \(entry.time)")
+            .accessibilityIdentifier("timeline-entry-\(entry.type.rawValue)")
 
-            Text(entry.time)
-                .font(DS.mono(11))
-                .tracking(0.4)
-                .foregroundColor(.fgFaint)
+            Button {
+                showDeleteConfirmation = true
+            } label: {
+                AppIcon(name: "trash", size: 18, color: .fgFaint)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Delete \(entry.title)")
+            .accessibilityIdentifier("timeline-delete-\(entry.type.rawValue)")
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
         .overlay(alignment: .bottom) {
             if !isLast {
                 Rectangle().fill(Color.strokeDefault).frame(height: 0.5).padding(.leading, 64)
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(entry.title). \(entry.sub). \(entry.time)")
-        .accessibilityIdentifier("timeline-entry-\(entry.type.rawValue)")
+        .confirmationDialog(
+            "Delete log entry?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete entry", role: .destructive) {
+                onDelete()
+                showDeleteConfirmation = false
+            }
+            .accessibilityIdentifier("timeline-confirm-delete-\(entry.type.rawValue)-button")
+
+            Button("Cancel", role: .cancel) {
+                showDeleteConfirmation = false
+            }
+        } message: {
+            Text("Remove \(entry.title) from local logs on this device.")
+        }
     }
 }
 
