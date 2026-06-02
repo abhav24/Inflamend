@@ -1,0 +1,139 @@
+# Inflamend Test Plan
+
+## Baseline Test Status
+
+Current automated test status:
+
+```text
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+Result: failed before execution.
+Reason: Scheme Inflamend is not currently configured for the test action.
+```
+
+The first testing priority is to add a test target and move deterministic medical/safety/product logic into testable Swift types that do not depend on SwiftUI views.
+
+## Unit Test Priorities
+
+1. Red-flag detection:
+- Severe abdominal pain.
+- Heavy bleeding or black/tarry stool.
+- High fever.
+- Fainting.
+- Severe dehydration or inability to keep fluids down.
+- Chest pain or shortness of breath.
+- Rapid weight loss or rapid worsening.
+- Suicidal ideation/self-harm language.
+
+2. Risk score logic:
+- Low-risk baseline.
+- Increased bowel frequency.
+- Blood present.
+- High urgency.
+- High pain.
+- Poor sleep.
+- Missed medication.
+- Rapid worsening.
+- Score caps at 0 and 100.
+- Returned factors use cautious, non-diagnostic wording.
+
+3. Voice parsing:
+- Meal logging examples.
+- Bowel movement examples.
+- Medication taken examples.
+- Symptom check-in examples.
+- Note examples.
+- Sleep examples.
+- Weight examples.
+- Ambiguous transcript handling.
+- No auto-save without confirmation.
+
+4. Medication schedule calculations:
+- Daily, weekly, and multiple-dose schedules.
+- Taken/skipped/snoozed status.
+- Missed-dose history.
+- Timezone-safe date grouping.
+
+5. Report generation:
+- 7-day, 30-day, and custom range summaries.
+- BM frequency and Bristol distribution.
+- Blood/urgency flags.
+- Medication adherence summary.
+- Notes and doctor questions.
+- CSV/plain text export shape.
+
+6. Offline/sync queue:
+- Pending mutation enqueue.
+- Retry state.
+- Conflict state.
+- Last sync timestamp.
+- No data loss after app restart once persistence exists.
+
+7. Validation helpers:
+- Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
+- Required fields for save actions.
+- Safe human-readable errors.
+
+## UI Test Priorities
+
+- Fresh install shows welcome/auth or Today depending on session scaffold.
+- Sign up/sign in with mock service.
+- Onboarding can be completed or skipped for sensitive fields.
+- Today check-in can be saved in under 30 seconds.
+- Bowel movement log with blood shows safety guidance.
+- Food log saves as pattern tracking, not nutrition claims.
+- Medication taken/skipped changes adherence state.
+- Voice permission denied state is understandable.
+- Voice transcript confirmation can be edited before saving.
+- Insights empty state avoids fake claims.
+- Report export scaffold explains missing setup or creates local export.
+- Privacy controls expose export/delete/AI memory/transcript toggles.
+- Dark mode, Dynamic Type, and VoiceOver labels for major screens.
+
+## Backend Verification Plan
+
+When Supabase CLI and credentials are available:
+
+- Apply migrations cleanly on a local Supabase instance.
+- Verify every user-owned table has RLS enabled.
+- Verify own-user select/insert/update/delete succeeds.
+- Verify cross-user access is denied.
+- Verify Edge Functions reject unauthenticated requests.
+- Verify Edge Functions never trust client-provided `user_id`.
+- Verify seed data creates realistic development records without PHI.
+- Verify AI provider keys and service role keys are only server-side secrets.
+
+## Manual QA Matrix
+
+| Area | Scenario | Expected Result | Status |
+|---|---|---|---|
+| Install | Fresh install | Starts without crash | Pending |
+| Auth | Logged out | Shows welcome/sign in/up scaffold | Pending |
+| Auth | Sign out | Session clears, no stale PHI visible | Pending |
+| Onboarding | Sensitive questions skipped | App remains usable | Pending |
+| Today | Check-in saved | Today and risk score update | Pending |
+| Logging | BM with blood | Log saves and red-flag guidance appears | Pending |
+| Logging | Meal log | Food pattern entry saves without nutrition claims | Pending |
+| Medications | Dose taken | Adherence state updates | Pending |
+| Voice | Permission denied | Manual fallback shown | Pending |
+| Voice | Parsed transcript | Confirmation screen required before save | Pending |
+| AI | Red-flag prompt | Urgent care guidance, no diagnosis | Pending |
+| AI | Medication-change prompt | Advises clinician/pharmacist, no prescription change | Pending |
+| Insights | No data | Empty state, no fake claims | Pending |
+| Reports | Export | Plain text/CSV/PDF scaffold behaves safely | Pending |
+| Privacy | Export data | User-visible export path exists | Pending |
+| Privacy | Delete data/account | User-visible scaffold explains requirements | Pending |
+| Offline | Log while offline | Local save or safe failure | Pending |
+| Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
+| Accessibility | VoiceOver | Controls have useful labels | Pending |
+
+## Device Targets
+
+Available local simulator targets:
+
+- iPhone 17, iOS 26.0, booted.
+- iPhone 16e, iOS 26.0.
+- iPhone 17 Pro Max, iOS 26.0.
+- iPhone Air, iOS 26.0.
+- iPad and iPad Pro simulators on iOS 26.0.
+
+Prompt-requested `iPhone 16` is not installed. Use `iPhone 17` for current automated build/test unless a different simulator is added.
