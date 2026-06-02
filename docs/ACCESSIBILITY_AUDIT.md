@@ -39,7 +39,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added stable identifiers and UI smoke coverage for Insights no-data empty states across trend, bowel, pain, and food pattern sections.
 - Added stable identifiers and UI smoke coverage for populated Insights confidence text, stat tiles, chart containers, and food pattern rows.
 - Added accessibility labels and UI assertions for populated Insights trend, bowel, and pain heatmap chart summaries.
-- Replaced tiny medication dose toggles with full-row buttons and added UI smoke coverage for Log medication dose tracking, Home meds summary, and timeline feedback.
+- Replaced tiny medication dose toggles with full-row buttons, added visible dose status text, and added UI smoke coverage for Log medication dose tracking, Home meds summary, and timeline feedback.
 - Added stable identifiers and UI smoke coverage for Log food description, food trigger tags, food save action, and Home timeline feedback.
 - Added stable identifiers, keyboard Done controls, and UI smoke coverage for Log voice transcript parsing, editable confirmation fields, save/discard actions, and Home timeline feedback.
 - Added stable identifiers and UI smoke coverage for Profile AI memory and voice transcript storage privacy toggles.
@@ -58,7 +58,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Avoid color-only risk/trigger communication.
 - Add manual VoiceOver notes for destructive Profile confirmation dialogs.
 - Add manual VoiceOver notes for timeline delete confirmation dialogs.
-- Add manual VoiceOver notes for the timeline edit sheet and row action order.
+- Add manual VoiceOver notes for the timeline edit sheet, medication dose status rows, and row action order.
 - Add manual VoiceOver notes for the timeline delete undo toast and action order.
 - Add manual VoiceOver notes for privacy toggles, the Profile sync detail sheet including network and automatic retry status, and the voice permission fallback state.
 - Add labels/hints for auth mode selection and onboarding pill selections.

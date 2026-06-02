@@ -7,7 +7,7 @@ Current automated test status:
 ```text
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
 Result: TEST SUCCEEDED.
-Coverage: 46 unit tests in HealthLogicTests plus 27 UI smoke tests in InflamendUITests.
+Coverage: 47 unit tests in HealthLogicTests plus 27 UI smoke tests in InflamendUITests.
 ```
 
 The previous blocker, missing test target/test action, is resolved.
@@ -22,14 +22,20 @@ Result: TEST SUCCEEDED with 1 focused unit test.
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testAutomaticSyncRetryRunsOnlyDueMutationsWhenOnline
 Result: TEST SUCCEEDED with 1 focused unit test.
 
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests/HealthLogicTests/testMedicationDoseStatusPersistsAndQueuesStructuredLog
+Result: TEST SUCCEEDED with 1 focused unit test.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
 Result: TEST SUCCEEDED with 1 UI smoke test.
 
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryShowsBackendBlockedSmoke -only-testing:InflamendUITests/InflamendUITests/testProfileSyncRetryPausesWhenNetworkOfflineSmoke
 Result: TEST SUCCEEDED with 2 UI smoke tests.
 
+xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendUITests/InflamendUITests/testMedicationDoseUpdatesHomeSummarySmoke -only-testing:InflamendUITests/InflamendUITests/testMedicationLogCanBeEditedFromTimelineSmoke
+Result: TEST SUCCEEDED with 2 UI smoke tests.
+
 xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:InflamendTests
-Result: TEST SUCCEEDED with 46 unit tests.
+Result: TEST SUCCEEDED with 47 unit tests.
 
 xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
 Result: BUILD SUCCEEDED.
@@ -82,7 +88,7 @@ Status: started. Bowel, medication, and weight examples are covered, including s
 - Missed-dose history.
 - Timezone-safe date grouping.
 
-Status: started. Twice-daily schedule calculation is covered.
+Status: started. Twice-daily schedule calculation, persisted dose status, skipped status snapshot restore, and structured medication replay payloads are covered.
 
 5. Report generation:
 - 7-day, 30-day, and custom range summaries.
@@ -159,7 +165,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Symptom log saves and structured pain/fatigue/mood edits are visible from Home. Status: covered by UI smoke test, including pain edit to 8/10 and safety card verification.
 - Sleep log saves and structured quality/wake edits are visible from Home. Status: covered by UI smoke test, including quality edit to 9/10 and wake edit to 3.
 - Weight log saves and structured value edits are visible from Home. Status: covered by UI smoke test, including 62.4 kg edit to 63.0 kg.
-- Medication taken/skipped changes adherence state. Status: dose-taken path and timeline status correction covered by UI smoke tests.
+- Medication taken/skipped changes adherence state. Status: dose-taken path, persisted skipped status, and timeline status correction covered by unit and UI smoke tests.
 - Voice permission denied state is understandable. Status: deterministic denied-state scaffold covered by UI smoke test; real native Speech/microphone permission requests remain pending Apple setup.
 - Voice transcript confirmation can be edited before saving. Status: covered by UI smoke test.
 - Insights empty state avoids fake claims. Status: covered by UI smoke test.
@@ -202,7 +208,7 @@ When Supabase CLI and credentials are available:
 | Logging | Symptom log | Pain, fatigue, and mood save and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Logging | Sleep log | Sleep quality and bathroom wakes save and can be corrected from Home | Implemented locally and covered by UI smoke test |
 | Logging | Weight log | Weight value saves and can be corrected from Home | Implemented locally and covered by UI smoke test |
-| Medications | Dose taken/status corrected | Adherence state updates | Implemented locally and covered by UI smoke tests for dose taken and timeline status correction |
+| Medications | Dose taken/status corrected | Adherence state updates | Implemented locally with persisted dose statuses and covered by unit/UI smoke tests for dose taken, skipped persistence, and timeline status correction |
 | Voice | Permission denied | Manual fallback shown | Deterministic denied-state scaffold covered by UI smoke test; real OS permission prompt/native capture pending Apple Speech/microphone setup |
 | Voice | Parsed transcript | Confirmation screen required before save | Implemented locally and covered by UI smoke test; native Speech/microphone integration pending |
 | AI | Red-flag prompt | Urgent care guidance, no diagnosis | Implemented and covered by Care UI smoke test |
@@ -229,6 +235,7 @@ When Supabase CLI and credentials are available:
 - `testVoiceParserParsesMedication`
 - `testVoiceParserParsesWeight`
 - `testMedicationScheduleCalculatesTwiceDailyDoses`
+- `testMedicationDoseStatusPersistsAndQueuesStructuredLog`
 - `testReportSummaryUsesPossiblePatternLanguage`
 - `testDoctorReportExporterBuildsLocalLogReportWithoutTriggerClaims`
 - `testDoctorReportExporterUsesLastThirtyDayLoggedAtRange`

@@ -1358,6 +1358,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with live Supabase replay wiring, returned server IDs/receipts, auth refresh, conflict handling, and manual accessibility QA.
 
+## Persisted Medication Dose Status Audit
+
+### Feature Audit: Snapshot-Backed Medication Dose Lifecycle
+
+Product Simplicity Reviewer:
+- Findings: The Meds tab no longer resets its schedule state on view reload. Users can mark a scheduled dose taken or missed from the same full-row control, and the Home adherence summary stays aligned.
+- Required fixes: Add user-managed schedule creation/editing before this can replace a real medication plan.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The row remains a single large tap target and now shows visible status text in addition to the circle indicator, reducing color-only state reliance.
+- Required fixes: Manually verify status text wrapping and VoiceOver order at large Dynamic Type.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: `MedEntry` is now codable with stable IDs and pending/taken/skipped/missed status. Dose changes update the protected snapshot, refresh adherence counts, and queue structured medication log payloads for future replay.
+- Required fixes: Add backend medication schedule tables/replay wiring, server IDs, conflict handling, and reminder scheduling once credentials and notification setup exist.
+- Status: Accept local persistence checkpoint.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: Medication adherence status is now part of the local snapshot and JSON export, so the privacy inventory marks it as health data. The UI records self-reported status and does not advise medication changes.
+- Required fixes: Keep medication status out of production diagnostics and ensure live sync/export/delete paths treat schedule status as PHI.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: Focused medication dose persistence coverage passed, including skipped status restore and queued structured replay payloads. Medication UI smokes passed for dose-taken summary and timeline status correction, full unit target passed with 47 tests, and clean build passed.
+- Required fixes: Add tests for user-managed schedule creation/editing, reminders, and backend replay after those surfaces exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with medication schedule management, reminder setup, backend sync, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration
@@ -1662,7 +1694,7 @@ Apple UI Quality Reviewer:
 
 Backend and Data Integrity Reviewer:
 - Findings: Medication timeline edits replace the typed `HealthLogPayload`, rebuild display title/details from the typed payload, keep pending create/update replay snapshots aligned with the corrected row, and reconcile the local adherence count when status changes between taken and not taken.
-- Required fixes: Add live backend update replay, conflict handling, persisted medication schedules, and backend serialization tests for payload-bearing medication edits once Supabase credentials exist.
+- Required fixes: Add live backend update replay, conflict handling, user-managed medication schedule editing, reminders, and backend serialization tests for payload-bearing medication edits once Supabase credentials exist.
 - Status: Accept local implementation.
 
 Privacy, Security, and Medical Safety Reviewer:

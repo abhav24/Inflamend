@@ -12,6 +12,7 @@ struct AppSnapshot: Codable, Equatable {
     var mood: MoodOption?
     var medsTaken: Int
     var medsTotal: Int
+    var medicationDoses: [MedEntry]
     var latestSafetyMessage: String?
     var aiMemoryEnabled: Bool
     var voiceTranscriptStorageEnabled: Bool
@@ -28,6 +29,7 @@ struct AppSnapshot: Codable, Equatable {
         mood: MoodOption?,
         medsTaken: Int,
         medsTotal: Int,
+        medicationDoses: [MedEntry] = [],
         latestSafetyMessage: String?,
         aiMemoryEnabled: Bool,
         voiceTranscriptStorageEnabled: Bool,
@@ -43,6 +45,7 @@ struct AppSnapshot: Codable, Equatable {
         self.mood = mood
         self.medsTaken = medsTaken
         self.medsTotal = medsTotal
+        self.medicationDoses = medicationDoses
         self.latestSafetyMessage = latestSafetyMessage
         self.aiMemoryEnabled = aiMemoryEnabled
         self.voiceTranscriptStorageEnabled = voiceTranscriptStorageEnabled
@@ -60,6 +63,7 @@ struct AppSnapshot: Codable, Equatable {
         case mood
         case medsTaken
         case medsTotal
+        case medicationDoses
         case latestSafetyMessage
         case aiMemoryEnabled
         case voiceTranscriptStorageEnabled
@@ -78,6 +82,7 @@ struct AppSnapshot: Codable, Equatable {
         mood = try container.decodeIfPresent(MoodOption.self, forKey: .mood)
         medsTaken = try container.decodeIfPresent(Int.self, forKey: .medsTaken) ?? 0
         medsTotal = max(1, try container.decodeIfPresent(Int.self, forKey: .medsTotal) ?? 4)
+        medicationDoses = try container.decodeIfPresent([MedEntry].self, forKey: .medicationDoses) ?? []
         latestSafetyMessage = try container.decodeIfPresent(String.self, forKey: .latestSafetyMessage)
         aiMemoryEnabled = try container.decodeIfPresent(Bool.self, forKey: .aiMemoryEnabled) ?? false
         voiceTranscriptStorageEnabled = try container.decodeIfPresent(Bool.self, forKey: .voiceTranscriptStorageEnabled) ?? false
@@ -568,6 +573,7 @@ class AppState {
     var mood: MoodOption? = nil
     var medsTaken: Int = 2
     var medsTotal: Int = 4
+    var medicationDoses: [MedEntry] = MedicationDefaults.defaultDoses
     var latestSafetyMessage: String? = nil
     var aiMemoryEnabled: Bool = false
     var voiceTranscriptStorageEnabled: Bool = false
@@ -1054,17 +1060,42 @@ class AppState {
     }
 
     func recordMedicationTaken(name: String = "Medication") {
+        if isMedicationDoseStateAligned,
+           let dose = medicationDoses.first(where: {
+               $0.name.caseInsensitiveCompare(name) == .orderedSame && !$0.status.isTaken
+           }) {
+            recordMedicationDoseStatus(id: dose.id, status: .taken)
+            return
+        }
+
         if medsTaken < medsTotal {
             medsTaken += 1
         }
-        let payload = HealthLogPayload.medication(name: name, status: "taken")
+        recordMedicationLog(name: name, status: .taken)
+        showToast("\(name) marked taken")
+    }
+
+    func recordMedicationDoseStatus(id: MedEntry.ID, status: MedicationDoseStatus) {
+        guard let index = medicationDoses.firstIndex(where: { $0.id == id }) else { return }
+        guard medicationDoses[index].status != status else {
+            showToast("\(medicationDoses[index].name) already \(status.label.lowercased())")
+            return
+        }
+
+        medicationDoses[index].status = status
+        refreshMedicationAdherenceFromDoses()
+        recordMedicationLog(name: medicationDoses[index].name, status: status)
+        showToast("\(medicationDoses[index].name) · \(status.label.lowercased())")
+    }
+
+    private func recordMedicationLog(name: String, status: MedicationDoseStatus) {
+        let payload = HealthLogPayload.medication(name: name, status: status.rawValue)
         addLog(
             type: .meds,
             title: payload.medicationDisplayTitle ?? "\(name) · taken",
             sub: payload.medicationDisplayDetails ?? "Logged manually",
             payload: payload
         )
-        showToast("\(name) marked taken")
     }
 
     func clearSafetyMessage() {
@@ -1251,6 +1282,7 @@ class AppState {
     private func reconcileMedicationAdherence(from previousPayload: HealthLogPayload?, to currentPayload: HealthLogPayload?) {
         guard previousPayload?.kind == .medication || currentPayload?.kind == .medication else { return }
 
+        let shouldSyncDoseStatus = isMedicationDoseStateAligned
         let wasTaken = Self.isTakenMedicationStatus(previousPayload?.medicationStatus)
         let isTaken = Self.isTakenMedicationStatus(currentPayload?.medicationStatus)
 
@@ -1259,10 +1291,36 @@ class AppState {
         } else if !wasTaken && isTaken {
             medsTaken = min(medsTotal, medsTaken + 1)
         }
+
+        if shouldSyncDoseStatus,
+           let currentPayload,
+           let status = MedicationDoseStatus(rawValue: currentPayload.medicationStatus ?? "") {
+            updateFirstMedicationDose(named: currentPayload.medicationName, status: status)
+        }
     }
 
     private nonisolated static func isTakenMedicationStatus(_ status: String?) -> Bool {
         status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "taken"
+    }
+
+    private var isMedicationDoseStateAligned: Bool {
+        !medicationDoses.isEmpty
+            && medsTotal == medicationDoses.count
+            && medsTaken == medicationDoses.filter { $0.status.isTaken }.count
+    }
+
+    private func refreshMedicationAdherenceFromDoses() {
+        guard !medicationDoses.isEmpty else { return }
+        medsTotal = medicationDoses.count
+        medsTaken = medicationDoses.filter { $0.status.isTaken }.count
+    }
+
+    private func updateFirstMedicationDose(named name: String?, status: MedicationDoseStatus) {
+        guard let name,
+              let index = medicationDoses.firstIndex(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame })
+        else { return }
+        medicationDoses[index].status = status
+        refreshMedicationAdherenceFromDoses()
     }
 
     private func reconcileCheckInDerivedState(from previousPayload: HealthLogPayload?, to currentPayload: HealthLogPayload?) {
@@ -1295,6 +1353,7 @@ class AppState {
             mood: mood,
             medsTaken: medsTaken,
             medsTotal: medsTotal,
+            medicationDoses: medicationDoses,
             latestSafetyMessage: latestSafetyMessage,
             aiMemoryEnabled: aiMemoryEnabled,
             voiceTranscriptStorageEnabled: voiceTranscriptStorageEnabled,
@@ -1312,6 +1371,7 @@ class AppState {
         mood = snapshot.mood
         medsTaken = snapshot.medsTaken
         medsTotal = snapshot.medsTotal
+        medicationDoses = snapshot.medicationDoses.isEmpty ? MedicationDefaults.defaultDoses : snapshot.medicationDoses
         latestSafetyMessage = snapshot.latestSafetyMessage
         aiMemoryEnabled = snapshot.aiMemoryEnabled
         voiceTranscriptStorageEnabled = snapshot.voiceTranscriptStorageEnabled
@@ -1382,6 +1442,7 @@ class AppState {
         riskScore = 24
         medsTaken = 1
         medsTotal = 2
+        medicationDoses = MedicationDefaults.seededDoses
         logs = [
             LogEntry(type: .note, title: "UI test export note", sub: "Seeded local log", time: Self.timeString(from: Date()))
         ]
@@ -1887,10 +1948,101 @@ enum ChatRole: String, Codable, Equatable { case user, assistant }
 
 // MARK: - Meds
 
-struct MedEntry: Identifiable {
-    let id = UUID()
+enum MedicationDoseStatus: String, Codable, Equatable {
+    case pending
+    case taken
+    case skipped
+    case missed
+
+    var label: String {
+        switch self {
+        case .pending:
+            return "Pending"
+        case .taken:
+            return "Taken"
+        case .skipped:
+            return "Skipped"
+        case .missed:
+            return "Missed"
+        }
+    }
+
+    var isTaken: Bool {
+        self == .taken
+    }
+}
+
+struct MedEntry: Identifiable, Codable, Equatable {
+    var id = UUID()
     var name: String
     var dose: String
     var time: String
-    var taken: Bool
+    var status: MedicationDoseStatus
+
+    var taken: Bool {
+        get { status.isTaken }
+        set { status = newValue ? .taken : .pending }
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        dose: String,
+        time: String,
+        taken: Bool = false,
+        status: MedicationDoseStatus? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.dose = dose
+        self.time = time
+        self.status = status ?? (taken ? .taken : .pending)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case dose
+        case time
+        case taken
+        case status
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decode(String.self, forKey: .name)
+        dose = try container.decode(String.self, forKey: .dose)
+        time = try container.decode(String.self, forKey: .time)
+        if let status = try container.decodeIfPresent(MedicationDoseStatus.self, forKey: .status) {
+            self.status = status
+        } else {
+            let taken = try container.decodeIfPresent(Bool.self, forKey: .taken) ?? false
+            self.status = taken ? .taken : .pending
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(dose, forKey: .dose)
+        try container.encode(time, forKey: .time)
+        try container.encode(status, forKey: .status)
+        try container.encode(taken, forKey: .taken)
+    }
+}
+
+private enum MedicationDefaults {
+    static let defaultDoses: [MedEntry] = [
+        MedEntry(name: "Mesalamine", dose: "800mg", time: "8:00am", status: .taken),
+        MedEntry(name: "Azathioprine", dose: "50mg", time: "8:00am", status: .taken),
+        MedEntry(name: "Vitamin D", dose: "1000 IU", time: "8:00am", status: .pending),
+        MedEntry(name: "Mesalamine", dose: "800mg", time: "8:00pm", status: .pending),
+    ]
+
+    static let seededDoses: [MedEntry] = [
+        MedEntry(name: "Mesalamine", dose: "800mg", time: "8:00am", status: .taken),
+        MedEntry(name: "Vitamin D", dose: "1000 IU", time: "8:00am", status: .pending),
+    ]
 }

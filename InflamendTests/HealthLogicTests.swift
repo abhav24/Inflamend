@@ -108,6 +108,45 @@ final class HealthLogicTests: XCTestCase {
         XCTAssertEqual(calendar.component(.hour, from: doses[1].scheduledAt), 20)
     }
 
+    @MainActor
+    func testMedicationDoseStatusPersistsAndQueuesStructuredLog() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("inflamend-medication-dose-status-\(UUID().uuidString).json")
+        let store = AppSnapshotStore(fileURL: url)
+        store.delete()
+
+        let appState = AppState(store: store, reachabilityMonitor: nil)
+        appState.signUp(email: "med-status@example.com", displayName: "Medication Status")
+        appState.medicationDoses = [
+            MedEntry(name: "Mesalamine", dose: "800mg", time: "8:00am", status: .taken),
+            MedEntry(name: "Vitamin D", dose: "1000 IU", time: "8:00am", status: .pending)
+        ]
+        appState.medsTaken = 1
+        appState.medsTotal = 2
+
+        let vitaminDoseId = try XCTUnwrap(appState.medicationDoses.last?.id)
+        appState.recordMedicationDoseStatus(id: vitaminDoseId, status: .skipped)
+
+        XCTAssertEqual(appState.medicationDoses.last?.status, .skipped)
+        XCTAssertEqual(appState.medsTaken, 1)
+        XCTAssertEqual(appState.medsTotal, 2)
+        XCTAssertEqual(appState.logs.first?.title, "Vitamin D · skipped")
+        XCTAssertEqual(appState.logs.first?.payload?.medicationStatus, "skipped")
+
+        let syncMutation = try XCTUnwrap(appState.pendingSyncMutations.first {
+            $0.kind == .healthLog && $0.payload?.healthLog?.typedPayload?.medicationStatus == "skipped"
+        })
+        XCTAssertEqual(syncMutation.payload?.healthLog?.typedPayload?.medicationName, "Vitamin D")
+
+        let restored = AppState(store: store, reachabilityMonitor: nil)
+        XCTAssertEqual(restored.medicationDoses.count, 2)
+        XCTAssertEqual(restored.medicationDoses.last?.status, .skipped)
+        XCTAssertEqual(restored.medsTaken, 1)
+        XCTAssertEqual(restored.logs.first?.payload?.medicationStatus, "skipped")
+
+        store.delete()
+    }
+
     func testReportSummaryUsesPossiblePatternLanguage() {
         let report = ReportSummaryGenerator.plainText(
             ReportSummaryInput(

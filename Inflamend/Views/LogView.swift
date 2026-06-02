@@ -396,29 +396,27 @@ struct LogSymptomForm: View {
 
 struct LogMedsForm: View {
     var appState: AppState
-    @State private var meds: [MedEntry] = [
-        MedEntry(name: "Mesalamine",   dose: "800mg",   time: "8:00am",  taken: true),
-        MedEntry(name: "Azathioprine", dose: "50mg",    time: "8:00am",  taken: true),
-        MedEntry(name: "Vitamin D",    dose: "1000 IU", time: "8:00am",  taken: false),
-        MedEntry(name: "Mesalamine",   dose: "800mg",   time: "8:00pm",  taken: false),
-    ]
+
+    private var meds: [MedEntry] {
+        appState.medicationDoses
+    }
 
     var body: some View {
         FormCard(title: "Today's schedule", label: "\(meds.count) DOSES") {
             VStack(spacing: 0) {
                 ForEach(Array(meds.enumerated()), id: \.element.id) { idx, med in
                     Button {
-                        toggleDose(at: idx, med: med)
+                        toggleDose(med)
                     } label: {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()
-                                    .fill(meds[idx].taken ? Color.sage : Color.clear)
+                                    .fill(med.status == .taken ? Color.sage : Color.clear)
                                     .frame(width: 26, height: 26)
                                     .overlay(
-                                        Circle().stroke(meds[idx].taken ? Color.clear : Color.fgFaint, lineWidth: 1.5)
+                                        Circle().stroke(med.status == .taken ? Color.clear : med.status.color, lineWidth: 1.5)
                                     )
-                                if meds[idx].taken {
+                                if med.status == .taken {
                                     AppIcon(name: "check", size: 13, color: .darkText)
                                 }
                             }
@@ -426,7 +424,7 @@ struct LogMedsForm: View {
                             HStack(spacing: 0) {
                                 Text(med.name)
                                     .font(DS.sans(14))
-                                    .foregroundColor(meds[idx].taken ? .fgDim : .fgPrimary)
+                                    .foregroundColor(med.status == .taken ? .fgDim : .fgPrimary)
                                     .tracking(-0.1)
                                 Text(" · \(med.dose)")
                                     .font(DS.sans(12))
@@ -434,9 +432,14 @@ struct LogMedsForm: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Text(med.time)
-                                .font(DS.mono(11))
-                                .foregroundColor(.fgFaint)
+                            VStack(alignment: .trailing, spacing: 3) {
+                                Text(med.time)
+                                    .font(DS.mono(11))
+                                    .foregroundColor(.fgFaint)
+                                Text(med.status.label)
+                                    .font(DS.mono(10, weight: .semibold))
+                                    .foregroundColor(med.status.color)
+                            }
                         }
                         .contentShape(Rectangle())
                     }
@@ -447,9 +450,9 @@ struct LogMedsForm: View {
                             Rectangle().fill(Color.strokeDefault).frame(height: 0.5)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.15), value: meds[idx].taken)
+                    .animation(.easeInOut(duration: 0.15), value: med.status)
                     .accessibilityLabel("\(med.name) \(med.dose) \(med.time)")
-                    .accessibilityValue(meds[idx].taken ? "taken" : "not taken")
+                    .accessibilityValue(med.status.label)
                     .accessibilityIdentifier(doseToggleIdentifier(for: med))
                     .accessibilityAddTraits(.isButton)
                 }
@@ -457,13 +460,9 @@ struct LogMedsForm: View {
         }
     }
 
-    private func toggleDose(at idx: Int, med: MedEntry) {
-        meds[idx].taken.toggle()
-        let verb = meds[idx].taken ? "taken" : "marked missed"
-        if meds[idx].taken {
-            appState.recordMedicationTaken(name: med.name)
-        }
-        appState.showToast("\(med.name) · \(verb)")
+    private func toggleDose(_ med: MedEntry) {
+        let nextStatus: MedicationDoseStatus = med.status == .taken ? .missed : .taken
+        appState.recordMedicationDoseStatus(id: med.id, status: nextStatus)
     }
 
     private func doseToggleIdentifier(for med: MedEntry) -> String {
@@ -476,6 +475,21 @@ struct LogMedsForm: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: "-")
+    }
+}
+
+private extension MedicationDoseStatus {
+    var color: Color {
+        switch self {
+        case .pending:
+            return .fgFaint
+        case .taken:
+            return .sage
+        case .skipped:
+            return .amber
+        case .missed:
+            return .clay
+        }
     }
 }
 
