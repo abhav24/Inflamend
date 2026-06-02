@@ -28,6 +28,7 @@ struct LogView: View {
                         LogPill(title: t.rawValue, isActive: activeTab == t) {
                             withAnimation(.easeInOut(duration: 0.15)) { activeTab = t }
                         }
+                        .accessibilityIdentifier("log-tab-\(t.rawValue.lowercased())")
                     }
                 }
                 .padding(.horizontal, 20)
@@ -297,6 +298,7 @@ struct LogBowelForm: View {
                     PillToggle(label: option.rawValue.capitalized, isActive: blood == option, color: option == .none ? .sage : .clay) {
                         blood = option
                     }
+                    .accessibilityIdentifier("bowel-blood-\(option.rawValue)")
                 }
             }
         }
@@ -323,6 +325,7 @@ struct LogBowelForm: View {
                 nighttime: nighttime
             )
         }
+        .accessibilityIdentifier("bowel-save-entry-button")
     }
 }
 

@@ -11,7 +11,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 | Auth/Welcome | Partial | Unverified | Likely acceptable | Mostly >=44pt; keyboard Done and sign-in mode paths verified | Text labels on mode buttons | In progress |
 | Onboarding | Partial | Unverified | Likely acceptable | Mostly >=44pt; finish action verified | Text labels on pill choices | In progress |
 | Today/Home | Partial | Unverified | Likely acceptable | Mostly >=44pt; check-in action path verified | Safety card uses text | In progress |
-| Log | Partial | Unverified | Likely acceptable | Mostly >=44pt | Voice confirmation and blood choices use text | Needs work |
+| Log | Partial | Unverified | Likely acceptable | Mostly >=44pt; detailed bowel blood/save path verified | Voice confirmation and blood choices use text | In progress |
 | Insights | Low | Unverified | Mixed chart colors | Mostly OK | Charts need summaries | Needs work |
 | Care/Chat | Partial | Unverified | Likely acceptable | Composer and submit path verified by UI smoke test | Safety copy visible and identifier-backed | In progress |
 | Profile | Partial | Unverified | Likely acceptable | Rows OK; export, sign-out, and destructive rows verified by UI smoke tests | Destructive actions use confirmation dialogs | In progress |
@@ -28,6 +28,7 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 - Added a UI smoke test for navigating to Profile, tapping "Export my data", and verifying the user-data export sheet title and share action.
 - Added stable identifiers and UI smoke coverage for destructive Profile confirmation prompts.
 - Added stable identifiers and UI smoke coverage for Profile sign-out returning to the auth gate.
+- Added stable identifiers and UI smoke coverage for the Log Bowel tab, significant-blood choice, bowel save action, and Home safety card.
 
 ## Required Fixes
 
@@ -43,4 +44,4 @@ The app uses native SwiftUI controls and readable contrast in most places, but a
 
 ## Status
 
-Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Care red-flag, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.
+Core safety/privacy UI exists, and the auth sign-up/sign-in/onboarding, Today check-in, Log bowel red-flag, Care red-flag, Profile sign-out, Profile data export, and destructive confirmation paths now have smoke coverage. Accessibility polish, Dynamic Type review, and manual assistive-technology verification are still pending.

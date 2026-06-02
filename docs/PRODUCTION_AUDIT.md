@@ -717,3 +717,35 @@ QA and Regression Reviewer:
 
 Final decision:
 - Ship now, then continue with high-risk logging and Care refusal UI coverage.
+
+## Bowel Red-Flag UI Coverage Audit
+
+### Feature Audit: Bowel Logging Safety Smoke Test
+
+Product Simplicity Reviewer:
+- Findings: The high-risk bowel logging path now has a direct UI smoke test that records significant blood and verifies safety guidance appears on Home.
+- Required fixes: Add edit/delete, backend sync, and broader validation coverage for bowel entries before release.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: Log tabs, the significant-blood choice, the Bowel save action, and the Home safety card now expose stable identifiers. The shared UI helper now scrolls vertically through nested horizontal/vertical scroll layouts.
+- Required fixes: Run manual Dynamic Type and VoiceOver checks for the Log form, pill choices, and Home safety card announcement.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The smoke test exercises the local `recordBowel` path, risk recomputation, and red-flag surfacing, but live backend sync and server-side parity remain blocked by missing Supabase setup.
+- Required fixes: Add Supabase replay, server IDs, conflict handling, and shared or mirrored red-flag rules once credentials are available.
+- Status: Accept local implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The safety card copy explicitly states Inflamend cannot diagnose or triage emergencies when significant blood is logged.
+- Required fixes: Verify the same safety behavior in backend AI/report/export surfaces and complete live cloud deletion/export parity before release.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The first focused run exposed a scroll-helper issue, which was fixed. The focused bowel red-flag UI test then passed, `xcodebuild test` now passes with 32 tests: 24 unit tests and 8 UI smoke tests, and `xcodebuild clean build` also passes.
+- Required fixes: Continue expanding UI coverage to Care medication-change refusal, report/share flows, Insights empty states, and medication logging.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with Care refusal and reporting UI coverage.

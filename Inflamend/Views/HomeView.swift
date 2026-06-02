@@ -328,6 +328,7 @@ struct SafetyCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Safety check. \(message)")
+        .accessibilityIdentifier("home-safety-card")
     }
 }
 

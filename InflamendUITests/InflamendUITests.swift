@@ -122,6 +122,21 @@ final class InflamendUITests: XCTestCase {
     }
 
     @MainActor
+    func testBowelLogWithSignificantBloodShowsSafetyGuidanceSmoke() {
+        let app = openSeededHome()
+
+        app.buttons["tab-log"].tap()
+        app.buttons["log-tab-bowel"].tap()
+        tapWhenVisible(app.buttons["bowel-blood-significant"], in: app)
+        tapWhenVisible(app.buttons["bowel-save-entry-button"], in: app)
+
+        app.buttons["tab-home"].tap()
+        let safetyCard = app.descendants(matching: .any)["home-safety-card"]
+        XCTAssertTrue(safetyCard.waitForExistence(timeout: 5))
+        XCTAssertTrue(safetyCard.label.contains("cannot diagnose or triage emergencies"))
+    }
+
+    @MainActor
     private func openSeededHome() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -180,11 +195,9 @@ final class InflamendUITests: XCTestCase {
                 return
             }
 
-            if app.scrollViews.firstMatch.exists {
-                app.scrollViews.firstMatch.swipeUp()
-            } else {
-                app.swipeUp()
-            }
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.28))
+            start.press(forDuration: 0.01, thenDragTo: end)
         }
 
         XCTFail("Element was not hittable: \(element)", file: file, line: line)
