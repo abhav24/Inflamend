@@ -319,6 +319,8 @@ struct AppIcon: View {
         case "share":    return "square.and.arrow.up"
         case "trash":    return "trash"
         case "edit":     return "pencil"
+        case "refresh":  return "arrow.clockwise"
+        case "alert":    return "exclamationmark.triangle"
         case "logout":   return "rectangle.portrait.and.arrow.right"
         case "note":     return "note.text"
         case "shield":   return "checkmark.shield"

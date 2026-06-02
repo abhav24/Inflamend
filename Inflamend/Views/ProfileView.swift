@@ -4,6 +4,7 @@ struct ProfileView: View {
     var appState: AppState
     @State private var preparedExport: ProfilePreparedExport?
     @State private var pendingConfirmation: ProfileConfirmation?
+    @State private var showingSyncDetails = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -123,7 +124,7 @@ struct ProfileView: View {
 
                 VStack(spacing: 0) {
                     ProfileRow(icon: "cloud", label: "Sync status", sub: appState.syncSummary, accessibilityID: "profile-sync-status-row") {
-                        appState.retryPendingSyncScaffold()
+                        showingSyncDetails = true
                     }
                     ProfileRow(
                         icon: "sparkle",
@@ -184,6 +185,9 @@ struct ProfileView: View {
             }
         }
         .background(Color.bgPrimary)
+        .sheet(isPresented: $showingSyncDetails) {
+            SyncStatusDetailSheet(appState: appState)
+        }
         .sheet(item: $preparedExport) { export in
             switch export {
             case .doctorReport(let report):
@@ -221,6 +225,271 @@ struct ProfileView: View {
             appState.clearAIHistory()
         case .deleteDataAccount:
             appState.requestAccountDeletionScaffold()
+        }
+    }
+}
+
+private struct SyncStatusDetailSheet: View {
+    var appState: AppState
+
+    private var activeMutations: [PendingSyncMutation] {
+        appState.pendingSyncMutations.filter { $0.status != .synced }
+    }
+
+    private var replayPlanByMutation: [UUID: SyncReplayPlanItem] {
+        Dictionary(uniqueKeysWithValues: appState.pendingSyncReplayPlan.map { ($0.mutationId, $0) })
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    IconBadge(name: "cloud", color: .ink)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Sync details")
+                            .font(DS.sans(18, weight: .semibold))
+                            .foregroundColor(.fgPrimary)
+                            .accessibilityIdentifier("profile-sync-detail-title")
+                        Text(appState.syncSummary)
+                            .font(DS.sans(12))
+                            .foregroundColor(.fgFaint)
+                            .accessibilityIdentifier("profile-sync-detail-summary")
+                    }
+                    Spacer()
+                }
+
+                Text("Inflamend is saving changes on this device. Cloud replay is blocked until Supabase credentials are configured.")
+                    .font(DS.sans(13))
+                    .foregroundColor(.fgDim)
+                    .lineSpacing(3)
+
+                Button {
+                    appState.retryPendingSyncScaffold()
+                } label: {
+                    HStack(spacing: 8) {
+                        AppIcon(name: "refresh", size: 16, color: activeMutations.isEmpty ? .fgFaint : .darkText)
+                        Text(activeMutations.isEmpty ? "Nothing pending" : "Retry sync")
+                            .font(DS.sans(15, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundColor(activeMutations.isEmpty ? .fgFaint : .darkText)
+                    .background(activeMutations.isEmpty ? Color.bgInset : Color.ink)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(PressableButtonStyle(scale: activeMutations.isEmpty ? 1 : 0.97))
+                .disabled(activeMutations.isEmpty)
+                .accessibilityIdentifier("profile-sync-detail-retry-button")
+
+                if activeMutations.isEmpty {
+                    Text("No local records are waiting for backend replay.")
+                        .font(DS.sans(13))
+                        .foregroundColor(.fgDim)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color.bgInset)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .accessibilityIdentifier("profile-sync-detail-empty")
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(Array(activeMutations.enumerated()), id: \.element.id) { index, mutation in
+                            SyncMutationDetailRow(
+                                index: index,
+                                mutation: mutation,
+                                plan: replayPlanByMutation[mutation.id]
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(Color.bgPrimary)
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct SyncMutationDetailRow: View {
+    let index: Int
+    let mutation: PendingSyncMutation
+    let plan: SyncReplayPlanItem?
+
+    private var accessibilitySummary: String {
+        var pieces = [
+            mutation.summary,
+            mutation.kind.syncLabel,
+            mutation.status.syncLabel
+        ]
+        if let plan {
+            pieces.append("\(plan.action.syncLabel) \(plan.target)")
+        }
+        if let lastError = mutation.lastError, !lastError.isEmpty {
+            pieces.append(lastError)
+        }
+        pieces.append("Attempts \(mutation.attemptCount)")
+        return pieces.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                AppIcon(name: mutation.status.syncIconName, size: 16, color: mutation.status.syncColor)
+                    .frame(width: 28, height: 28)
+                    .background(mutation.status.syncColor.opacity(0.12))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(mutation.summary)
+                        .font(DS.sans(14, weight: .semibold))
+                        .foregroundColor(.fgPrimary)
+                    Text(mutation.kind.syncLabel)
+                        .font(DS.sans(12))
+                        .foregroundColor(.fgFaint)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack(spacing: 8) {
+                SyncDetailChip(
+                    text: mutation.status.syncLabel,
+                    color: mutation.status.syncColor,
+                    identifier: "profile-sync-detail-status-\(index)"
+                )
+
+                if let plan {
+                    SyncDetailChip(
+                        text: "\(plan.action.syncLabel) \(plan.target)",
+                        color: .fgDim,
+                        identifier: "profile-sync-detail-target-\(index)"
+                    )
+                }
+            }
+
+            if let lastError = mutation.lastError, !lastError.isEmpty {
+                Text(lastError)
+                    .font(DS.sans(12))
+                    .foregroundColor(.fgDim)
+                    .lineLimit(3)
+                    .accessibilityIdentifier("profile-sync-detail-error-\(index)")
+            }
+
+            Text("Attempts \(mutation.attemptCount) · \(mutation.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(DS.mono(11))
+                .foregroundColor(.fgFaint)
+                .accessibilityIdentifier("profile-sync-detail-attempts-\(index)")
+        }
+        .padding(14)
+        .background(Color.bgInset)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
+        .accessibilityIdentifier("profile-sync-detail-row-\(index)")
+    }
+}
+
+private struct SyncDetailChip: View {
+    let text: String
+    let color: Color
+    let identifier: String
+
+    var body: some View {
+        Text(text)
+            .font(DS.mono(10, weight: .semibold))
+            .foregroundColor(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
+            .accessibilityLabel(text)
+            .accessibilityIdentifier(identifier)
+    }
+}
+
+private extension SyncMutationKind {
+    var syncLabel: String {
+        switch self {
+        case .authSession:
+            return "Auth session"
+        case .onboardingProfile:
+            return "Onboarding profile"
+        case .healthLog:
+            return "Health log create"
+        case .healthLogUpdate:
+            return "Health log update"
+        case .healthLogDeletion:
+            return "Health log deletion"
+        case .chatMessage:
+            return "Care message"
+        case .privacyPreference:
+            return "Privacy preference"
+        case .safetyNotice:
+            return "Safety notice"
+        case .reportExport:
+            return "Report export"
+        case .accountDeletion:
+            return "Account deletion"
+        }
+    }
+}
+
+private extension SyncMutationStatus {
+    var syncLabel: String {
+        switch self {
+        case .pending:
+            return "Pending"
+        case .blockedNoBackend:
+            return "Blocked - backend setup needed"
+        case .syncing:
+            return "Syncing"
+        case .synced:
+            return "Synced"
+        case .failedRetryable:
+            return "Retryable failure"
+        case .failedNeedsUser:
+            return "Needs attention"
+        }
+    }
+
+    var syncColor: Color {
+        switch self {
+        case .pending, .syncing:
+            return .amber
+        case .blockedNoBackend, .failedRetryable, .failedNeedsUser:
+            return .clay
+        case .synced:
+            return .sage
+        }
+    }
+
+    var syncIconName: String {
+        switch self {
+        case .pending, .syncing:
+            return "clock"
+        case .blockedNoBackend, .failedRetryable, .failedNeedsUser:
+            return "alert"
+        case .synced:
+            return "check"
+        }
+    }
+}
+
+private extension SyncReplayAction {
+    var syncLabel: String {
+        switch self {
+        case .authenticate:
+            return "Auth"
+        case .upsert:
+            return "Upsert"
+        case .insert:
+            return "Insert"
+        case .update:
+            return "Update"
+        case .softDelete:
+            return "Delete"
+        case .invokeFunction:
+            return "Function"
         }
     }
 }

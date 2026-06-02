@@ -1230,6 +1230,38 @@ QA and Regression Reviewer:
 Final decision:
 - Ship now, then continue with live Supabase replay wiring, server IDs, structured records, and manual accessibility QA.
 
+## Profile Sync Detail Surface Audit
+
+### Feature Audit: Per-Record Sync Blocked Details
+
+Product Simplicity Reviewer:
+- Findings: Users can now inspect pending and blocked local changes from Profile without the app implying cloud sync has succeeded. The main Profile row stays compact, while details move into a focused sheet.
+- Required fixes: Add clearer remediation copy once live retry, auth refresh, conflict resolution, or support escalation paths exist.
+- Status: Accept checkpoint.
+
+Apple UI Quality Reviewer:
+- Findings: The sheet follows the existing Profile modal pattern, uses a single retry action, exposes stable identifiers, and combines row metadata into an accessibility label instead of relying on decorative chips.
+- Required fixes: Manually verify row wrapping, retry placement, and VoiceOver order at large Dynamic Type sizes.
+- Status: Accept checkpoint.
+
+Backend and Data Integrity Reviewer:
+- Findings: The UI surfaces replay-plan kind/action/target/attempt/error metadata that already exists locally, while preserving the truth that Supabase is not configured and no backend mutation has completed.
+- Required fixes: Connect live replay, store returned server IDs/receipts, add retry backoff/reachability, and expose conflict/user-action states when the backend is available.
+- Status: Accept local blocked-state implementation.
+
+Privacy, Security, and Medical Safety Reviewer:
+- Findings: The detail sheet shows local mutation summaries and backend-blocked metadata without exposing raw payload contents or implying cloud deletion/export. The blocked state remains explicit.
+- Required fixes: Re-check summaries before telemetry, crash logging, or support export includes sync diagnostics.
+- Status: Accept checkpoint.
+
+QA and Regression Reviewer:
+- Findings: The first two focused UI attempts exposed that a decorative status chip did not reliably publish the dynamic blocked label to XCTest. The final implementation uses combined row accessibility metadata, and the focused sync-detail UI test, full unit target with 43 tests, and clean build pass.
+- Required fixes: Add full live replay success/failure, conflict, backoff, reachability, and manual accessibility regression coverage once Supabase credentials exist.
+- Status: Accept checkpoint.
+
+Final decision:
+- Ship now, then continue with live Supabase replay wiring, server IDs/receipts, remediation states, and manual accessibility QA.
+
 ## Timeline Delete Undo Audit
 
 ### Feature Audit: Toast Undo and Queue Restoration

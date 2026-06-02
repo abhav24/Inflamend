@@ -102,7 +102,7 @@ Status: started. Plain-text report wording, possible-pattern language, local doc
 - Last sync timestamp.
 - No data loss after app restart once persistence exists.
 
-Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
+Status: local snapshot restore, structured log timestamp and typed payload persistence, pending queue persistence, local log edit/delete/undo queue behavior, timeline edit typed-payload preservation, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, deterministic replay planning with health-log payload snapshots, idempotency/server/receipt metadata, per-record backend-blocked errors, Profile sync blocked-state/detail UI, legacy snapshot/mutation decode, and corrupt snapshot fallback are covered. Network replay, returned server IDs/receipts, live backend typed-payload serialization, backoff, reachability, and conflict behavior are pending.
 
 7. Validation helpers:
 - Numeric ranges for pain, urgency, Bristol type, weight, sleep, and water.
@@ -154,7 +154,7 @@ Status: started. Underlying AppState effects are covered; Profile destructive co
 - Care red-flag prompt shows urgent safety guidance and no diagnosis claim. Status: covered by UI smoke test.
 - Care medication-change prompt refuses prescription advice and points to a clinician/pharmacist. Status: covered by UI smoke test.
 - Report export scaffold explains missing setup or creates local export. Status: local doctor-report export covered by UI smoke test; 30-day `loggedAt` range filtering covered by unit test.
-- Profile sync status shows pending/backend-blocked state. Status: pending local queue and blocked retry state covered by UI smoke test; backend network replay pending.
+- Profile sync status shows pending/backend-blocked state. Status: pending local queue, blocked retry state, and per-record detail sheet covered by UI smoke test; backend network replay pending.
 - Privacy controls expose export/delete/AI memory/transcript toggles. Status: covered for local export/delete confirmations plus AI memory and voice transcript toggles by UI smoke tests; backend enforcement pending.
 - Dark mode, Dynamic Type, and VoiceOver labels for major screens.
 
@@ -202,7 +202,7 @@ When Supabase CLI and credentials are available:
 | Privacy | Voice transcript storage toggle | Visible Off/On state updates and local preference persists | Implemented locally and covered by UI smoke test; backend retention enforcement pending |
 | Privacy | Delete AI history | Confirmation before local message clearing | Implemented locally and covered by UI smoke test |
 | Privacy | Delete data/account | Confirmation before local deletion-request scaffold | Implemented locally and covered by UI smoke test; backend deletion pending |
-| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync blocked retry covered by UI smoke test; backend network replay pending |
+| Offline | Log while offline | Local save or safe failure | Local snapshot, structured log timestamps, typed payload persistence, food/bowel/symptom/sleep/weight/medication/check-in structured timeline edits, pending queue, health-log replay payload snapshots, replay planning with idempotency metadata, and per-record blocked errors implemented; Profile sync detail sheet exposes blocked records and retry metadata under UI smoke coverage; backend network replay pending |
 | Accessibility | Dynamic Type | Text remains readable and non-overlapping | Pending |
 | Accessibility | VoiceOver | Controls have useful labels | Pending |
 

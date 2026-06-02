@@ -198,7 +198,16 @@ final class InflamendUITests: XCTestCase {
         let syncRow = app.buttons["profile-sync-status-row"]
         waitForLabel(syncRow, contains: "pending")
         tapWhenVisible(syncRow, in: app)
-        waitForLabel(syncRow, contains: "Sync blocked: Supabase not configured")
+
+        XCTAssertTrue(app.staticTexts["profile-sync-detail-title"].waitForExistence(timeout: 5))
+        let syncSummary = app.staticTexts["profile-sync-detail-summary"]
+        waitForLabel(syncSummary, contains: "pending")
+
+        tapWhenVisible(app.buttons["profile-sync-detail-retry-button"], in: app)
+        waitForLabel(syncSummary, contains: "blocked")
+        let firstSyncDetailRow = app.descendants(matching: .any)["profile-sync-detail-row-0"]
+        waitForLabel(firstSyncDetailRow, contains: "Blocked")
+        waitForLabel(firstSyncDetailRow, contains: "Supabase not configured")
     }
 
     @MainActor
