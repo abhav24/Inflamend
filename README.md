@@ -1,6 +1,6 @@
 # Inflamend
 
-A native iOS health tracking and AI companion app for people living with Inflammatory Bowel Disease (IBD), specifically Ulcerative Colitis. Inflamend helps patients log daily health data, monitor flare risk, summarize food and lifestyle patterns, and review careful local insights — all in a dark, minimal, medically-informed UI.
+A native iOS health tracking and AI companion app for people living with Inflammatory Bowel Disease (IBD), specifically Ulcerative Colitis. Inflamend helps patients log daily health data, monitor flare risk, identify food and lifestyle patterns, and get AI-powered insights — all in a dark, minimal, medically-informed UI.
 
 ---
 
@@ -8,11 +8,12 @@ A native iOS health tracking and AI companion app for people living with Inflamm
 
 - **Flare Risk Score** — AI-driven 0–100 risk indicator updated from logged data, shown as an animated ring on the home screen
 - **Daily Logging** — 7-category logging system: food, bowel movements (Bristol scale), symptoms, medications, sleep, weight, and rapid check-ins
-- **Food Pattern Summaries** — Summarizes local meal logs by frequency without making trigger or causation claims
-- **Insights & Charts** — Local-log trend summaries, empty states, pain heatmap, bowel-log chart, and food frequency list
-- **AI Chat** — In-app assistant ("Ask Inflamend") for medication questions, dietary advice, and symptom explanation
-- **Medication Tracking** — Daily schedule with check-off, streak tracking, and reminder support
-- **Profile & Export** — Saved-log stats, medication status, and a shareable local doctor report
+- **Timeline Management** — Edit, delete, and undo any log entry with full structured payload preservation
+- **Insights & Charts** — Date-windowed trend summaries, pain heatmap, bowel chart, food frequency list, and accessibility summaries
+- **AI Chat** — In-app assistant ("Ask Inflamend") with local deterministic safety responses and Claude API scaffolding
+- **Medication Tracking** — Daily schedule with check-off, streak tracking, reminder settings, and persisted dose status
+- **Doctor Report Export** — Shareable local report with structured health data
+- **Privacy & Sync** — Full local-first data layer with sync queue, snapshot recovery, and user data export/delete controls
 
 ---
 
@@ -24,39 +25,24 @@ A native iOS health tracking and AI companion app for people living with Inflamm
 | Framework | SwiftUI 6 (`@Observable` macro) |
 | Min iOS | 17.0 |
 | State | Centralized `AppState` with `@Observable` / `@MainActor` |
+| Persistence | `AppSnapshotStore` — JSON to Application Support with iOS file protection |
+| Sync | Local mutation queue with typed payloads, replay planner, backoff, network-awareness |
 | Charts | Pure SwiftUI (`Path`, `GeometryReader`) — no external library |
 | Navigation | Custom floating tab bar (no `NavigationStack`) |
-| Assets | SF Symbols only — no custom images |
-| Backend | Supabase schema/RLS/Edge Function scaffolds; iOS app still uses mock/local state |
+| Backend | Supabase schema, RLS policies, and Edge Functions (AI chat, risk score, voice parse, export) |
 | Dependencies | None (no Swift packages, no CocoaPods) |
-| Tests | Xcode unit test target `InflamendTests` |
+| Tests | `InflamendTests` (health logic unit tests), `InflamendUITests` (15+ UI smoke tests) |
 
 Dark mode only. No external dependencies.
 
 ---
 
-## Current Local Commands
+## Branch Overview
 
-This repository currently builds and tests on the available `iPhone 17` iOS 26.0 simulator. The originally requested `iPhone 16` simulator is not installed on this machine.
-
-```bash
-xcodebuild -list
-xcodebuild clean build -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-xcodebuild test -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
-```
-
-Current test coverage is focused on deterministic health logic:
-
-- Red-flag detection.
-- Risk scoring.
-- Voice transcript parsing.
-- Medication schedule calculations.
-- Local doctor report export content.
-- Report summary wording.
-- Local Care safety responses.
-- Validation helpers.
-
-Supabase backend files are scaffolded under `supabase/`, but local migration/function verification requires installing the Supabase CLI and Deno.
+| Branch | Description |
+|--------|-------------|
+| `main` | Baseline — navigation, design system, core screens |
+| `v2` | Local-first MVP — full offline data layer, timeline editing, sync queue, UI tests |
 
 ---
 
@@ -65,47 +51,57 @@ Supabase backend files are scaffolded under `supabase/`, but local migration/fun
 ```
 Inflamend/
 ├── InflamendApp.swift        # @main entry, forces dark color scheme
-├── ContentView.swift         # Root: tab switcher + custom tab bar + sheets
-├── Models.swift              # AppState, LogEntry, ChatMessage, enums
+├── ContentView.swift         # Root: tab switcher + custom tab bar + sheets + auth flow
+├── Models.swift              # AppState, LogEntry, typed payloads, sync models, enums
 ├── DesignSystem.swift        # Color tokens, typography, reusable components
+├── Core/
+│   └── HealthLogic.swift     # Risk scoring, red-flag detection, report generation
 └── Views/
     ├── HomeView.swift        # Dashboard: risk ring, mood check-in, timeline
     ├── LogView.swift         # 7-tab logging interface
-    ├── InsightsView.swift    # Local-log summaries, charts, heatmap, and empty states
+    ├── InsightsView.swift    # Local-log summaries, charts, heatmap, empty states
     ├── ChatView.swift        # AI assistant chat UI
-    └── ProfileView.swift     # Account, stats, settings
+    └── ProfileView.swift     # Account, stats, sync status, settings, privacy controls
 ```
 
 ### State Management
 
-All UI state is coordinated through a single `AppState` class (no Combine, no Redux). It's declared with `@Observable` and annotated `@MainActor`. Views create it at the root and pass it down via `@State` / `@Binding`.
+All UI state flows through a single `AppState` class (`@Observable`, `@MainActor`). It owns auth, onboarding, privacy preferences, logs, chat, risk state, snapshot restore, and the pending sync mutation queue.
 
-`AppState` now also owns local scaffolds for auth, onboarding, privacy preferences, logs, chat messages, risk state, snapshot restore, and a pending sync mutation queue. `AppSnapshotStore` writes JSON to Application Support with iOS file protection while the Supabase worker remains externally blocked.
+`AppSnapshotStore` writes JSON to Application Support with iOS file protection. The Supabase sync worker is scaffolded but externally blocked — all data stays local until a sync connection is established.
 
 ```swift
 @Observable @MainActor
 class AppState {
     var authSession: AuthSession?
     var onboardingProfile: OnboardingProfile?
-    var riskScore: Int = 42
-    var mood: MoodOption?
-    var medsTaken: Int = 2
-    var medsTotal: Int = 4
-    var pendingSyncMutations: [PendingSyncMutation] = []
+    var riskScore: Int
     var logs: [LogEntry] = []
-    var chatMessages: [ChatMessage] = [...]
-    var toast: String?
+    var pendingSyncMutations: [PendingSyncMutation] = []
+    var syncRetryMetadata: SyncRetryMetadata?
+    var privacyPreferences: PrivacyPreferences
 
-    func signUp(email: String, displayName: String)
-    func completeOnboarding(...)
-    func addLog(type: LogType, title: String, sub: String)
+    func addLog(type: LogType, payload: LogPayload)
+    func editLog(id: UUID, payload: LogPayload)
+    func deleteLog(id: UUID)
+    func undoLastDelete()
     func retryPendingSyncScaffold()
+    func exportUserData() -> ExportBundle
+    func deleteAllData()
 }
 ```
 
+### Local-First Data Layer
+
+- **Typed payloads** — each log type has a structured payload (e.g. `BowelPayload`, `FoodPayload`) preserved through edits
+- **Sync queue** — mutations enqueue as `PendingSyncMutation` with serialized typed payloads
+- **Snapshot recovery** — `AppSnapshotStore` persists and restores full app state on launch
+- **Replay planner** — queued mutations replay in order when connectivity returns
+- **Retry backoff** — exponential backoff metadata tracked per mutation; sync pauses when network is unavailable
+
 ### Navigation
 
-No `NavigationStack`. A custom `Tab` enum drives a `ZStack` switch inside `ContentView`. The floating tab bar is a capsule with `.ultraThinMaterial` glassmorphism, 20px shadow, spring scale animation on active tab.
+No `NavigationStack`. A custom `Tab` enum drives a `ZStack` switch inside `ContentView`. The floating tab bar is a capsule with `.ultraThinMaterial` glassmorphism, 20px shadow, and spring scale animation on the active tab.
 
 ---
 
@@ -151,14 +147,6 @@ No `NavigationStack`. A custom `Tab` enum drives a `ZStack` switch inside `Conte
 | `ScreenHeader` | Consistent title + subtitle pattern |
 | `FlowLayout` | Custom `Layout` for wrapping pill tags |
 
-### ViewModifiers
-
-```swift
-.card()              // rounded card with stroke + elevated background
-.dsLabel()           // mono, uppercase, faint foreground
-.appearAnimation(delay: 0.2)  // opacity + Y-offset fade-in
-```
-
 ---
 
 ## Screens
@@ -170,10 +158,8 @@ No `NavigationStack`. A custom `Tab` enum drives a `ZStack` switch inside `Conte
 - **Today Summary**: 4 mini-stat rows (symptoms, meds, water, sleep)
 - **Mood Check-in**: 4 options (great/ok/rough/flare), color-coded, persists in AppState
 - **Rapid Log Row**: Water, meal, meds, BM quick-log buttons → trigger sheets
-- **Timeline**: Chronological `LogEntry` list with icon badges
+- **Timeline**: Chronological `LogEntry` list with edit and delete (with undo) per entry
 - **AI Insight Card**: Pattern nudge with gradient background, links to ChatView
-
-Staggered appear animations with 0–0.35s delays.
 
 ### Log (`LogView.swift`)
 
@@ -185,18 +171,21 @@ Staggered appear animations with 0–0.35s delays.
 | **Food** | Meal time picker, free text, known triggers (6 tags), gut-friendly foods (4 tags) |
 | **Bowel** | Bristol scale 1–7, urgency slider 0–10, blood/mucus/pain toggles |
 | **Symptoms** | Pain, fatigue, mood sliders 0–10; body map placeholder |
-| **Meds** | Today's schedule (4 meds), checkbox toggle, toast on change |
+| **Meds** | Today's schedule, checkbox toggle with persisted dose status, toast on change |
 | **Sleep** | Bedtime/wake inputs, calculated duration, quality slider, bathroom wake pills |
-| **Weight** | Large serif input (kg), trend indicator |
+| **Weight** | Large serif input (kg/lbs unit preference), trend indicator |
+
+All log submissions produce typed payloads stored in `AppState.logs` and enqueued in the sync mutation queue.
 
 ### Insights (`InsightsView.swift`)
 
-- **Recent / All toggle** with spring animation
+- **Date range selector**: Recent / 30d / 90d / All toggle with spring animation
 - **Stat tiles**: Avg pain, bowel log count, flare mention count
 - **Line chart**: Local pain and fatigue scores, area fill, dot markers
 - **Bar chart**: Recent bowel/check-in entries from local logs
 - **Pain Heatmap**: 5-week calendar grid, color intensity by saved pain severity
 - **Food patterns list**: Meal log frequency summaries with no trigger or causation claim
+- **Accessibility summaries** on all charts
 - **Honest empty states** when saved logs do not yet support a chart
 
 All charts implemented in pure SwiftUI using `Path` and `GeometryReader`.
@@ -208,142 +197,138 @@ All charts implemented in pure SwiftUI using `Path` and `GeometryReader`.
 - AI messages: left-aligned, card background with outline
 - Typing indicator: 3 animated dots with staggered opacity
 - Suggestion chips appear when < 3 messages
-- 1.2s simulated response delay (ready for Claude API)
-- `ScrollViewReader` auto-scrolls to latest message
-
-Local deterministic safety responses:
-- Red-flag prompts bypass general advice
-- Medication-change prompts advise clinician/pharmacist review
-- Food/stress guidance stays cautious and non-causal
+- Local deterministic safety responses (red-flag detection, medication change warnings)
+- Ready for Claude API integration
 
 ### Profile (`ProfileView.swift`)
 
 - Circular gradient avatar with initial
 - Stats row: saved logs, risk score, medication status
-- **HEALTH section**: Local doctor report export, medication reminders, flare history, care plan
-- **APP section**: Preferences, IBD library, sign out
-- **PRIVACY section**: Sync status, AI memory, voice transcript storage, data export/delete controls
-- Version footer: `INFLAMEND v1.0 · BUILD 1`
+- **HEALTH**: Doctor report export, medication reminders, flare history, care plan questions
+- **APP**: Weight unit preferences, IBD education library, sign out
+- **PRIVACY**: Sync status with retry detail, AI memory toggle, voice transcript storage toggle, data export and delete controls
+- Version footer
 
 ---
 
 ## Data Models (`Models.swift`)
 
+Core types:
+
 ```swift
-enum LogType { case food, bowel, symptom, meds, water, sleep, weight }
+enum LogType { case food, bowel, symptom, meds, water, sleep, weight, checkIn }
 
 struct LogEntry: Identifiable {
+    let id: UUID
     let type: LogType
-    let title: String    // e.g. "Mesalamine · 800mg"
-    let sub: String      // e.g. "taken on schedule"
-    let time: String     // e.g. "8:00a"
-    // iconName and color computed from LogType
+    let title: String
+    let sub: String
+    let timestamp: Date
+    var payload: LogPayload   // typed, preserved through edits
 }
 
-enum MoodOption: String { case great, ok, rough, flare }
-// Each has: icon (◎ ○ ◐ ●), color (sage/fgDim/amber/clay)
+// Typed payloads (one per log type)
+struct FoodPayload: Codable { var mealTime, notes: String; var triggers, friendly: [String] }
+struct BowelPayload: Codable { var bristolType: Int; var urgency: Double; var blood, mucus, pain: Bool }
+struct SymptomsPayload: Codable { var pain, fatigue, mood: Double }
+// ... MedsPayload, SleepPayload, WeightPayload, CheckInPayload
 
-struct ChatMessage: Identifiable {
-    let role: ChatRole   // .user | .assistant
-    let content: String
-}
-
-struct MedEntry {
-    let name: String
-    let dose: String
-    let time: String
-    var taken: Bool
+struct PendingSyncMutation: Codable, Identifiable {
+    let id: UUID
+    let logType: LogType
+    let operation: SyncOperation   // .create | .update | .delete
+    let payload: LogPayload
+    var retryCount: Int
+    var lastAttempt: Date?
 }
 ```
 
 ---
 
-## How to Recreate
+## Tests
 
-### Requirements
+### Unit Tests (`InflamendTests/HealthLogicTests.swift`)
 
-- macOS 14+ (Sonoma or later)
-- Xcode 16+
-- iOS 17+ simulator or device
+Covers deterministic health logic:
+- Red-flag symptom detection
+- Risk score calculation
+- Voice transcript parsing
+- Medication schedule calculations
+- Doctor report content and wording
+- Local Care safety response routing
+- Validation helpers
 
-### Steps
+### UI Smoke Tests (`InflamendUITests/InflamendUITests.swift`)
 
-**1. Create Xcode project**
-```
-Xcode → File → New → Project → iOS App
-Interface: SwiftUI
-Language: Swift
-Minimum deployment: iOS 17.0
-Bundle ID: com.yourname.inflamend
-```
+15+ scenarios covering:
+- Auth onboarding flow
+- Today check-in
+- Bowel red-flag warning
+- Care red-flag response
+- Medication dose toggle
+- Food log submission
+- Doctor report export
+- Insights empty state and populated state
+- Privacy toggle controls
+- Voice confirmation flow
+- Profile sign-out
+- Destructive action confirmation
+- Local sign-in
 
-**2. Delete boilerplate**
+---
 
-Remove `ContentView.swift` and start fresh with the file structure above.
+## Build & Run
 
-**3. Set dark mode only**
-
-In `InflamendApp.swift`:
-```swift
-@main
-struct InflamendApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .preferredColorScheme(.dark)
-        }
-    }
-}
-```
-
-**4. Build files in this order**
-
-1. `Models.swift` — enums and data models first, no UI dependencies
-2. `DesignSystem.swift` — color extensions, typography constants, all reusable components
-3. `ContentView.swift` — root navigation, custom tab bar, sheet modals
-4. `Views/HomeView.swift`
-5. `Views/LogView.swift`
-6. `Views/InsightsView.swift`
-7. `Views/ChatView.swift`
-8. `Views/ProfileView.swift`
-
-**5. Color tokens**
-
-Add colors as `Color` extensions in `DesignSystem.swift`:
-```swift
-extension Color {
-    static let bgPrimary   = Color(hex: "141210")
-    static let fgPrimary   = Color(hex: "F6F1E4")
-    static let sage        = Color(hex: "A8B89A")
-    static let amber       = Color(hex: "E3A963")
-    static let clay        = Color(hex: "D98466")
-    static let ink         = Color(hex: "8A94A2")
-    // ... etc
-}
-```
-
-**6. No external packages needed**
-
-No Swift Package Manager dependencies. All charts use SwiftUI `Path`. All icons use SF Symbols.
-
-**7. Build and run**
 ```bash
-xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17'
+# Build
+xcodebuild -project Inflamend.xcodeproj -scheme Inflamend \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build
+
+# Unit tests
+xcodebuild test -project Inflamend.xcodeproj -scheme Inflamend \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# UI tests
+xcodebuild test -project Inflamend.xcodeproj -scheme InflamendUITests \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+Requires macOS 14+, Xcode 16+, iOS 17+ simulator. No external dependencies.
+
+Supabase backend files are scaffolded under `supabase/` (schema, RLS policies, edge functions). Local migration and function verification requires the Supabase CLI and Deno.
+
+---
+
+## Supabase Backend (Scaffolded)
+
+```
+supabase/
+├── migrations/
+│   ├── 0001_init.sql                      # Core schema
+│   ├── 0002_rls_policies.sql              # Row-level security
+│   ├── 0003_seed_dev_data.sql
+│   ├── 0004_medication_reminder_settings.sql
+│   └── 0005_app_preferences.sql
+└── functions/
+    ├── ai-chat/          # Claude API proxy
+    ├── risk-score/       # Server-side risk scoring
+    ├── voice-parse/      # Voice transcript → structured log
+    └── export-report/    # PDF report generation
 ```
 
 ---
 
-## Planned Integrations (Not Yet Built)
+## Planned Integrations
 
-| Feature | Planned Tech |
-|---------|-------------|
-| AI chat responses | Anthropic Claude API |
-| Production user authentication | Supabase Auth |
-| Server data persistence | Supabase Postgres |
-| Offline sync queue | Local repository + Supabase sync worker |
-| Push notifications | APNs + Supabase Edge Functions |
-| PDF export | PDFKit |
-| Medication reminders | `UNUserNotificationCenter` |
+| Feature | Status |
+|---------|--------|
+| Claude API chat responses | Scaffolded — local safety responses live; API call wired |
+| Supabase Auth | Schema + RLS ready; iOS client not yet connected |
+| Server data sync | Sync queue built locally; Supabase worker blocked externally |
+| Push notifications | `UNUserNotificationCenter` reminder settings built; APNs not yet registered |
+| PDF export | Structured report data ready; PDFKit render not yet implemented |
+| Apple Health import | Not started |
 
 ---
 
@@ -351,4 +336,4 @@ xcodebuild -scheme Inflamend -destination 'platform=iOS Simulator,name=iPhone 17
 
 - **Free tier**: Core logging, basic insights
 - **Premium ($4.99/month)**: AI Risk Indicator, AI Chat, advanced food pattern summaries
-- Premium gating not implemented in current MVP — all features available to all users
+- Premium gating not implemented — all features available to all users in current build
