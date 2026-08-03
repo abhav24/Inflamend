@@ -8,6 +8,7 @@ struct ProfileView: View {
             VStack(spacing: 0) {
                 // Header
                 ScreenHeader(subtitle: "YOUR ACCOUNT", title: "Hello, ", titleItalicSuffix: "Priya")
+                    .appearAnimation(delay: 0)
 
                 // Profile card
                 HStack(spacing: 14) {
@@ -38,11 +39,12 @@ struct ProfileView: View {
                             .background(Color.bgInset)
                             .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle())
                 }
                 .card()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.07)
 
                 // Stats row
                 HStack {
@@ -58,6 +60,7 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.14)
 
                 // Health section
                 SectionLabel("HEALTH")
@@ -75,6 +78,7 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.21)
 
                 // App section
                 SectionLabel("APP")
@@ -94,6 +98,7 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
+                .appearAnimation(delay: 0.28)
 
                 Text("INFLAMEND v2.4.0 · BUILD 184")
                     .font(DS.mono(11))
@@ -181,7 +186,7 @@ struct ProfileRow: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle(scale: 0.97))
         .disabled(action == nil)
     }
 }
