@@ -48,6 +48,10 @@ struct ChatView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(appState.chatMessages) { msg in
                             ChatBubble(message: msg)
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .offset(y: 10)),
+                                    removal: .opacity
+                                ))
                         }
 
                         if isTyping {
@@ -152,8 +156,10 @@ struct ChatView: View {
         let t = (text ?? input).trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return }
         input = ""
-        appState.chatMessages.append(ChatMessage(role: .user, content: t))
-        isTyping = true
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+            appState.chatMessages.append(ChatMessage(role: .user, content: t))
+            isTyping = true
+        }
 
         // Simulate AI response after a short delay
         let response = responses[t] ?? "That's a great question, Priya. Based on your recent logs, things look manageable — but I'd recommend chatting with your GI doctor about this one for proper guidance."
