@@ -84,7 +84,7 @@ struct ChatView: View {
                                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.strokeDefault, lineWidth: 0.5))
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(PressableButtonStyle(scale: 0.97))
                                 }
                             }
                             .padding(.horizontal, 20)
@@ -161,7 +161,6 @@ struct ChatView: View {
             isTyping = true
         }
 
-        // Simulate AI response after a short delay
         let response = responses[t] ?? "That's a great question, Priya. Based on your recent logs, things look manageable — but I'd recommend chatting with your GI doctor about this one for proper guidance."
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
