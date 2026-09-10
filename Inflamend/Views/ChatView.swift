@@ -136,6 +136,7 @@ struct ChatView: View {
                                 color: input.trimmingCharacters(in: .whitespaces).isEmpty ? .fgFaint : .darkText
                             )
                         }
+                        .animation(.spring(response: 0.28, dampingFraction: 0.7), value: input.isEmpty)
                     }
                     .buttonStyle(.plain)
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -164,8 +165,10 @@ struct ChatView: View {
         let response = responses[t] ?? "That's a great question, Priya. Based on your recent logs, things look manageable — but I'd recommend chatting with your GI doctor about this one for proper guidance."
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(1.2))
-            isTyping = false
-            appState.chatMessages.append(ChatMessage(role: .assistant, content: response))
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                isTyping = false
+                appState.chatMessages.append(ChatMessage(role: .assistant, content: response))
+            }
         }
     }
 }
