@@ -140,7 +140,6 @@ struct ChatView: View {
                     }
                     .buttonStyle(PressableButtonStyle(scale: 0.9))
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .animation(.easeInOut(duration: 0.2), value: input)
                     .padding(.trailing, 6)
                 }
                 .background(Color.bgCard)
