@@ -138,7 +138,7 @@ struct ChatView: View {
                         }
                         .animation(.spring(response: 0.28, dampingFraction: 0.7), value: input.isEmpty)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle(scale: 0.9))
                     .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
                     .animation(.easeInOut(duration: 0.2), value: input)
                     .padding(.trailing, 6)
