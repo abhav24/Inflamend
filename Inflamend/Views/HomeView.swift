@@ -19,6 +19,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 HStack(alignment: .bottom) {
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("THURSDAY · APR 17")
                             .dsLabel()
@@ -137,6 +138,7 @@ struct HomeView: View {
                                         .stroke(appState.mood == option ? option.color : Color.clear, lineWidth: 1)
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 18))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: appState.mood)
                             }
                             .buttonStyle(.plain)
                             .animation(.easeInOut(duration: 0.15), value: appState.mood)
@@ -194,6 +196,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.28)
 
                 // AI nudge card
                 HStack(alignment: .top, spacing: 12) {
