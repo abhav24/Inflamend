@@ -47,7 +47,7 @@ struct HomeView: View {
                                 .offset(x: 2, y: -2)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle(scale: 0.92))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -140,8 +140,7 @@ struct HomeView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 18))
                                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: appState.mood)
                             }
-                            .buttonStyle(.plain)
-                            .animation(.easeInOut(duration: 0.15), value: appState.mood)
+                            .buttonStyle(PressableButtonStyle())
                         }
                     }
                 }
@@ -230,7 +229,7 @@ struct HomeView: View {
                                 .tracking(0.8)
                                 .foregroundColor(.sage)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableButtonStyle())
                         .padding(.top, 6)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
