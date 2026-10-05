@@ -52,6 +52,7 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 18)
+                .appearAnimation(delay: 0)
 
                 // Risk card + Today summary side by side
                 HStack(alignment: .top, spacing: 10) {
@@ -147,6 +148,7 @@ struct HomeView: View {
                 .card()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.14)
 
                 // Rapid log row
                 VStack(spacing: 10) {
@@ -245,6 +247,7 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.35)
             }
         }
         .background(Color.bgPrimary)
