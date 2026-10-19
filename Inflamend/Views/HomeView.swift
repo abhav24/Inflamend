@@ -99,6 +99,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.07)
 
                 // Check-in card
                 VStack(alignment: .leading, spacing: 0) {
@@ -161,7 +162,7 @@ struct HomeView: View {
                                 .tracking(0.8)
                                 .foregroundColor(.sage)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableButtonStyle())
                     }
                     .padding(.horizontal, 4)
 
@@ -327,7 +328,7 @@ struct RapidButton: View {
             .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.strokeDefault, lineWidth: 0.5))
             .clipShape(RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableButtonStyle())
     }
 }
 
