@@ -121,7 +121,9 @@ struct HomeView: View {
                     HStack(spacing: 8) {
                         ForEach(MoodOption.allCases, id: \.self) { option in
                             Button {
-                                appState.mood = option
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                                    appState.mood = option
+                                }
                                 appState.showToast("Logged: feeling \(option.label.lowercased())")
                             } label: {
                                 VStack(spacing: 6) {
@@ -175,6 +177,7 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
+                .appearAnimation(delay: 0.21)
 
                 // Timeline
                 VStack(spacing: 10) {
